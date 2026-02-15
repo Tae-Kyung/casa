@@ -1,7 +1,7 @@
 # PRD: CASA (CBNU AI-Agentic Startup Accelerator) MVP
 
-> **문서 버전:** 1.3
-> **작성일:** 2026-02-15
+> **문서 버전:** 1.4
+> **작성일:** 2026-02-16
 > **대상 스택:** Next.js 15 (App Router) + Supabase + Tailwind CSS + Vercel
 
 ---
@@ -1200,7 +1200,7 @@ export async function POST(request: NextRequest) {
 │  │                    Next.js 15 (App Router)                   │   │
 │  │  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐│   │
 │  │  │  Landing  │  │ Dashboard │  │  Project  │  │  Document ││   │
-│  │  │   Page    │  │   Page    │  │   Page    │  │  Preview  ││   │
+│  │  │(14섹션)   │  │   Page    │  │   Page    │  │  Preview  ││   │
 │  │  └───────────┘  └───────────┘  └───────────┘  └───────────┘│   │
 │  │        Tailwind CSS + shadcn/ui + next-themes + next-intl   │   │
 │  └─────────────────────────────────────────────────────────────┘   │
@@ -1313,6 +1313,25 @@ src/
 │   ├── LocaleSelector.tsx        # 언어 선택
 │   └── MobileDrawer.tsx          # 모바일 사이드바
 ├── features/
+│   ├── landing/                 # 랜딩(홍보) 페이지 전용
+│   │   ├── components/
+│   │   │   ├── LandingNav.tsx       # 1. 네비게이션 (sticky, 모바일 Sheet)
+│   │   │   ├── HeroSection.tsx      # 2. 히어로 (100dvh, 대시보드 목업)
+│   │   │   ├── ProblemSection.tsx    # 3. 문제 제기 (3단 카드)
+│   │   │   ├── SolutionOverview.tsx  # 4. 솔루션 (4단계 플로우)
+│   │   │   ├── FeatureSection.tsx    # 5. 핵심 기능 (지그재그)
+│   │   │   ├── AITechSection.tsx     # 6. AI 차별화 (다크 배경)
+│   │   │   ├── StatsSection.tsx      # 7. 숫자 성과 (카운트업)
+│   │   │   ├── CaseStudySection.tsx  # 8. Before/After (Tabs)
+│   │   │   ├── TestimonialSection.tsx # 9. 사용자 후기 (캐러셀)
+│   │   │   ├── ProcessSection.tsx    # 10. 이용 프로세스 (타임라인)
+│   │   │   ├── PartnerSection.tsx    # 11. 파트너 (로고 그리드)
+│   │   │   ├── FAQSection.tsx        # 12. FAQ (Accordion)
+│   │   │   ├── FinalCTASection.tsx   # 13. 최종 CTA
+│   │   │   └── LandingFooter.tsx     # 14. 푸터
+│   │   └── hooks/
+│   │       ├── useScrollAnimation.ts # IntersectionObserver 기반
+│   │       └── useCountUp.ts         # 숫자 카운트업 애니메이션
 │   ├── projects/
 │   │   ├── ProjectCard.tsx
 │   │   ├── ProjectList.tsx
@@ -1956,9 +1975,29 @@ export function detectLanguage(text: string): 'ko' | 'en' | 'ja' | 'zh' {
       "title": "프로젝트 삭제",
       "message": "\"{name}\" 프로젝트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
     }
+  },
+  "landing": {
+    "getStarted": "무료로 시작하기",
+    "login": "로그인",
+    "nav": { "features": "...", "process": "...", "faq": "..." },
+    "hero": { "badge": "...", "titleLine1": "...", "titleLine2": "...", "subtitle": "...", "cta": "...", "ctaSecondary": "...", "trust1~3": "...", "bottom1~3": "..." },
+    "problem": { "title": "...", "card1~3Title": "...", "card1~3Desc": "...", "highlightLine1~3": "...", "highlightConclusion": "..." },
+    "solution": { "title": "...", "subtitle": "...", "step1~4Title": "...", "step1~4Desc": "...", "step1~4Tags": "..." },
+    "features": { "title": "...", "subtitle": "...", "f1~4Title": "...", "f1~4Label": "...", "f1~4Tag1~3": "...", "f1~4Desc": "...", "f1~4Point1~4": "..." },
+    "aiTech": { "title": "...", "subtitle": "...", "orchestrator": "...", "ai1~3Name": "...", "ai1~3Role": "...", "col1~3Title": "...", "col1~3Item1~4": "..." },
+    "stats": { "title": "...", "stat1~4Value": "...", "stat1~4Label": "...", "stat1~4Sub": "...", "bottom1~4": "..." },
+    "caseStudy": { "title": "...", "case1~3Tab": "...", "case1~3Name": "...", "case1~3Before1~3": "...", "case1~3Casa1~3": "...", "case1~3After1~3": "..." },
+    "testimonial": { "title": "...", "t1~3Quote": "...", "t1~3Name": "...", "t1~3Role": "...", "cta": "..." },
+    "process": { "title": "...", "subtitle": "...", "step1~4Title": "...", "step1~4Time": "...", "step1~4Desc": "...", "totalTime": "...", "cta": "..." },
+    "partner": { "title": "...", "org1~3": "...", "tech1~3": "...", "orgLabel": "...", "techLabel": "..." },
+    "faq": { "title": "...", "q1~10": "...", "a1~10": "..." },
+    "finalCta": { "title": "...", "subtitle": "...", "cta": "...", "badge1~3": "..." },
+    "footer": { "brand": "...", "brandDesc": "...", "org": "...", "address": "...", "linksTitle": "...", "supportTitle": "...", "copyright": "...", "poweredBy": "..." }
   }
 }
 ```
+
+> **참고**: `landing` 네임스페이스는 14개 섹션에 대응하는 서브키 ~250개로 구성됨. 상세 키는 `src/i18n/messages/ko.json` 참조.
 
 ```json
 // i18n/messages/en.json
@@ -2024,6 +2063,9 @@ export function detectLanguage(text: string): 'ko' | 'en' | 'ja' | 'zh' {
       "title": "Delete Project",
       "message": "Are you sure you want to delete \"{name}\"? This action cannot be undone."
     }
+  },
+  "landing": {
+    "...": "// ko.json의 landing과 동일한 구조, 영어 번역"
   }
 }
 ```
@@ -2041,7 +2083,61 @@ export function detectLanguage(text: string): 'ko' | 'en' | 'ja' | 'zh' {
 5. **다크모드 필수**: 모든 컴포넌트에 `dark:` 클래스 적용
 6. **다국어 지원**: 모든 텍스트는 i18n 키 사용
 
-### 8.2 다크모드 색상 매핑 (COMMON.md 기준 - 필수 적용)
+### 8.2 랜딩(홍보) 페이지 디자인
+
+랜딩 페이지(`src/app/[locale]/page.tsx`)는 비로그인 사용자에게 CASA 플랫폼을 홍보하는 14개 섹션의 단일 페이지로 구현됨. 로그인 사용자는 `/dashboard`로 자동 리다이렉트.
+
+#### 8.2.1 페이지 구조 (14개 섹션)
+
+| # | 섹션 | 컴포넌트 | 핵심 역할 |
+|---|------|----------|-----------|
+| 1 | 네비게이션 | `LandingNav` | sticky 헤더, 앵커 링크, 모바일 Sheet 메뉴 |
+| 2 | 히어로 | `HeroSection` | 100dvh, 그라디언트 헤드라인, CTA 2개, 대시보드 목업 |
+| 3 | 문제 제기 | `ProblemSection` | 3단 카드, 하단 시간 비교 강조 박스 |
+| 4 | 솔루션 개요 | `SolutionOverview` | 4단계 수평 플로우, 화살표 연결 |
+| 5 | 핵심 기능 | `FeatureSection` | 4개 기능 지그재그 레이아웃, 태그 뱃지 |
+| 6 | AI 차별화 | `AITechSection` | 다크 배경, 오케스트레이터 다이어그램, 3단 비교 |
+| 7 | 숫자 성과 | `StatsSection` | 4단 그리드, `useCountUp` 카운트업 애니메이션 |
+| 8 | Before/After | `CaseStudySection` | Tabs 컴포넌트, Before(red)/After(green) |
+| 9 | 사용자 후기 | `TestimonialSection` | CSS transform 캐러셀, 점 네비게이션 |
+| 10 | 이용 프로세스 | `ProcessSection` | 4단계 타임라인, 시간 뱃지 |
+| 11 | 파트너 | `PartnerSection` | 지원 기관 + 기술 파트너 그리드 |
+| 12 | FAQ | `FAQSection` | shadcn/ui Accordion, 10개 Q&A, 2단 컬럼 |
+| 13 | 최종 CTA | `FinalCTASection` | 그라디언트 배경, 큰 CTA, 안심 뱃지 |
+| 14 | 푸터 | `LandingFooter` | 3컬럼 다크 배경 |
+
+#### 8.2.2 CTA 배치 (총 5곳)
+
+1. **네비게이션**: 항상 노출 — "무료로 시작하기" → `/signup`
+2. **히어로**: 첫 화면 — "무료로 시작하기" + "자세히 알아보기" → `/signup`, `#features`
+3. **사용자 후기 하단**: "나도 시작하기" → `/signup`
+4. **이용 프로세스 하단**: "지금 무료로 시작하기" → `/signup`
+5. **최종 CTA 섹션**: "무료로 시작하기" + 로그인 링크 → `/signup`, `/login`
+
+#### 8.2.3 애니메이션 전략
+
+| 기법 | 구현 방식 | 용도 |
+|------|-----------|------|
+| 스크롤 트리거 | `useScrollAnimation` (IntersectionObserver, threshold 0.15, triggerOnce) | 전 섹션 fade-in/slide-in |
+| 카운트업 | `useCountUp` (requestAnimationFrame, easeOutExpo) | 숫자 성과 섹션 |
+| 캐러셀 | CSS `transform: translateX` | 사용자 후기 슬라이더 |
+| 호버 | Tailwind `hover:-translate-y-1 hover:shadow-md` | 카드 상승 효과 |
+| 접근성 | `prefers-reduced-motion: reduce` → 애니메이션 비활성화 | 전역 CSS |
+
+#### 8.2.4 반응형 브레이크포인트
+
+| 뷰포트 | 범위 | 주요 변화 |
+|--------|------|-----------|
+| 모바일 | ~767px | 1단 그리드, 세로 스택, CTA 전체 폭, Sheet 메뉴 |
+| 태블릿 | 768~1199px | 2단 그리드, 히어로 세로, 폰트 축소 |
+| 데스크톱 | 1200px+ | 2~4단 그리드, 히어로 좌우 분할, 지그재그 |
+
+#### 8.2.5 재사용 기존 컴포넌트
+
+- `Button`, `Card`, `Badge`, `Tabs`, `Sheet`, `Accordion` (shadcn/ui)
+- `ThemeToggle`, `LocaleSelector` (common)
+
+### 8.3 다크모드 색상 매핑 (COMMON.md 기준 - 필수 적용)
 
 **규칙:** 모든 컴포넌트에서 아래 매핑을 일관되게 적용한다. `dark:` 없는 색상 클래스는 코드 리뷰에서 거부한다.
 
@@ -2072,7 +2168,7 @@ Warning:  yellow-600 / dark:yellow-500
 Error:    red-600    / dark:red-500
 ```
 
-### 8.3 next-themes 설정
+### 8.4 next-themes 설정
 
 ```tsx
 // app/layout.tsx
@@ -2091,7 +2187,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-### 8.4 ThemeToggle 컴포넌트
+### 8.5 ThemeToggle 컴포넌트
 
 ```tsx
 // components/ThemeToggle.tsx
@@ -2135,7 +2231,7 @@ export function ThemeToggle() {
 }
 ```
 
-### 8.5 LocaleSelector 컴포넌트
+### 8.6 LocaleSelector 컴포넌트
 
 ```tsx
 // components/LocaleSelector.tsx
@@ -2205,7 +2301,7 @@ export function LocaleSelector() {
 }
 ```
 
-### 8.6 반응형 대시보드 레이아웃 (COMMON.md 기준)
+### 8.7 반응형 대시보드 레이아웃 (COMMON.md 기준)
 
 ```tsx
 // app/[locale]/dashboard/layout.tsx
@@ -2281,7 +2377,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 }
 ```
 
-### 8.7 삭제 확인 모달 (window.confirm 절대 금지)
+### 8.8 삭제 확인 모달 (window.confirm 절대 금지)
 
 ```tsx
 // components/ConfirmModal.tsx
@@ -2349,7 +2445,7 @@ export function ConfirmModal({ confirm, onConfirm, onCancel, loading }: ConfirmM
 }
 ```
 
-### 8.8 필수 3가지 상태 처리 (COMMON.md 기준)
+### 8.9 필수 3가지 상태 처리 (COMMON.md 기준)
 
 **규칙:** 모든 데이터 페칭 컴포넌트는 아래 3가지 상태를 반드시 처리한다.
 
@@ -2392,7 +2488,7 @@ function ProjectList() {
 }
 ```
 
-### 8.9 진행률 표시 (SSE 작업)
+### 8.10 진행률 표시 (SSE 작업)
 
 ```tsx
 // components/ProgressBar.tsx
@@ -2679,6 +2775,20 @@ export const maxDuration = 120;
 - [ ] 성능 최적화
 - [ ] 베타 테스트 (10개 팀)
 
+### Phase 5: 랜딩(홍보) 페이지 (완료)
+
+- [x] 14개 섹션 컴포넌트 구현 (`features/landing/components/`)
+- [x] 스크롤 애니메이션 훅 (`useScrollAnimation`, `useCountUp`)
+- [x] CSS keyframes + `prefers-reduced-motion` 지원 (`globals.css`)
+- [x] 다국어 메시지 확장 (`landing` 네임스페이스 ~250키, ko/en)
+- [x] shadcn/ui Accordion 컴포넌트 추가
+- [x] 메인 `page.tsx` 통합 (서버 인증 + 14개 클라이언트 섹션)
+- [x] 반응형 3단계 (모바일/태블릿/데스크톱)
+- [x] 다크모드 전 섹션 대응 (AI 기술 섹션은 항상 다크)
+- [x] CTA 5곳 → `/signup`, `/login` 연결
+- [x] 로그인 유저 → `/dashboard` 리다이렉트 유지
+- [x] 기존 서비스 기능 미변경 확인
+
 ---
 
 ## 13. 개발 체크리스트 (COMMON.md 기준)
@@ -2771,8 +2881,8 @@ export const maxDuration = 120;
 ---
 
 *문서 작성: Claude Opus 4.5*
-*최종 수정: 2026-02-15*
-*버전: 1.3*
+*최종 수정: 2026-02-16*
+*버전: 1.4*
 
 ---
 
@@ -2784,3 +2894,4 @@ export const maxDuration = 120;
 | 1.1 | 2026-02-15 | bi_ 접두사, COMMON.md 가이드라인 전면 반영 (다크모드, i18n, IP 기반 언어 감지) |
 | 1.2 | 2026-02-15 | Human-in-the-Loop 승인 워크플로우 추가 (4단계 Gate), Multi-AI 오케스트레이션 전략 추가, bi_approvals 테이블 및 RLS 정책, 승인 관련 API 엔드포인트 |
 | 1.3 | 2026-02-15 | **프롬프트 관리 시스템 추가**: bi_prompts/bi_prompt_versions/bi_prompt_variables 테이블, PromptEngine 클래스, Redis 캐싱, 관리자 UI, 버전 관리/롤백, 시드 데이터, 관리자 API 엔드포인트 |
+| 1.4 | 2026-02-16 | **랜딩(홍보) 페이지 전면 개편**: 6개→14개 섹션 확장, features/landing/ 컴포넌트 14개 신규, 스크롤 애니메이션(IntersectionObserver + CSS keyframes), 카운트업 훅, shadcn/ui Accordion 추가, landing 다국어 ~250키 확장(ko/en), 폴더 구조·UI/UX 가이드라인·마일스톤 섹션 PRD 반영 |
