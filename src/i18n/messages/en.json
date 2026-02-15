@@ -1,0 +1,152 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "all": "All",
+    "yes": "Yes",
+    "no": "No",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "submit": "Submit",
+    "close": "Close"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "signup": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "name": "Name",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "loginSuccess": "Successfully logged in",
+    "logoutSuccess": "Successfully logged out",
+    "signupSuccess": "Sign up complete. Please check your email.",
+    "invalidCredentials": "Invalid email or password",
+    "emailRequired": "Email is required",
+    "passwordRequired": "Password is required",
+    "passwordMismatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 8 characters"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "newProject": "New Project",
+    "settings": "Settings",
+    "admin": "Admin",
+    "prompts": "Prompt Management",
+    "approvals": "Approvals"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "myProjects": "My Projects",
+    "recentActivity": "Recent Activity",
+    "mentorFeedback": "Mentor Feedback",
+    "noProjects": "No projects yet",
+    "createFirst": "Start your first project"
+  },
+  "project": {
+    "title": "Project",
+    "name": "Project Name",
+    "status": "Status",
+    "stage": "Stage",
+    "progress": "Progress",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
+    "draft": "Draft",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "archived": "Archived",
+    "idea": "Idea",
+    "evaluation": "Evaluation",
+    "document": "Document",
+    "deploy": "Deploy",
+    "done": "Done"
+  },
+  "idea": {
+    "title": "Idea Input",
+    "description": "Describe your startup idea freely",
+    "placeholder": "Example: I want to create a used textbook trading platform for college students...",
+    "minLength": "Please enter at least 500 characters",
+    "expand": "Expand with AI",
+    "expanding": "Expanding idea...",
+    "confirm": "Confirm Idea",
+    "regenerate": "Regenerate",
+    "problem": "Problem to Solve",
+    "solution": "Proposed Solution",
+    "target": "Target Customers",
+    "differentiation": "Differentiation"
+  },
+  "evaluation": {
+    "title": "Business Evaluation",
+    "start": "Start Evaluation",
+    "evaluating": "Evaluating...",
+    "investor": "Investor",
+    "market": "Market Analyst",
+    "tech": "Tech Expert",
+    "totalScore": "Total Score",
+    "recommendations": "Recommendations",
+    "approve": "Approve and Generate Documents",
+    "reevaluate": "Request Re-evaluation",
+    "dispute": "Dispute"
+  },
+  "document": {
+    "title": "Document Generation",
+    "businessPlan": "Business Plan",
+    "pitch": "Pitch Summary",
+    "landing": "Landing Page",
+    "generating": "Generating document...",
+    "preview": "Preview",
+    "download": "Download",
+    "revise": "Request Revision",
+    "confirmDoc": "Confirm Document"
+  },
+  "gate": {
+    "gate1": "Idea Confirmation",
+    "gate2": "Evaluation Approval",
+    "gate3": "Document Confirmation",
+    "gate4": "Final Approval",
+    "passed": "Passed",
+    "pending": "Pending",
+    "requestApproval": "Request Approval"
+  },
+  "feedback": {
+    "title": "Feedback",
+    "noFeedback": "No feedback yet",
+    "writeFeedback": "Write Feedback",
+    "mentorReview": "Request Mentor Review"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "language": "Language",
+    "profile": "Profile"
+  },
+  "error": {
+    "notFound": "Page not found",
+    "unauthorized": "Login required",
+    "forbidden": "Access denied",
+    "serverError": "Server error occurred",
+    "networkError": "Please check your network connection"
+  },
+  "confirm": {
+    "delete": "Are you sure you want to delete?",
+    "deleteDescription": "This action cannot be undone.",
+    "unsavedChanges": "You have unsaved changes. Do you want to leave this page?"
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "common": {
+    "loading": "로딩 중...",
+    "error": "오류가 발생했습니다",
+    "retry": "다시 시도",
+    "cancel": "취소",
+    "confirm": "확인",
+    "save": "저장",
+    "delete": "삭제",
+    "edit": "수정",
+    "create": "생성",
+    "search": "검색",
+    "filter": "필터",
+    "all": "전체",
+    "yes": "예",
+    "no": "아니오",
+    "back": "뒤로",
+    "next": "다음",
+    "previous": "이전",
+    "submit": "제출",
+    "close": "닫기"
+  },
+  "auth": {
+    "login": "로그인",
+    "logout": "로그아웃",
+    "signup": "회원가입",
+    "email": "이메일",
+    "password": "비밀번호",
+    "confirmPassword": "비밀번호 확인",
+    "name": "이름",
+    "forgotPassword": "비밀번호를 잊으셨나요?",
+    "noAccount": "계정이 없으신가요?",
+    "hasAccount": "이미 계정이 있으신가요?",
+    "loginSuccess": "로그인되었습니다",
+    "logoutSuccess": "로그아웃되었습니다",
+    "signupSuccess": "회원가입이 완료되었습니다. 이메일을 확인해주세요.",
+    "invalidCredentials": "이메일 또는 비밀번호가 올바르지 않습니다",
+    "emailRequired": "이메일을 입력해주세요",
+    "passwordRequired": "비밀번호를 입력해주세요",
+    "passwordMismatch": "비밀번호가 일치하지 않습니다",
+    "passwordTooShort": "비밀번호는 8자 이상이어야 합니다"
+  },
+  "nav": {
+    "dashboard": "대시보드",
+    "projects": "프로젝트",
+    "newProject": "새 프로젝트",
+    "settings": "설정",
+    "admin": "관리자",
+    "prompts": "프롬프트 관리",
+    "approvals": "승인 관리"
+  },
+  "dashboard": {
+    "title": "대시보드",
+    "myProjects": "내 프로젝트",
+    "recentActivity": "최근 활동",
+    "mentorFeedback": "멘토 피드백",
+    "noProjects": "아직 프로젝트가 없습니다",
+    "createFirst": "첫 번째 프로젝트를 시작해보세요"
+  },
+  "project": {
+    "title": "프로젝트",
+    "name": "프로젝트 이름",
+    "status": "상태",
+    "stage": "단계",
+    "progress": "진행률",
+    "createdAt": "생성일",
+    "updatedAt": "수정일",
+    "draft": "초안",
+    "inProgress": "진행 중",
+    "completed": "완료",
+    "archived": "보관됨",
+    "idea": "아이디어",
+    "evaluation": "평가",
+    "document": "문서",
+    "deploy": "배포",
+    "done": "완료"
+  },
+  "idea": {
+    "title": "아이디어 입력",
+    "description": "창업 아이디어를 자유롭게 작성해주세요",
+    "placeholder": "예: 대학생을 위한 중고 교재 거래 플랫폼을 만들고 싶습니다...",
+    "minLength": "최소 500자 이상 입력해주세요",
+    "expand": "AI로 확장하기",
+    "expanding": "아이디어 확장 중...",
+    "confirm": "아이디어 확정",
+    "regenerate": "다시 생성",
+    "problem": "해결하려는 문제",
+    "solution": "제안하는 솔루션",
+    "target": "목표 고객",
+    "differentiation": "차별화 포인트"
+  },
+  "evaluation": {
+    "title": "사업성 평가",
+    "start": "평가 시작",
+    "evaluating": "평가 진행 중...",
+    "investor": "투자심사역",
+    "market": "시장분석가",
+    "tech": "기술전문가",
+    "totalScore": "종합 점수",
+    "recommendations": "개선 제안",
+    "approve": "승인하고 문서 생성",
+    "reevaluate": "재평가 요청",
+    "dispute": "이의 제기"
+  },
+  "document": {
+    "title": "문서 생성",
+    "businessPlan": "사업계획서",
+    "pitch": "요약 피치",
+    "landing": "랜딩페이지",
+    "generating": "문서 생성 중...",
+    "preview": "미리보기",
+    "download": "다운로드",
+    "revise": "수정 요청",
+    "confirmDoc": "문서 확정"
+  },
+  "gate": {
+    "gate1": "아이디어 확정",
+    "gate2": "평가 승인",
+    "gate3": "문서 확정",
+    "gate4": "최종 승인",
+    "passed": "통과",
+    "pending": "대기 중",
+    "requestApproval": "승인 요청"
+  },
+  "feedback": {
+    "title": "피드백",
+    "noFeedback": "아직 피드백이 없습니다",
+    "writeFeedback": "피드백 작성",
+    "mentorReview": "멘토 검토 요청"
+  },
+  "settings": {
+    "title": "설정",
+    "theme": "테마",
+    "light": "라이트",
+    "dark": "다크",
+    "system": "시스템",
+    "language": "언어",
+    "profile": "프로필"
+  },
+  "error": {
+    "notFound": "페이지를 찾을 수 없습니다",
+    "unauthorized": "로그인이 필요합니다",
+    "forbidden": "접근 권한이 없습니다",
+    "serverError": "서버 오류가 발생했습니다",
+    "networkError": "네트워크 연결을 확인해주세요"
+  },
+  "confirm": {
+    "delete": "정말 삭제하시겠습니까?",
+    "deleteDescription": "이 작업은 되돌릴 수 없습니다.",
+    "unsavedChanges": "저장하지 않은 변경사항이 있습니다. 페이지를 떠나시겠습니까?"
+  }
+}
