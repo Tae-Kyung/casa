@@ -155,13 +155,11 @@ export default function PromptsPage() {
         </div>
       ) : prompts.length === 0 ? (
         <EmptyState
-          icon={Settings2}
+          icon={<Settings2 className="h-8 w-8 text-muted-foreground" />}
           title={t('admin.prompts.noPrompts')}
           description={t('admin.prompts.noPromptsDesc')}
-          action={{
-            label: t('admin.prompts.newPrompt'),
-            onClick: () => {},
-          }}
+          actionLabel={t('admin.prompts.newPrompt')}
+          actionHref="/admin/prompts/new"
         />
       ) : (
         <>

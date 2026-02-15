@@ -210,13 +210,11 @@ export default function ProjectsPage() {
         </div>
       ) : projects.length === 0 ? (
         <EmptyState
-          icon={FolderKanban}
+          icon={<FolderKanban className="h-8 w-8 text-muted-foreground" />}
           title={t('dashboard.noProjects')}
           description={t('dashboard.createFirst')}
-          action={{
-            label: t('nav.newProject'),
-            onClick: () => setShowCreateModal(true),
-          }}
+          actionLabel={t('nav.newProject')}
+          actionHref="/projects/new"
         />
       ) : (
         <>

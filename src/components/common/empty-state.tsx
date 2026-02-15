@@ -1,27 +1,22 @@
-'use client'
-
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface EmptyStateProps {
-  icon?: LucideIcon
+  icon?: React.ReactNode
   title: string
   description?: string
-  action?: {
-    label: string
-    href?: string
-    onClick?: () => void
-  }
+  actionLabel?: string
+  actionHref?: string
   className?: string
 }
 
 export function EmptyState({
-  icon: Icon,
+  icon,
   title,
   description,
-  action,
+  actionLabel,
+  actionHref,
   className,
 }: EmptyStateProps) {
   return (
@@ -31,9 +26,9 @@ export function EmptyState({
         className
       )}
     >
-      {Icon && (
+      {icon && (
         <div className="mb-4 rounded-full bg-muted p-4">
-          <Icon className="h-8 w-8 text-muted-foreground" />
+          {icon}
         </div>
       )}
       <h3 className="text-lg font-semibold">{title}</h3>
@@ -42,15 +37,11 @@ export function EmptyState({
           {description}
         </p>
       )}
-      {action && action.href ? (
+      {actionLabel && actionHref && (
         <Button className="mt-4" asChild>
-          <Link href={action.href}>{action.label}</Link>
+          <Link href={actionHref}>{actionLabel}</Link>
         </Button>
-      ) : action && action.onClick ? (
-        <Button onClick={action.onClick} className="mt-4">
-          {action.label}
-        </Button>
-      ) : null}
+      )}
     </div>
   )
 }

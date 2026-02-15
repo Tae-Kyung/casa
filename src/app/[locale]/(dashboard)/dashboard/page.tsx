@@ -83,13 +83,11 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
         <CardContent>
           {!projects || projects.length === 0 ? (
             <EmptyState
-              icon={FolderKanban}
+              icon={<FolderKanban className="h-8 w-8 text-muted-foreground" />}
               title={t('noProjects')}
               description={t('createFirst')}
-              action={{
-                label: tProject('title'),
-                href: '/projects/new',
-              }}
+              actionLabel={tProject('title')}
+              actionHref="/projects/new"
             />
           ) : (
             <div className="space-y-6">
