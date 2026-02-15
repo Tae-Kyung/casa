@@ -58,10 +58,10 @@ export function DeployStage({
         toast.success(result.data.message)
         onUpdate()
       } else {
-        toast.error(result.error || '완료 처리에 실패했습니다.')
+        toast.error(result.error || t('deploy.completeFailed'))
       }
     } catch {
-      toast.error('완료 처리에 실패했습니다.')
+      toast.error(t('deploy.completeFailed'))
     } finally {
       setIsCompleting(false)
     }
@@ -70,7 +70,7 @@ export function DeployStage({
   const handleCopyShareUrl = () => {
     if (shareUrl) {
       navigator.clipboard.writeText(shareUrl)
-      toast.success('링크가 복사되었습니다.')
+      toast.success(t('deploy.linkCopied'))
     }
   }
 
@@ -93,7 +93,7 @@ export function DeployStage({
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     })
-    toast.success('모든 문서가 다운로드되었습니다.')
+    toast.success(t('deploy.downloadComplete'))
   }
 
   const handleGenerateShareUrl = async () => {
@@ -101,7 +101,7 @@ export function DeployStage({
     const url = `${window.location.origin}/share/${project.id}`
     setShareUrl(url)
     navigator.clipboard.writeText(url)
-    toast.success('공유 링크가 생성되어 복사되었습니다.')
+    toast.success(t('deploy.shareLinkGenerated'))
   }
 
   const handleDeployLanding = async () => {
@@ -118,10 +118,10 @@ export function DeployStage({
         toast.success(result.data.message)
         onUpdate()
       } else {
-        toast.error(result.error || '랜딩페이지 배포에 실패했습니다.')
+        toast.error(result.error || t('deploy.deployFailed'))
       }
     } catch {
-      toast.error('랜딩페이지 배포에 실패했습니다.')
+      toast.error(t('deploy.deployFailed'))
     } finally {
       setIsDeploying(false)
     }
@@ -142,10 +142,10 @@ export function DeployStage({
           </div>
           <div>
             <h3 className="font-semibold text-orange-700 dark:text-orange-300">
-              Gate 3 통과 필요
+              {t('deploy.gate3Required')}
             </h3>
             <p className="text-sm text-orange-600 dark:text-orange-400">
-              문서 단계(Gate 3)를 먼저 완료해야 배포를 진행할 수 있습니다.
+              {t('deploy.gate3RequiredDesc')}
             </p>
           </div>
         </CardContent>
@@ -160,13 +160,13 @@ export function DeployStage({
       {/* 프로젝트 요약 */}
       <Card>
         <CardHeader>
-          <CardTitle>프로젝트 요약</CardTitle>
-          <CardDescription>완료된 모든 단계를 확인하세요.</CardDescription>
+          <CardTitle>{t('deploy.projectSummary')}</CardTitle>
+          <CardDescription>{t('deploy.projectSummaryDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* 아이디어 요약 */}
           <div className="rounded-lg border p-4">
-            <h4 className="mb-2 font-medium">아이디어</h4>
+            <h4 className="mb-2 font-medium">{t('deploy.ideaSummary')}</h4>
             <p className="text-sm text-muted-foreground line-clamp-3">
               {ideaCard?.problem || ideaCard?.raw_input || '-'}
             </p>
@@ -175,26 +175,26 @@ export function DeployStage({
           {/* 평가 점수 */}
           {evaluation && (
             <div className="rounded-lg border p-4">
-              <h4 className="mb-2 font-medium">평가 결과</h4>
+              <h4 className="mb-2 font-medium">{t('deploy.evalResult')}</h4>
               <div className="flex gap-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    {evaluation.total_score}점
+                    {evaluation.total_score}
                   </div>
-                  <div className="text-xs text-muted-foreground">종합 점수</div>
+                  <div className="text-xs text-muted-foreground">{t('deploy.totalScore')}</div>
                 </div>
                 <div className="flex-1 space-y-1">
                   <div className="flex justify-between text-sm">
-                    <span>투자</span>
-                    <span>{evaluation.investor_score}점</span>
+                    <span>{t('deploy.investScore')}</span>
+                    <span>{evaluation.investor_score}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>시장</span>
-                    <span>{evaluation.market_score}점</span>
+                    <span>{t('deploy.marketScore')}</span>
+                    <span>{evaluation.market_score}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>기술</span>
-                    <span>{evaluation.tech_score}점</span>
+                    <span>{t('deploy.techScore')}</span>
+                    <span>{evaluation.tech_score}</span>
                   </div>
                 </div>
               </div>
@@ -203,7 +203,7 @@ export function DeployStage({
 
           {/* 생성된 문서 목록 */}
           <div className="rounded-lg border p-4">
-            <h4 className="mb-2 font-medium">생성된 문서</h4>
+            <h4 className="mb-2 font-medium">{t('deploy.generatedDocs')}</h4>
             <div className="flex flex-wrap gap-2">
               {documents.map(doc => {
                 const Icon = documentIcons[doc.type as keyof typeof documentIcons] || FileText
@@ -226,9 +226,9 @@ export function DeployStage({
           <CardContent className="py-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="space-y-1">
-                <h3 className="font-semibold">프로젝트 완료</h3>
+                <h3 className="font-semibold">{t('deploy.completeProject')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  모든 단계가 완료되었습니다. 프로젝트를 최종 완료하세요.
+                  {t('deploy.completeProjectDesc')}
                 </p>
               </div>
               <Button
@@ -239,12 +239,12 @@ export function DeployStage({
                 {isCompleting ? (
                   <>
                     <LoadingSpinner size="sm" className="mr-2" />
-                    처리 중...
+                    {t('common.processing')}
                   </>
                 ) : (
                   <>
                     <Rocket className="mr-2 h-5 w-5" />
-                    프로젝트 완료 (Gate 4)
+                    {t('deploy.completeGate4')}
                   </>
                 )}
               </Button>
@@ -259,7 +259,7 @@ export function DeployStage({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Share2 className="h-5 w-5" />
-              공유하기
+              {t('deploy.share')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -278,7 +278,7 @@ export function DeployStage({
             ) : (
               <Button className="w-full" onClick={handleGenerateShareUrl}>
                 <Share2 className="mr-2 h-4 w-4" />
-                공유 링크 생성
+                {t('deploy.generateShareLink')}
               </Button>
             )}
           </CardContent>
@@ -288,7 +288,7 @@ export function DeployStage({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
-              랜딩페이지 배포
+              {t('deploy.deployLanding')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -306,7 +306,7 @@ export function DeployStage({
                     variant="outline"
                     onClick={() => {
                       navigator.clipboard.writeText(landingUrl)
-                      toast.success('URL이 복사되었습니다.')
+                      toast.success(t('deploy.urlCopied'))
                     }}
                   >
                     <Copy className="h-4 w-4" />
@@ -318,7 +318,7 @@ export function DeployStage({
                   onClick={() => window.open(landingUrl, '_blank')}
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />
-                  페이지 열기
+                  {t('deploy.openPage')}
                 </Button>
               </div>
             ) : (
@@ -330,12 +330,12 @@ export function DeployStage({
                 {isDeploying ? (
                   <>
                     <LoadingSpinner size="sm" className="mr-2" />
-                    배포 중...
+                    {t('deploy.deploying')}
                   </>
                 ) : (
                   <>
                     <Upload className="mr-2 h-4 w-4" />
-                    랜딩페이지 배포
+                    {t('deploy.deployLanding')}
                   </>
                 )}
               </Button>
@@ -347,13 +347,13 @@ export function DeployStage({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Download className="h-5 w-5" />
-              다운로드
+              {t('document.download')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Button className="w-full" onClick={handleDownloadAll}>
               <Download className="mr-2 h-4 w-4" />
-              모든 문서 다운로드
+              {t('deploy.downloadAll')}
             </Button>
           </CardContent>
         </Card>
@@ -368,10 +368,10 @@ export function DeployStage({
             </div>
             <div>
               <h3 className="font-semibold text-green-700 dark:text-green-300">
-                프로젝트 완료!
+                {t('deploy.projectComplete')}
               </h3>
               <p className="text-sm text-green-600 dark:text-green-400">
-                축하합니다! 모든 단계가 완료되었습니다. 생성된 문서를 다운로드하고 공유해보세요.
+                {t('deploy.projectCompleteDesc')}
               </p>
             </div>
           </CardContent>

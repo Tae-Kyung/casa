@@ -49,7 +49,7 @@ export function IdeaStage({
       onUpdate()
     },
     onError: (error) => {
-      toast.error(`AI 확장 오류: ${error}`)
+      toast.error(t('ideaStage.aiExpandError', { error }))
     },
   })
 
@@ -68,7 +68,7 @@ export function IdeaStage({
 
   const handleSave = async () => {
     if (rawInput.length < 50) {
-      toast.error('아이디어를 더 자세히 작성해주세요. (최소 50자)')
+      toast.error(t('ideaStage.writeMore'))
       return
     }
 
@@ -84,14 +84,14 @@ export function IdeaStage({
       const result = await response.json()
 
       if (result.success) {
-        toast.success('아이디어가 저장되었습니다.')
+        toast.success(t('ideaStage.saved'))
         setIsEditing(false)
         onUpdate()
       } else {
-        toast.error(result.error || '저장에 실패했습니다.')
+        toast.error(result.error || t('toast.saveFailed'))
       }
     } catch (error) {
-      toast.error('저장에 실패했습니다.')
+      toast.error(t('toast.saveFailed'))
     } finally {
       setIsSaving(false)
     }
@@ -115,10 +115,10 @@ export function IdeaStage({
         toast.success(result.data.message)
         onUpdate()
       } else {
-        toast.error(result.error || '확정에 실패했습니다.')
+        toast.error(result.error || t('toast.confirmFailed'))
       }
     } catch (error) {
-      toast.error('확정에 실패했습니다.')
+      toast.error(t('toast.confirmFailed'))
     } finally {
       setIsConfirming(false)
     }
@@ -276,7 +276,7 @@ export function IdeaStage({
           {expandedIdea?.raw && (
             <Card className="md:col-span-2">
               <CardHeader>
-                <CardTitle className="text-lg">AI 응답 (원본)</CardTitle>
+                <CardTitle className="text-lg">{t('ideaStage.aiResponseRaw')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <pre className="whitespace-pre-wrap text-sm">
@@ -295,7 +295,7 @@ export function IdeaStage({
             <div>
               <h3 className="font-semibold">{t('gate.gate1')}</h3>
               <p className="text-sm text-muted-foreground">
-                아이디어를 확정하고 다음 단계로 진행하시겠습니까?
+                {t('ideaStage.confirmQuestion')}
               </p>
             </div>
             <Button
@@ -331,7 +331,7 @@ export function IdeaStage({
                 {t('gate.gate1')} {t('gate.passed')}
               </h3>
               <p className="text-sm text-green-600 dark:text-green-400">
-                아이디어가 확정되었습니다. 평가 단계로 이동할 수 있습니다.
+                {t('ideaStage.confirmedMessage')}
               </p>
             </div>
           </CardContent>

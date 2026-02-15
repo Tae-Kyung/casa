@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Playwright E2E tests (not React code)
+    "e2e/**",
+    // Sentry configs
+    "sentry.*.config.ts",
   ]),
 ]);
 

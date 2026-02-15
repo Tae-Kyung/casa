@@ -71,11 +71,11 @@ export default function ProjectDetailPage({ params }: PageProps) {
         setProject(result.data)
         setActiveTab(stageToTab[result.data.current_stage] || 'idea')
       } else {
-        toast.error('프로젝트를 불러오는데 실패했습니다.')
+        toast.error(t('toast.projectFetchFailed'))
         router.push('/projects')
       }
     } catch (error) {
-      toast.error('프로젝트를 불러오는데 실패했습니다.')
+      toast.error(t('toast.projectFetchFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -94,13 +94,13 @@ export default function ProjectDetailPage({ params }: PageProps) {
       const result = await response.json()
 
       if (result.success) {
-        toast.success('프로젝트가 삭제되었습니다.')
+        toast.success(t('toast.projectDeleted'))
         router.push('/projects')
       } else {
-        toast.error('프로젝트 삭제에 실패했습니다.')
+        toast.error(t('toast.projectDeleteFailed'))
       }
     } catch (error) {
-      toast.error('프로젝트 삭제에 실패했습니다.')
+      toast.error(t('toast.projectDeleteFailed'))
     }
   }
 

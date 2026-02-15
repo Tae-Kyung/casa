@@ -21,13 +21,6 @@ import { Pagination } from '@/components/common/pagination'
 import { toast } from 'sonner'
 import type { Prompt, PromptCategory } from '@/types/database'
 
-const categoryLabels: Record<PromptCategory, string> = {
-  ideation: '아이디어',
-  evaluation: '평가',
-  document: '문서',
-  marketing: '마케팅',
-}
-
 const categoryColors: Record<PromptCategory, string> = {
   ideation: 'bg-blue-500',
   evaluation: 'bg-green-500',
@@ -37,6 +30,13 @@ const categoryColors: Record<PromptCategory, string> = {
 
 export default function PromptsPage() {
   const t = useTranslations()
+
+  const categoryLabels: Record<PromptCategory, string> = {
+    ideation: t('admin.prompts.categoryIdeation'),
+    evaluation: t('admin.prompts.categoryEvaluation'),
+    document: t('admin.prompts.categoryDocument'),
+    marketing: t('admin.prompts.categoryMarketing'),
+  }
   const [prompts, setPrompts] = useState<Prompt[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -66,7 +66,7 @@ export default function PromptsPage() {
         setTotalPages(result.data.totalPages)
       }
     } catch (error) {
-      toast.error('프롬프트 목록을 불러오는데 실패했습니다.')
+      toast.error(t('admin.prompts.fetchFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -90,12 +90,12 @@ export default function PromptsPage() {
       const result = await response.json()
 
       if (result.success) {
-        toast.success('캐시가 동기화되었습니다.')
+        toast.success(t('admin.prompts.syncCacheSuccess'))
       } else {
-        toast.error('캐시 동기화에 실패했습니다.')
+        toast.error(t('admin.prompts.syncCacheFailed'))
       }
     } catch (error) {
-      toast.error('캐시 동기화에 실패했습니다.')
+      toast.error(t('admin.prompts.syncCacheFailed'))
     }
   }
 
@@ -106,12 +106,12 @@ export default function PromptsPage() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleSyncCache}>
             <RefreshCw className="mr-2 h-4 w-4" />
-            캐시 동기화
+            {t('admin.prompts.syncCache')}
           </Button>
           <Button asChild>
             <Link href="/admin/prompts/new">
               <Plus className="mr-2 h-4 w-4" />
-              새 프롬프트
+              {t('admin.prompts.newPrompt')}
             </Link>
           </Button>
         </div>
@@ -121,7 +121,7 @@ export default function PromptsPage() {
       <div className="flex flex-col gap-4 md:flex-row">
         <form onSubmit={handleSearch} className="flex flex-1 gap-2">
           <Input
-            placeholder="프롬프트 검색..."
+            placeholder={t('admin.prompts.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-sm"
@@ -136,14 +136,14 @@ export default function PromptsPage() {
           setPage(1)
         }}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="카테고리" />
+            <SelectValue placeholder={t('admin.prompts.category')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">전체</SelectItem>
-            <SelectItem value="ideation">아이디어</SelectItem>
-            <SelectItem value="evaluation">평가</SelectItem>
-            <SelectItem value="document">문서</SelectItem>
-            <SelectItem value="marketing">마케팅</SelectItem>
+            <SelectItem value="all">{t('common.all')}</SelectItem>
+            <SelectItem value="ideation">{t('admin.prompts.categoryIdeation')}</SelectItem>
+            <SelectItem value="evaluation">{t('admin.prompts.categoryEvaluation')}</SelectItem>
+            <SelectItem value="document">{t('admin.prompts.categoryDocument')}</SelectItem>
+            <SelectItem value="marketing">{t('admin.prompts.categoryMarketing')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -156,10 +156,10 @@ export default function PromptsPage() {
       ) : prompts.length === 0 ? (
         <EmptyState
           icon={Settings2}
-          title="프롬프트가 없습니다"
-          description="새 프롬프트를 추가해보세요."
+          title={t('admin.prompts.noPrompts')}
+          description={t('admin.prompts.noPromptsDesc')}
           action={{
-            label: '새 프롬프트',
+            label: t('admin.prompts.newPrompt'),
             onClick: () => {},
           }}
         />
@@ -183,7 +183,7 @@ export default function PromptsPage() {
                       <div className="flex items-center gap-2">
                         <Badge variant="outline">v{prompt.version}</Badge>
                         {!prompt.is_active && (
-                          <Badge variant="destructive">비활성</Badge>
+                          <Badge variant="destructive">{t('admin.prompts.inactive')}</Badge>
                         )}
                       </div>
                     </div>
@@ -191,14 +191,14 @@ export default function PromptsPage() {
                   <CardContent>
                     <div className="flex flex-col gap-2 text-sm text-muted-foreground">
                       <div>
-                        <span className="font-medium">키:</span>{' '}
+                        <span className="font-medium">{t('admin.prompts.keyLabel')}</span>{' '}
                         <code className="rounded bg-muted px-1">{prompt.key}</code>
                       </div>
                       {prompt.description && (
                         <p className="line-clamp-2">{prompt.description}</p>
                       )}
                       <div className="flex gap-4">
-                        <span>모델: {prompt.model}</span>
+                        <span>{t('admin.prompts.modelLabel')} {prompt.model}</span>
                         <span>Temperature: {prompt.temperature}</span>
                         <span>Max Tokens: {prompt.max_tokens}</span>
                       </div>

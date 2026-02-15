@@ -54,7 +54,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // 경로에서 로케일 제거
-  const pathWithoutLocale = pathname.replace(/^\/(ko|en|ja|zh)/, '') || '/'
+  const pathWithoutLocale = pathname.replace(/^\/(ko|en)/, '') || '/'
 
   // 공개 경로 체크
   const isPublicPath = publicPaths.some((p) => pathWithoutLocale.startsWith(p))
@@ -75,9 +75,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 관리자 경로 체크 (추후 역할 검증 추가)
-  if (adminPaths.some((p) => pathWithoutLocale.startsWith(p))) {
-    // TODO: 사용자 역할 검증
+  // 관리자 경로 체크 - bi_users에서 역할 검증
+  if (user && adminPaths.some((p) => pathWithoutLocale.startsWith(p))) {
+    const { data: userData } = await supabase
+      .from('bi_users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!userData || (userData.role !== 'admin' && userData.role !== 'mentor')) {
+      const locale = pathname.split('/')[1] || 'ko'
+      const url = request.nextUrl.clone()
+      url.pathname = `/${locale}/dashboard`
+      return NextResponse.redirect(url)
+    }
   }
 
   return response

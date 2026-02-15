@@ -32,13 +32,6 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import type { Project, ProjectStatus } from '@/types/database'
 
-const statusLabels: Record<ProjectStatus, string> = {
-  draft: '초안',
-  in_progress: '진행 중',
-  completed: '완료',
-  archived: '보관됨',
-}
-
 const statusColors: Record<ProjectStatus, string> = {
   draft: 'bg-gray-500',
   in_progress: 'bg-blue-500',
@@ -48,6 +41,13 @@ const statusColors: Record<ProjectStatus, string> = {
 
 export default function ProjectsPage() {
   const t = useTranslations()
+
+  const statusLabels: Record<ProjectStatus, string> = {
+    draft: t('project.draft'),
+    in_progress: t('project.inProgress'),
+    completed: t('project.completed'),
+    archived: t('project.archived'),
+  }
   const router = useRouter()
   const [projects, setProjects] = useState<Project[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -95,7 +95,7 @@ export default function ProjectsPage() {
         setTotalPages(result.data.totalPages)
       }
     } catch (error) {
-      toast.error('프로젝트 목록을 불러오는데 실패했습니다.')
+      toast.error(t('toast.projectListFetchFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -107,7 +107,7 @@ export default function ProjectsPage() {
 
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) {
-      toast.error('프로젝트 이름을 입력해주세요.')
+      toast.error(t('toast.projectNameRequired'))
       return
     }
 
@@ -122,15 +122,15 @@ export default function ProjectsPage() {
       const result = await response.json()
 
       if (result.success) {
-        toast.success('프로젝트가 생성되었습니다.')
+        toast.success(t('toast.projectCreated'))
         setShowCreateModal(false)
         setNewProjectName('')
         router.push(`/projects/${result.data.id}`)
       } else {
-        toast.error(result.error || '프로젝트 생성에 실패했습니다.')
+        toast.error(result.error || t('toast.projectCreateFailed'))
       }
     } catch (error) {
-      toast.error('프로젝트 생성에 실패했습니다.')
+      toast.error(t('toast.projectCreateFailed'))
     } finally {
       setIsCreating(false)
     }
@@ -158,7 +158,7 @@ export default function ProjectsPage() {
                   id="projectName"
                   value={newProjectName}
                   onChange={(e) => setNewProjectName(e.target.value)}
-                  placeholder="프로젝트 이름을 입력하세요"
+                  placeholder={t('toast.projectNameRequired')}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleCreateProject()
                   }}

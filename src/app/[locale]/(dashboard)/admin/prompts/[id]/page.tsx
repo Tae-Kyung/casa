@@ -78,11 +78,11 @@ export default function PromptEditPage({ params }: PageProps) {
       if (result.success) {
         setPrompt(result.data)
       } else {
-        toast.error('프롬프트를 불러오는데 실패했습니다.')
+        toast.error(t('admin.prompts.fetchFailed'))
         router.push('/admin/prompts')
       }
     } catch (error) {
-      toast.error('프롬프트를 불러오는데 실패했습니다.')
+      toast.error(t('admin.prompts.fetchFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -119,7 +119,7 @@ export default function PromptEditPage({ params }: PageProps) {
       const result = await response.json()
 
       if (result.success) {
-        toast.success(isNew ? '프롬프트가 생성되었습니다.' : '프롬프트가 저장되었습니다.')
+        toast.success(isNew ? t('admin.prompts.createSuccess') : t('admin.prompts.saveSuccess'))
         if (isNew) {
           router.push(`/admin/prompts/${result.data.id}`)
         } else {
@@ -128,10 +128,10 @@ export default function PromptEditPage({ params }: PageProps) {
           fetchVersions()
         }
       } else {
-        toast.error(result.error || '저장에 실패했습니다.')
+        toast.error(result.error || t('admin.prompts.saveFailed'))
       }
     } catch (error) {
-      toast.error('저장에 실패했습니다.')
+      toast.error(t('admin.prompts.saveFailed'))
     } finally {
       setIsSaving(false)
     }
@@ -146,15 +146,15 @@ export default function PromptEditPage({ params }: PageProps) {
       const result = await response.json()
 
       if (result.success) {
-        toast.success(`버전 ${version}으로 롤백되었습니다.`)
+        toast.success(t('admin.prompts.rollbackSuccess', { version }))
         setPrompt(result.data)
         fetchVersions()
         setShowVersions(false)
       } else {
-        toast.error('롤백에 실패했습니다.')
+        toast.error(t('admin.prompts.rollbackFailed'))
       }
     } catch (error) {
-      toast.error('롤백에 실패했습니다.')
+      toast.error(t('admin.prompts.rollbackFailed'))
     }
   }
 
@@ -172,12 +172,12 @@ export default function PromptEditPage({ params }: PageProps) {
 
       if (result.success) {
         setTestResult(result.data.response)
-        toast.success(`테스트 완료 (${result.data.latencyMs}ms)`)
+        toast.success(t('admin.prompts.testSuccess', { latency: result.data.latencyMs }))
       } else {
-        toast.error('테스트에 실패했습니다.')
+        toast.error(t('admin.prompts.testFailed'))
       }
     } catch (error) {
-      toast.error('테스트에 실패했습니다.')
+      toast.error(t('admin.prompts.testFailed'))
     } finally {
       setIsTesting(false)
     }
@@ -192,13 +192,13 @@ export default function PromptEditPage({ params }: PageProps) {
       const result = await response.json()
 
       if (result.success) {
-        toast.success('프롬프트가 삭제되었습니다.')
+        toast.success(t('admin.prompts.deleteSuccess'))
         router.push('/admin/prompts')
       } else {
-        toast.error('삭제에 실패했습니다.')
+        toast.error(t('admin.prompts.deleteFailed'))
       }
     } catch (error) {
-      toast.error('삭제에 실패했습니다.')
+      toast.error(t('admin.prompts.deleteFailed'))
     }
   }
 
@@ -236,7 +236,7 @@ export default function PromptEditPage({ params }: PageProps) {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-3xl font-bold">
-            {isNew ? '새 프롬프트' : prompt.name}
+            {isNew ? t('admin.prompts.newPrompt') : prompt.name}
           </h1>
           {!isNew && (
             <Badge variant="outline">v{prompt.version}</Badge>
@@ -249,12 +249,12 @@ export default function PromptEditPage({ params }: PageProps) {
                 <DialogTrigger asChild>
                   <Button variant="outline">
                     <History className="mr-2 h-4 w-4" />
-                    버전 이력
+                    {t('admin.prompts.versionHistory')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
-                    <DialogTitle>버전 이력</DialogTitle>
+                    <DialogTitle>{t('admin.prompts.versionHistory')}</DialogTitle>
                   </DialogHeader>
                   <div className="max-h-96 space-y-2 overflow-y-auto">
                     {versions.map((version) => (
@@ -263,9 +263,9 @@ export default function PromptEditPage({ params }: PageProps) {
                         className="flex items-center justify-between rounded border p-3"
                       >
                         <div>
-                          <div className="font-medium">버전 {version.version}</div>
+                          <div className="font-medium">{t('admin.prompts.version', { version: version.version })}</div>
                           <div className="text-sm text-muted-foreground">
-                            {version.change_note || '변경 사항 없음'}
+                            {version.change_note || t('admin.prompts.noChangeNote')}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {new Date(version.created_at).toLocaleString()}
@@ -276,13 +276,13 @@ export default function PromptEditPage({ params }: PageProps) {
                           size="sm"
                           onClick={() => handleRollback(version.version)}
                         >
-                          롤백
+                          {t('admin.prompts.rollback')}
                         </Button>
                       </div>
                     ))}
                     {versions.length === 0 && (
                       <p className="py-4 text-center text-muted-foreground">
-                        버전 이력이 없습니다.
+                        {t('admin.prompts.noVersions')}
                       </p>
                     )}
                   </div>
@@ -293,17 +293,17 @@ export default function PromptEditPage({ params }: PageProps) {
                 <DialogTrigger asChild>
                   <Button variant="outline">
                     <Play className="mr-2 h-4 w-4" />
-                    테스트
+                    {t('admin.prompts.test')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-3xl">
                   <DialogHeader>
-                    <DialogTitle>프롬프트 테스트</DialogTitle>
+                    <DialogTitle>{t('admin.prompts.promptTest')}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
                     {templateVariables.length > 0 && (
                       <div className="space-y-2">
-                        <Label>변수 입력</Label>
+                        <Label>{t('admin.prompts.variableInput')}</Label>
                         {templateVariables.map((variable) => (
                           <div key={variable} className="flex items-center gap-2">
                             <Label className="w-32">{`{{${variable}}}`}</Label>
@@ -315,7 +315,7 @@ export default function PromptEditPage({ params }: PageProps) {
                                   [variable]: e.target.value,
                                 })
                               }
-                              placeholder={`${variable} 값 입력`}
+                              placeholder={t('admin.prompts.variablePlaceholder', { variable })}
                             />
                           </div>
                         ))}
@@ -325,15 +325,15 @@ export default function PromptEditPage({ params }: PageProps) {
                       {isTesting ? (
                         <>
                           <LoadingSpinner size="sm" className="mr-2" />
-                          테스트 중...
+                          {t('admin.prompts.testing')}
                         </>
                       ) : (
-                        '테스트 실행'
+                        t('admin.prompts.runTest')
                       )}
                     </Button>
                     {testResult && (
                       <div className="space-y-2">
-                        <Label>결과</Label>
+                        <Label>{t('admin.prompts.result')}</Label>
                         <div className="max-h-64 overflow-y-auto rounded bg-muted p-4">
                           <pre className="whitespace-pre-wrap text-sm">
                             {testResult}
@@ -350,7 +350,7 @@ export default function PromptEditPage({ params }: PageProps) {
                 onClick={() => setShowDeleteConfirm(true)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                삭제
+                {t('common.delete')}
               </Button>
             </>
           )}
@@ -358,12 +358,12 @@ export default function PromptEditPage({ params }: PageProps) {
             {isSaving ? (
               <>
                 <LoadingSpinner size="sm" className="mr-2" />
-                저장 중...
+                {t('common.saving')}
               </>
             ) : (
               <>
                 <Save className="mr-2 h-4 w-4" />
-                저장
+                {t('common.save')}
               </>
             )}
           </Button>
@@ -373,33 +373,33 @@ export default function PromptEditPage({ params }: PageProps) {
       {/* 기본 정보 */}
       <Card>
         <CardHeader>
-          <CardTitle>기본 정보</CardTitle>
+          <CardTitle>{t('admin.prompts.basicInfo')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="key">키 (고유 식별자)</Label>
+              <Label htmlFor="key">{t('admin.prompts.keyId')}</Label>
               <Input
                 id="key"
                 value={prompt.key || ''}
                 onChange={(e) => setPrompt({ ...prompt, key: e.target.value })}
                 disabled={!isNew}
-                placeholder="예: idea_expansion"
+                placeholder={t('admin.prompts.keyPlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="name">이름</Label>
+              <Label htmlFor="name">{t('admin.prompts.nameLabel')}</Label>
               <Input
                 id="name"
                 value={prompt.name || ''}
                 onChange={(e) => setPrompt({ ...prompt, name: e.target.value })}
-                placeholder="프롬프트 이름"
+                placeholder={t('admin.prompts.namePlaceholder')}
               />
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="category">카테고리</Label>
+              <Label htmlFor="category">{t('admin.prompts.categoryLabel')}</Label>
               <Select
                 value={prompt.category}
                 onValueChange={(value) =>
@@ -410,15 +410,15 @@ export default function PromptEditPage({ params }: PageProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ideation">아이디어</SelectItem>
-                  <SelectItem value="evaluation">평가</SelectItem>
-                  <SelectItem value="document">문서</SelectItem>
-                  <SelectItem value="marketing">마케팅</SelectItem>
+                  <SelectItem value="ideation">{t('admin.prompts.categoryIdeation')}</SelectItem>
+                  <SelectItem value="evaluation">{t('admin.prompts.categoryEvaluation')}</SelectItem>
+                  <SelectItem value="document">{t('admin.prompts.categoryDocument')}</SelectItem>
+                  <SelectItem value="marketing">{t('admin.prompts.categoryMarketing')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="model">AI 모델</Label>
+              <Label htmlFor="model">{t('admin.prompts.aiModel')}</Label>
               <Select
                 value={prompt.model}
                 onValueChange={(value) => setPrompt({ ...prompt, model: value })}
@@ -435,12 +435,12 @@ export default function PromptEditPage({ params }: PageProps) {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">설명</Label>
+            <Label htmlFor="description">{t('admin.prompts.descriptionLabel')}</Label>
             <Textarea
               id="description"
               value={prompt.description || ''}
               onChange={(e) => setPrompt({ ...prompt, description: e.target.value })}
-              placeholder="프롬프트에 대한 설명"
+              placeholder={t('admin.prompts.descriptionPlaceholder')}
               rows={2}
             />
           </div>
@@ -450,7 +450,7 @@ export default function PromptEditPage({ params }: PageProps) {
       {/* AI 설정 */}
       <Card>
         <CardHeader>
-          <CardTitle>AI 설정</CardTitle>
+          <CardTitle>{t('admin.prompts.aiSettings')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
@@ -488,13 +488,13 @@ export default function PromptEditPage({ params }: PageProps) {
       {/* 프롬프트 내용 */}
       <Card>
         <CardHeader>
-          <CardTitle>시스템 프롬프트</CardTitle>
+          <CardTitle>{t('admin.prompts.systemPrompt')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Textarea
             value={prompt.system_prompt || ''}
             onChange={(e) => setPrompt({ ...prompt, system_prompt: e.target.value })}
-            placeholder="AI의 역할과 행동 지침을 입력하세요..."
+            placeholder={t('admin.prompts.systemPromptPlaceholder')}
             rows={10}
             className="font-mono text-sm"
           />
@@ -503,7 +503,7 @@ export default function PromptEditPage({ params }: PageProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>사용자 프롬프트 템플릿</CardTitle>
+          <CardTitle>{t('admin.prompts.userPromptTemplate')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <Textarea
@@ -511,13 +511,13 @@ export default function PromptEditPage({ params }: PageProps) {
             onChange={(e) =>
               setPrompt({ ...prompt, user_prompt_template: e.target.value })
             }
-            placeholder="사용자 입력 템플릿을 입력하세요. 변수는 {{variable}} 형식으로 사용합니다."
+            placeholder={t('admin.prompts.userPromptPlaceholder')}
             rows={10}
             className="font-mono text-sm"
           />
           {templateVariables.length > 0 && (
             <div>
-              <Label>감지된 변수:</Label>
+              <Label>{t('admin.prompts.detectedVariables')}</Label>
               <div className="mt-1 flex flex-wrap gap-2">
                 {templateVariables.map((variable) => (
                   <Badge key={variable} variant="secondary">
@@ -534,13 +534,13 @@ export default function PromptEditPage({ params }: PageProps) {
       {!isNew && (
         <Card>
           <CardHeader>
-            <CardTitle>변경 노트</CardTitle>
+            <CardTitle>{t('admin.prompts.changeNote')}</CardTitle>
           </CardHeader>
           <CardContent>
             <Input
               value={changeNote}
               onChange={(e) => setChangeNote(e.target.value)}
-              placeholder="이번 변경 사항에 대한 설명 (선택)"
+              placeholder={t('admin.prompts.changeNotePlaceholder')}
             />
           </CardContent>
         </Card>
@@ -550,9 +550,9 @@ export default function PromptEditPage({ params }: PageProps) {
       <ConfirmModal
         open={showDeleteConfirm}
         onOpenChange={setShowDeleteConfirm}
-        title="프롬프트 삭제"
-        description="이 프롬프트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
-        confirmText="삭제"
+        title={t('admin.prompts.deletePrompt')}
+        description={t('admin.prompts.deletePromptDesc')}
+        confirmText={t('common.delete')}
         onConfirm={handleDelete}
         variant="destructive"
       />

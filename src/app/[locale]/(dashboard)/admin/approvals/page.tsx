@@ -113,7 +113,7 @@ export default function ApprovalsPage() {
         setPagination(result.data.pagination)
       }
     } catch (error) {
-      toast.error('승인 목록을 불러오는데 실패했습니다.')
+      toast.error(t('admin.approvals.fetchFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -146,10 +146,10 @@ export default function ApprovalsPage() {
         setComment('')
         fetchApprovals()
       } else {
-        toast.error(result.error || '처리에 실패했습니다.')
+        toast.error(result.error || t('admin.approvals.processFailed'))
       }
     } catch (error) {
-      toast.error('처리에 실패했습니다.')
+      toast.error(t('admin.approvals.processFailed'))
     } finally {
       setIsProcessing(false)
     }
@@ -157,10 +157,10 @@ export default function ApprovalsPage() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { color: 'bg-yellow-500', text: '대기중', icon: Clock },
-      approved: { color: 'bg-green-500', text: '승인됨', icon: CheckCircle },
-      rejected: { color: 'bg-red-500', text: '반려됨', icon: XCircle },
-      revision_requested: { color: 'bg-orange-500', text: '수정요청', icon: RefreshCw },
+      pending: { color: 'bg-yellow-500', text: t('admin.approvals.statusPending'), icon: Clock },
+      approved: { color: 'bg-green-500', text: t('admin.approvals.statusApproved'), icon: CheckCircle },
+      rejected: { color: 'bg-red-500', text: t('admin.approvals.statusRejected'), icon: XCircle },
+      revision_requested: { color: 'bg-orange-500', text: t('admin.approvals.statusRevisionRequested'), icon: RefreshCw },
     }
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending
     const Icon = config.icon
@@ -175,10 +175,10 @@ export default function ApprovalsPage() {
 
   const getGateLabel = (gate: string) => {
     const gateLabels: Record<string, string> = {
-      gate_1: 'Gate 1 (아이디어)',
-      gate_2: 'Gate 2 (평가)',
-      gate_3: 'Gate 3 (문서)',
-      gate_4: 'Gate 4 (최종)',
+      gate_1: t('admin.approvals.gate1Label'),
+      gate_2: t('admin.approvals.gate2Label'),
+      gate_3: t('admin.approvals.gate3Label'),
+      gate_4: t('admin.approvals.gate4Label'),
     }
     return gateLabels[gate] || gate
   }
@@ -187,14 +187,14 @@ export default function ApprovalsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">승인 관리</h1>
+          <h1 className="text-3xl font-bold">{t('admin.approvals.title')}</h1>
           <p className="text-muted-foreground">
-            프로젝트 승인 요청을 검토하고 처리합니다.
+            {t('admin.approvals.description')}
           </p>
         </div>
         <Button variant="outline" onClick={fetchApprovals}>
           <RefreshCw className="mr-2 h-4 w-4" />
-          새로고침
+          {t('common.refresh')}
         </Button>
       </div>
 
@@ -203,27 +203,27 @@ export default function ApprovalsPage() {
         <CardContent className="flex items-center gap-4 py-4">
           <Filter className="h-5 w-5 text-muted-foreground" />
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">상태:</span>
+            <span className="text-sm text-muted-foreground">{t('admin.approvals.statusLabel')}</span>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pending">대기중</SelectItem>
-                <SelectItem value="approved">승인됨</SelectItem>
-                <SelectItem value="rejected">반려됨</SelectItem>
-                <SelectItem value="revision_requested">수정요청</SelectItem>
+                <SelectItem value="pending">{t('admin.approvals.statusPending')}</SelectItem>
+                <SelectItem value="approved">{t('admin.approvals.statusApproved')}</SelectItem>
+                <SelectItem value="rejected">{t('admin.approvals.statusRejected')}</SelectItem>
+                <SelectItem value="revision_requested">{t('admin.approvals.statusRevisionRequested')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">게이트:</span>
+            <span className="text-sm text-muted-foreground">{t('admin.approvals.gateLabel')}</span>
             <Select value={gateFilter} onValueChange={setGateFilter}>
               <SelectTrigger className="w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">전체</SelectItem>
+                <SelectItem value="all">{t('common.all')}</SelectItem>
                 <SelectItem value="gate_1">Gate 1</SelectItem>
                 <SelectItem value="gate_2">Gate 2</SelectItem>
                 <SelectItem value="gate_3">Gate 3</SelectItem>
@@ -243,9 +243,9 @@ export default function ApprovalsPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Clock className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="font-semibold text-lg">승인 요청이 없습니다</h3>
+            <h3 className="font-semibold text-lg">{t('admin.approvals.noApprovals')}</h3>
             <p className="text-sm text-muted-foreground">
-              현재 처리할 승인 요청이 없습니다.
+              {t('admin.approvals.noApprovalsDesc')}
             </p>
           </CardContent>
         </Card>
@@ -268,8 +268,8 @@ export default function ApprovalsPage() {
                       </Button>
                     </CardTitle>
                     <CardDescription>
-                      요청자: {approval.requester?.name || approval.requester?.email} |{' '}
-                      요청일: {new Date(approval.requested_at).toLocaleString()}
+                      {t('admin.approvals.requester', { name: approval.requester?.name || approval.requester?.email })} |{' '}
+                      {t('admin.approvals.requestedAt', { date: new Date(approval.requested_at).toLocaleString() })}
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
@@ -287,7 +287,7 @@ export default function ApprovalsPage() {
                   )}
 
                   <div className="text-sm text-muted-foreground">
-                    <span>프로젝트 소유자: </span>
+                    <span>{t('admin.approvals.projectOwner')} </span>
                     <span className="font-medium text-foreground">
                       {approval.project.user?.name || approval.project.user?.email}
                     </span>
@@ -303,7 +303,7 @@ export default function ApprovalsPage() {
                         }}
                       >
                         <CheckCircle className="mr-2 h-4 w-4" />
-                        승인
+                        {t('admin.approvals.approve')}
                       </Button>
                       <Button
                         variant="outline"
@@ -314,7 +314,7 @@ export default function ApprovalsPage() {
                         }}
                       >
                         <RefreshCw className="mr-2 h-4 w-4" />
-                        수정요청
+                        {t('admin.approvals.requestRevision')}
                       </Button>
                       <Button
                         variant="destructive"
@@ -325,7 +325,7 @@ export default function ApprovalsPage() {
                         }}
                       >
                         <XCircle className="mr-2 h-4 w-4" />
-                        반려
+                        {t('admin.approvals.reject')}
                       </Button>
                     </div>
                   )}
@@ -333,7 +333,7 @@ export default function ApprovalsPage() {
                   {approval.reviewed_at && approval.reviewer && (
                     <div className="rounded-lg border p-3 text-sm">
                       <div className="font-medium">
-                        검토: {approval.reviewer.name || approval.reviewer.email}
+                        {t('admin.approvals.reviewer', { name: approval.reviewer.name || approval.reviewer.email })}
                       </div>
                       <div className="text-muted-foreground">
                         {new Date(approval.reviewed_at).toLocaleString()}
@@ -365,9 +365,9 @@ export default function ApprovalsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {actionType === 'approve' && '승인 확인'}
-              {actionType === 'reject' && '반려 확인'}
-              {actionType === 'request_revision' && '수정 요청'}
+              {actionType === 'approve' && t('admin.approvals.approveConfirm')}
+              {actionType === 'reject' && t('admin.approvals.rejectConfirm')}
+              {actionType === 'request_revision' && t('admin.approvals.revisionRequest')}
             </DialogTitle>
             <DialogDescription>
               {selectedApproval?.project.name}의 {getGateLabel(selectedApproval?.gate || '')}
@@ -377,12 +377,12 @@ export default function ApprovalsPage() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">
-                코멘트 {actionType !== 'approve' && '(필수)'}
+                {t('admin.approvals.commentLabel')} {actionType !== 'approve' && t('admin.approvals.commentRequired')}
               </label>
               <Textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="피드백을 입력하세요..."
+                placeholder={t('admin.approvals.commentPlaceholder')}
                 rows={4}
               />
             </div>
@@ -394,7 +394,7 @@ export default function ApprovalsPage() {
               onClick={() => setSelectedApproval(null)}
               disabled={isProcessing}
             >
-              취소
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleApprovalAction}
@@ -404,13 +404,13 @@ export default function ApprovalsPage() {
               {isProcessing ? (
                 <>
                   <LoadingSpinner size="sm" className="mr-2" />
-                  처리 중...
+                  {t('common.processing')}
                 </>
               ) : (
                 <>
-                  {actionType === 'approve' && '승인'}
-                  {actionType === 'reject' && '반려'}
-                  {actionType === 'request_revision' && '수정 요청'}
+                  {actionType === 'approve' && t('admin.approvals.approve')}
+                  {actionType === 'reject' && t('admin.approvals.reject')}
+                  {actionType === 'request_revision' && t('admin.approvals.requestRevision')}
                 </>
               )}
             </Button>

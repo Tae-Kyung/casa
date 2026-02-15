@@ -94,15 +94,15 @@ export function FeedbackSection({
       const result = await response.json()
 
       if (result.success) {
-        toast.success('피드백이 등록되었습니다.')
+        toast.success(t('feedbackSection.registered'))
         setNewComment('')
         setShowForm(false)
         fetchFeedbacks()
       } else {
-        toast.error(result.error || '피드백 등록에 실패했습니다.')
+        toast.error(result.error || t('feedbackSection.registerFailed'))
       }
     } catch (error) {
-      toast.error('피드백 등록에 실패했습니다.')
+      toast.error(t('feedbackSection.registerFailed'))
     } finally {
       setIsSubmitting(false)
     }
@@ -117,33 +117,33 @@ export function FeedbackSection({
       const result = await response.json()
 
       if (result.success) {
-        toast.success('피드백이 삭제되었습니다.')
+        toast.success(t('feedbackSection.deleted'))
         fetchFeedbacks()
       } else {
-        toast.error(result.error || '피드백 삭제에 실패했습니다.')
+        toast.error(result.error || t('feedbackSection.deleteFailed'))
       }
     } catch (error) {
-      toast.error('피드백 삭제에 실패했습니다.')
+      toast.error(t('feedbackSection.deleteFailed'))
     }
   }
 
   const getTypeConfig = (type: string) => {
     const configs: Record<string, { color: string; label: string }> = {
-      comment: { color: 'bg-blue-500', label: '코멘트' },
-      revision_request: { color: 'bg-orange-500', label: '수정요청' },
-      approval: { color: 'bg-green-500', label: '승인' },
-      rejection: { color: 'bg-red-500', label: '반려' },
+      comment: { color: 'bg-blue-500', label: t('feedbackSection.typeComment') },
+      revision_request: { color: 'bg-orange-500', label: t('feedbackSection.typeRevisionRequest') },
+      approval: { color: 'bg-green-500', label: t('feedbackSection.typeApproval') },
+      rejection: { color: 'bg-red-500', label: t('feedbackSection.typeRejection') },
     }
     return configs[type] || configs.comment
   }
 
   const getStageLabel = (stage: string) => {
     const labels: Record<string, string> = {
-      idea: '아이디어',
-      evaluation: '평가',
-      document: '문서',
-      deploy: '배포',
-      done: '완료',
+      idea: t('project.idea'),
+      evaluation: t('project.evaluation'),
+      document: t('project.document'),
+      deploy: t('project.deploy'),
+      done: t('project.done'),
     }
     return labels[stage] || stage
   }
@@ -163,7 +163,7 @@ export function FeedbackSection({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
-            멘토 피드백
+            {t('feedbackSection.mentorFeedback')}
           </CardTitle>
           {isMentorOrAdmin && (
             <Button
@@ -171,7 +171,7 @@ export function FeedbackSection({
               size="sm"
               onClick={() => setShowForm(!showForm)}
             >
-              {showForm ? '취소' : '피드백 작성'}
+              {showForm ? t('common.cancel') : t('feedback.writeFeedback')}
             </Button>
           )}
         </div>
@@ -182,38 +182,38 @@ export function FeedbackSection({
           <div className="mb-6 space-y-4 rounded-lg border p-4">
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="text-sm font-medium">단계</label>
+                <label className="text-sm font-medium">{t('feedbackSection.stage')}</label>
                 <Select value={newStage} onValueChange={setNewStage}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="idea">아이디어</SelectItem>
-                    <SelectItem value="evaluation">평가</SelectItem>
-                    <SelectItem value="document">문서</SelectItem>
-                    <SelectItem value="deploy">배포</SelectItem>
+                    <SelectItem value="idea">{t('project.idea')}</SelectItem>
+                    <SelectItem value="evaluation">{t('project.evaluation')}</SelectItem>
+                    <SelectItem value="document">{t('project.document')}</SelectItem>
+                    <SelectItem value="deploy">{t('project.deploy')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex-1">
-                <label className="text-sm font-medium">유형</label>
+                <label className="text-sm font-medium">{t('feedbackSection.type')}</label>
                 <Select value={newType} onValueChange={setNewType}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="comment">코멘트</SelectItem>
-                    <SelectItem value="suggestion">제안</SelectItem>
+                    <SelectItem value="comment">{t('feedbackSection.typeComment')}</SelectItem>
+                    <SelectItem value="suggestion">{t('feedbackSection.typeSuggestion')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium">내용</label>
+              <label className="text-sm font-medium">{t('feedbackSection.content')}</label>
               <Textarea
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                placeholder="피드백 내용을 입력하세요..."
+                placeholder={t('feedbackSection.contentPlaceholder')}
                 rows={4}
               />
             </div>
@@ -224,12 +224,12 @@ export function FeedbackSection({
               {isSubmitting ? (
                 <>
                   <LoadingSpinner size="sm" className="mr-2" />
-                  등록 중...
+                  {t('common.registering')}
                 </>
               ) : (
                 <>
                   <Send className="mr-2 h-4 w-4" />
-                  피드백 등록
+                  {t('feedbackSection.register')}
                 </>
               )}
             </Button>
@@ -243,7 +243,7 @@ export function FeedbackSection({
           </div>
         ) : feedbacks.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground">
-            아직 피드백이 없습니다.
+            {t('feedback.noFeedback')}
           </div>
         ) : (
           <div className="space-y-6">
@@ -270,10 +270,10 @@ export function FeedbackSection({
                           <div className="mb-2 flex items-start justify-between">
                             <div className="flex items-center gap-2">
                               <span className="font-medium">
-                                {feedback.author?.name || feedback.author?.email || '알 수 없음'}
+                                {feedback.author?.name || feedback.author?.email || t('common.unknown')}
                               </span>
                               <Badge variant="secondary" className="text-xs">
-                                {feedback.author?.role === 'admin' ? '관리자' : '멘토'}
+                                {feedback.author?.role === 'admin' ? t('feedbackSection.roleAdmin') : t('feedbackSection.roleMentor')}
                               </Badge>
                               <Badge className={`${typeConfig.color} text-white text-xs`}>
                                 {typeConfig.label}

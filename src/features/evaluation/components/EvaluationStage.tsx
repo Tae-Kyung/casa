@@ -110,14 +110,14 @@ export function EvaluationStage({
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || '평가 시작에 실패했습니다.')
+        throw new Error(error.error || t('evaluationStage.evalFailed'))
       }
 
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
 
       if (!reader) {
-        throw new Error('스트리밍을 시작할 수 없습니다.')
+        throw new Error(t('evaluationStage.streamError'))
       }
 
       let buffer = ''
@@ -159,7 +159,7 @@ export function EvaluationStage({
               })
             } else if (event.type === 'complete') {
               const completeData = JSON.parse(event.data)
-              toast.success(`평가 완료! 종합 점수: ${completeData.totalScore}점`)
+              toast.success(t('evaluationStage.evalComplete', { score: completeData.totalScore }))
               onUpdate()
             } else if (event.type === 'error') {
               const errorData = JSON.parse(event.data)
@@ -171,7 +171,7 @@ export function EvaluationStage({
         }
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '평가에 실패했습니다.')
+      toast.error(error instanceof Error ? error.message : t('toast.evalFailed'))
     } finally {
       setIsEvaluating(false)
       setProgress(null)
@@ -192,10 +192,10 @@ export function EvaluationStage({
         setPersonaResults({})
         onUpdate()
       } else {
-        toast.error(result.error || '재평가 요청에 실패했습니다.')
+        toast.error(result.error || t('toast.retryFailed'))
       }
     } catch {
-      toast.error('재평가 요청에 실패했습니다.')
+      toast.error(t('toast.retryFailed'))
     } finally {
       setIsRetrying(false)
     }
@@ -203,7 +203,7 @@ export function EvaluationStage({
 
   const handleDispute = async () => {
     if (disputeComment.length < 10) {
-      toast.error('이의 제기 내용을 10자 이상 작성해주세요.')
+      toast.error(t('evaluationStage.disputeMinLength'))
       return
     }
 
@@ -223,10 +223,10 @@ export function EvaluationStage({
         setDisputeComment('')
         onUpdate()
       } else {
-        toast.error(result.error || '이의 제기에 실패했습니다.')
+        toast.error(result.error || t('toast.disputeFailed'))
       }
     } catch {
-      toast.error('이의 제기에 실패했습니다.')
+      toast.error(t('toast.disputeFailed'))
     } finally {
       setIsSubmittingDispute(false)
     }
@@ -245,10 +245,10 @@ export function EvaluationStage({
         toast.success(result.data.message)
         onUpdate()
       } else {
-        toast.error(result.error || '확정에 실패했습니다.')
+        toast.error(result.error || t('toast.confirmFailed'))
       }
     } catch {
-      toast.error('확정에 실패했습니다.')
+      toast.error(t('toast.confirmFailed'))
     } finally {
       setIsConfirming(false)
     }
@@ -269,18 +269,18 @@ export function EvaluationStage({
   const personaConfig = {
     investor: {
       icon: TrendingUp,
-      label: '투자심사역',
-      description: '투자 가치 및 수익성 관점',
+      label: t('evaluation.investor'),
+      description: t('evaluationStage.investorDesc'),
     },
     market: {
       icon: Users,
-      label: '시장분석가',
-      description: '시장 규모 및 성장 가능성',
+      label: t('evaluation.market'),
+      description: t('evaluationStage.marketDesc'),
     },
     tech: {
       icon: Cpu,
-      label: '기술전문가',
-      description: '기술 실현 가능성 및 차별화',
+      label: t('evaluation.tech'),
+      description: t('evaluationStage.techDesc'),
     },
   }
 
@@ -293,10 +293,10 @@ export function EvaluationStage({
           </div>
           <div>
             <h3 className="font-semibold text-orange-700 dark:text-orange-300">
-              Gate 1 통과 필요
+              {t('evaluationStage.gate1Required')}
             </h3>
             <p className="text-sm text-orange-600 dark:text-orange-400">
-              아이디어 단계(Gate 1)를 먼저 완료해야 평가를 진행할 수 있습니다.
+              {t('evaluationStage.gate1RequiredDesc')}
             </p>
           </div>
         </CardContent>
@@ -327,13 +327,13 @@ export function EvaluationStage({
               })}
             </div>
             <div className="text-center">
-              <h3 className="text-lg font-semibold">AI 다면 평가</h3>
+              <h3 className="text-lg font-semibold">{t('evaluationStage.aiMultiEval')}</h3>
               <p className="text-sm text-muted-foreground">
-                3명의 AI 전문가가 다양한 관점에서 아이디어를 평가합니다.
+                {t('evaluationStage.aiMultiEvalDesc')}
               </p>
             </div>
             <Button size="lg" onClick={handleEvaluate}>
-              평가 시작
+              {t('evaluation.start')}
             </Button>
           </CardContent>
         </Card>
@@ -345,7 +345,7 @@ export function EvaluationStage({
           <CardContent className="py-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="font-medium">{progress.persona} 평가 중...</span>
+                <span className="font-medium">{t('evaluationStage.evaluatingPersona', { persona: progress.persona })}</span>
                 <span className="text-sm text-muted-foreground">
                   {progress.current} / {progress.total}
                 </span>
@@ -375,7 +375,7 @@ export function EvaluationStage({
                     </div>
                     {result && (
                       <Badge variant={getScoreBadgeVariant(result.score)}>
-                        {result.score}점
+                        {t('evaluationStage.score', { score: result.score })}
                       </Badge>
                     )}
                   </div>
@@ -392,7 +392,7 @@ export function EvaluationStage({
                   ) : result ? (
                     <div className="space-y-2">
                       <p className={`text-2xl font-bold ${getScoreColor(result.score)}`}>
-                        {result.score}점
+                        {t('evaluationStage.score', { score: result.score })}
                       </p>
                       <p className="text-sm text-muted-foreground line-clamp-4">
                         {result.feedback}
@@ -400,7 +400,7 @@ export function EvaluationStage({
                     </div>
                   ) : isEvaluating ? (
                     <div className="flex items-center justify-center py-4">
-                      <span className="text-sm text-muted-foreground">대기 중...</span>
+                      <span className="text-sm text-muted-foreground">{t('evaluationStage.waiting')}</span>
                     </div>
                   ) : (
                     <div className="flex items-center justify-center py-4">
@@ -420,18 +420,18 @@ export function EvaluationStage({
           <CardContent className="py-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">종합 점수</h3>
+                <h3 className="text-lg font-semibold">{t('evaluation.totalScore')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  3개 페르소나 평균 점수
+                  {t('evaluationStage.averageScore')}
                 </p>
               </div>
               <div className={`text-4xl font-bold ${getScoreColor(totalScore)}`}>
-                {totalScore}점
+                {t('evaluationStage.score', { score: totalScore })}
               </div>
             </div>
             {evaluation?.recommendations && Array.isArray(evaluation.recommendations) && (
               <div className="mt-4 border-t pt-4">
-                <h4 className="mb-2 font-medium">개선 제안</h4>
+                <h4 className="mb-2 font-medium">{t('evaluation.recommendations')}</h4>
                 <ul className="space-y-1">
                   {(evaluation.recommendations as string[]).slice(0, 5).map((rec, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -453,7 +453,7 @@ export function EvaluationStage({
             <MessageSquare className="h-5 w-5 text-yellow-600" />
             <div>
               <h4 className="font-medium text-yellow-700 dark:text-yellow-300">
-                이의 제기 접수됨
+                {t('evaluationStage.disputeReceived')}
               </h4>
               <p className="mt-1 text-sm text-yellow-600 dark:text-yellow-400">
                 {evaluation.dispute_comment}
@@ -476,12 +476,12 @@ export function EvaluationStage({
                 {isRetrying ? (
                   <>
                     <LoadingSpinner size="sm" className="mr-2" />
-                    처리 중...
+                    {t('common.processing')}
                   </>
                 ) : (
                   <>
                     <RefreshCw className="mr-2 h-4 w-4" />
-                    재평가
+                    {t('evaluationStage.retryEval')}
                   </>
                 )}
               </Button>
@@ -490,7 +490,7 @@ export function EvaluationStage({
                 onClick={() => setShowDisputeDialog(true)}
               >
                 <AlertTriangle className="mr-2 h-4 w-4" />
-                이의 제기
+                {t('evaluation.dispute')}
               </Button>
             </div>
             <Button
@@ -501,12 +501,12 @@ export function EvaluationStage({
               {isConfirming ? (
                 <>
                   <LoadingSpinner size="sm" className="mr-2" />
-                  처리 중...
+                  {t('common.processing')}
                 </>
               ) : (
                 <>
                   <Check className="mr-2 h-5 w-5" />
-                  평가 확정 (Gate 2 통과)
+                  {t('evaluationStage.confirmGate2')}
                 </>
               )}
             </Button>
@@ -523,10 +523,10 @@ export function EvaluationStage({
             </div>
             <div>
               <h3 className="font-semibold text-green-700 dark:text-green-300">
-                Gate 2 통과
+                {t('evaluationStage.gate2Passed')}
               </h3>
               <p className="text-sm text-green-600 dark:text-green-400">
-                평가가 확정되었습니다. 문서 생성 단계로 이동할 수 있습니다.
+                {t('evaluationStage.gate2PassedDesc')}
               </p>
             </div>
           </CardContent>
@@ -537,15 +537,15 @@ export function EvaluationStage({
       <Dialog open={showDisputeDialog} onOpenChange={setShowDisputeDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>이의 제기</DialogTitle>
+            <DialogTitle>{t('evaluationStage.disputeTitle')}</DialogTitle>
             <DialogDescription>
-              평가 결과에 대한 이의가 있으시면 의견을 작성해주세요.
+              {t('evaluationStage.disputeDesc')}
             </DialogDescription>
           </DialogHeader>
           <Textarea
             value={disputeComment}
             onChange={(e) => setDisputeComment(e.target.value)}
-            placeholder="이의 제기 내용을 작성해주세요. (최소 10자)"
+            placeholder={t('evaluationStage.disputePlaceholder')}
             rows={5}
           />
           <DialogFooter>
@@ -553,7 +553,7 @@ export function EvaluationStage({
               variant="outline"
               onClick={() => setShowDisputeDialog(false)}
             >
-              취소
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleDispute}
@@ -562,10 +562,10 @@ export function EvaluationStage({
               {isSubmittingDispute ? (
                 <>
                   <LoadingSpinner size="sm" className="mr-2" />
-                  제출 중...
+                  {t('common.submitting')}
                 </>
               ) : (
-                '제출'
+                t('common.submit')
               )}
             </Button>
           </DialogFooter>

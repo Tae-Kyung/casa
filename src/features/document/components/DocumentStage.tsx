@@ -40,32 +40,6 @@ interface DocumentStageProps {
 
 type DocumentTypeKey = 'business_plan' | 'pitch' | 'landing'
 
-const documentConfig: Record<DocumentTypeKey, {
-  icon: typeof FileText
-  label: string
-  description: string
-  apiPath: string
-}> = {
-  business_plan: {
-    icon: FileText,
-    label: '사업계획서',
-    description: '상세한 사업 계획 문서',
-    apiPath: 'business-plan',
-  },
-  pitch: {
-    icon: Presentation,
-    label: '요약 피치',
-    description: '투자자용 요약 발표 자료',
-    apiPath: 'pitch',
-  },
-  landing: {
-    icon: Globe,
-    label: '랜딩페이지',
-    description: '고객용 웹 페이지',
-    apiPath: 'landing',
-  },
-}
-
 export function DocumentStage({
   projectId,
   documents,
@@ -74,6 +48,32 @@ export function DocumentStage({
   onUpdate,
 }: DocumentStageProps) {
   const t = useTranslations()
+
+  const documentConfig: Record<DocumentTypeKey, {
+    icon: typeof FileText
+    label: string
+    description: string
+    apiPath: string
+  }> = {
+    business_plan: {
+      icon: FileText,
+      label: t('document.businessPlan'),
+      description: t('documentStage.businessPlanDesc'),
+      apiPath: 'business-plan',
+    },
+    pitch: {
+      icon: Presentation,
+      label: t('document.pitch'),
+      description: t('documentStage.pitchDesc'),
+      apiPath: 'pitch',
+    },
+    landing: {
+      icon: Globe,
+      label: t('document.landing'),
+      description: t('documentStage.landingDesc'),
+      apiPath: 'landing',
+    },
+  }
   const [generatingType, setGeneratingType] = useState<DocumentTypeKey | null>(null)
   const [streamingContent, setStreamingContent] = useState('')
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
@@ -104,14 +104,14 @@ export function DocumentStage({
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || '문서 생성에 실패했습니다.')
+        throw new Error(error.error || t('documentStage.generateFailed'))
       }
 
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
 
       if (!reader) {
-        throw new Error('스트리밍을 시작할 수 없습니다.')
+        throw new Error(t('documentStage.streamError'))
       }
 
       let buffer = ''
@@ -134,7 +134,7 @@ export function DocumentStage({
             if (event.type === 'text') {
               setStreamingContent(prev => prev + event.data)
             } else if (event.type === 'complete') {
-              toast.success(`${documentConfig[type].label} 생성 완료!`)
+              toast.success(t('documentStage.generateComplete', { label: documentConfig[type].label }))
               onUpdate()
             }
           } catch {
@@ -143,7 +143,7 @@ export function DocumentStage({
         }
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '문서 생성에 실패했습니다.')
+      toast.error(error instanceof Error ? error.message : t('documentStage.generateFailed'))
     } finally {
       setGeneratingType(null)
       setStreamingContent('')
@@ -164,10 +164,10 @@ export function DocumentStage({
         toast.success(result.data.message)
         onUpdate()
       } else {
-        toast.error(result.error || '확정에 실패했습니다.')
+        toast.error(result.error || t('toast.confirmFailed'))
       }
     } catch {
-      toast.error('확정에 실패했습니다.')
+      toast.error(t('toast.confirmFailed'))
     } finally {
       setConfirmingId(null)
     }
@@ -212,14 +212,14 @@ export function DocumentStage({
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || '섹션 수정에 실패했습니다.')
+        throw new Error(error.error || t('documentStage.reviseFailed'))
       }
 
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
 
       if (!reader) {
-        throw new Error('스트리밍을 시작할 수 없습니다.')
+        throw new Error(t('documentStage.streamError'))
       }
 
       let buffer = ''
@@ -248,7 +248,7 @@ export function DocumentStage({
               // 파싱 오류 무시
             }
           } else if (eventType === 'complete') {
-            toast.success('섹션이 수정되었습니다.')
+            toast.success(t('documentStage.reviseComplete'))
             onUpdate()
             setReviseDoc(null)
             setReviseSection('')
@@ -257,7 +257,7 @@ export function DocumentStage({
         }
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '섹션 수정에 실패했습니다.')
+      toast.error(error instanceof Error ? error.message : t('documentStage.reviseFailed'))
     } finally {
       setIsRevising(false)
       setReviseStreamContent('')
@@ -280,10 +280,10 @@ export function DocumentStage({
           </div>
           <div>
             <h3 className="font-semibold text-orange-700 dark:text-orange-300">
-              Gate 2 통과 필요
+              {t('documentStage.gate2Required')}
             </h3>
             <p className="text-sm text-orange-600 dark:text-orange-400">
-              평가 단계(Gate 2)를 먼저 완료해야 문서를 생성할 수 있습니다.
+              {t('documentStage.gate2RequiredDesc')}
             </p>
           </div>
         </CardContent>
@@ -300,13 +300,13 @@ export function DocumentStage({
         <CardContent className="py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold">문서 생성 현황</h3>
+              <h3 className="font-semibold">{t('documentStage.docStatus')}</h3>
               <p className="text-sm text-muted-foreground">
-                3개 문서 모두 확정하면 Gate 3를 통과합니다.
+                {t('documentStage.docStatusDesc')}
               </p>
             </div>
             <Badge variant={confirmedCount === 3 ? 'default' : 'secondary'}>
-              {confirmedCount} / 3 확정
+              {t('documentStage.confirmedCount', { count: confirmedCount })}
             </Badge>
           </div>
         </CardContent>
@@ -329,7 +329,7 @@ export function DocumentStage({
                     <CardTitle className="text-base">{config.label}</CardTitle>
                   </div>
                   {doc?.is_confirmed && (
-                    <Badge className="bg-green-500">확정됨</Badge>
+                    <Badge className="bg-green-500">{t('documentStage.confirmed')}</Badge>
                   )}
                 </div>
                 <CardDescription>{config.description}</CardDescription>
@@ -339,7 +339,7 @@ export function DocumentStage({
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <LoadingSpinner size="sm" />
-                      <span className="text-sm">생성 중...</span>
+                      <span className="text-sm">{t('documentStage.generating')}</span>
                     </div>
                     {streamingContent && (
                       <div className="max-h-32 overflow-y-auto rounded bg-muted p-2">
@@ -352,7 +352,7 @@ export function DocumentStage({
                 ) : doc ? (
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
-                      생성일: {new Date(doc.created_at).toLocaleDateString()}
+                      {t('documentStage.createdAt', { date: new Date(doc.created_at).toLocaleDateString() })}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -361,7 +361,7 @@ export function DocumentStage({
                         onClick={() => setPreviewDoc(doc)}
                       >
                         <Eye className="mr-1 h-4 w-4" />
-                        미리보기
+                        {t('document.preview')}
                       </Button>
                       <Button
                         size="sm"
@@ -369,7 +369,7 @@ export function DocumentStage({
                         onClick={() => handleDownload(doc)}
                       >
                         <Download className="mr-1 h-4 w-4" />
-                        다운로드
+                        {t('document.download')}
                       </Button>
                     </div>
                     {!doc.is_confirmed && (
@@ -383,10 +383,10 @@ export function DocumentStage({
                             setReviseInstruction('')
                           }}
                           disabled={!!generatingType || doc.type === 'landing'}
-                          title={doc.type === 'landing' ? '랜딩페이지는 섹션 수정을 지원하지 않습니다' : ''}
+                          title={doc.type === 'landing' ? t('documentStage.landingNoRevise') : ''}
                         >
                           <Edit3 className="mr-1 h-4 w-4" />
-                          섹션 수정
+                          {t('documentStage.sectionRevise')}
                         </Button>
                         <Button
                           size="sm"
@@ -395,7 +395,7 @@ export function DocumentStage({
                           disabled={!!generatingType}
                         >
                           <RefreshCw className="mr-1 h-4 w-4" />
-                          재생성
+                          {t('documentStage.regenerate')}
                         </Button>
                         <Button
                           size="sm"
@@ -407,7 +407,7 @@ export function DocumentStage({
                           ) : (
                             <Check className="mr-1 h-4 w-4" />
                           )}
-                          확정
+                          {t('common.confirm')}
                         </Button>
                       </div>
                     )}
@@ -418,7 +418,7 @@ export function DocumentStage({
                     onClick={() => handleGenerate(type)}
                     disabled={!!generatingType}
                   >
-                    {config.label} 생성
+                    {t('documentStage.generate', { label: config.label })}
                   </Button>
                 )}
               </CardContent>
@@ -436,10 +436,10 @@ export function DocumentStage({
             </div>
             <div>
               <h3 className="font-semibold text-green-700 dark:text-green-300">
-                Gate 3 통과
+                {t('documentStage.gate3Passed')}
               </h3>
               <p className="text-sm text-green-600 dark:text-green-400">
-                모든 문서가 확정되었습니다. 배포 단계로 이동할 수 있습니다.
+                {t('documentStage.gate3PassedDesc')}
               </p>
             </div>
           </CardContent>
@@ -474,11 +474,11 @@ export function DocumentStage({
       <Dialog open={!!reviseDoc} onOpenChange={() => !isRevising && setReviseDoc(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>섹션 수정 - {reviseDoc?.title}</DialogTitle>
+            <DialogTitle>{t('documentStage.sectionReviseDialogTitle', { title: reviseDoc?.title || '' })}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="section">수정할 섹션</Label>
+              <Label htmlFor="section">{t('documentStage.sectionLabel')}</Label>
               <div className="mt-1.5">
                 {extractSections(reviseDoc?.content || '').length > 0 ? (
                   <select
@@ -488,7 +488,7 @@ export function DocumentStage({
                     className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                     disabled={isRevising}
                   >
-                    <option value="">섹션을 선택하세요</option>
+                    <option value="">{t('documentStage.selectSection')}</option>
                     {extractSections(reviseDoc?.content || '').map((section) => (
                       <option key={section} value={section}>
                         {section}
@@ -500,19 +500,19 @@ export function DocumentStage({
                     id="section"
                     value={reviseSection}
                     onChange={(e) => setReviseSection(e.target.value)}
-                    placeholder="수정할 섹션명을 입력하세요"
+                    placeholder={t('documentStage.sectionInputPlaceholder')}
                     disabled={isRevising}
                   />
                 )}
               </div>
             </div>
             <div>
-              <Label htmlFor="instruction">수정 지시사항</Label>
+              <Label htmlFor="instruction">{t('documentStage.instructionLabel')}</Label>
               <Textarea
                 id="instruction"
                 value={reviseInstruction}
                 onChange={(e) => setReviseInstruction(e.target.value)}
-                placeholder="어떻게 수정해야 하는지 상세히 설명해주세요. (예: 시장 규모 데이터를 최신 자료로 업데이트해주세요)"
+                placeholder={t('documentStage.instructionPlaceholder')}
                 rows={4}
                 disabled={isRevising}
                 className="mt-1.5"
@@ -520,7 +520,7 @@ export function DocumentStage({
             </div>
             {isRevising && reviseStreamContent && (
               <div className="rounded-lg bg-muted p-3">
-                <p className="mb-2 text-sm font-medium">수정 중...</p>
+                <p className="mb-2 text-sm font-medium">{t('documentStage.revising')}</p>
                 <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap text-xs">
                   {reviseStreamContent}
                 </pre>
@@ -533,7 +533,7 @@ export function DocumentStage({
               onClick={() => setReviseDoc(null)}
               disabled={isRevising}
             >
-              취소
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleRevise}
@@ -542,12 +542,12 @@ export function DocumentStage({
               {isRevising ? (
                 <>
                   <LoadingSpinner size="sm" className="mr-2" />
-                  수정 중...
+                  {t('documentStage.revising')}
                 </>
               ) : (
                 <>
                   <Edit3 className="mr-2 h-4 w-4" />
-                  섹션 수정
+                  {t('documentStage.sectionRevise')}
                 </>
               )}
             </Button>

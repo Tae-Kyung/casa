@@ -37,7 +37,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>{t('theme')}</CardTitle>
             <CardDescription>
-              Select your preferred theme
+              {t('themeDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -96,7 +96,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>{t('language')}</CardTitle>
             <CardDescription>
-              Select your preferred language
+              {t('languageDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
