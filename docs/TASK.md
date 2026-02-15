@@ -1029,10 +1029,15 @@ PRD.md에 정의된 CASA MVP를 **견고하고 즉시 사용 가능한 수준**�
 - [x] **T8.5.2** Critical 버그 수정
   - `src/middleware.ts`: 로케일 regex `/(ko|en|ja|zh)/` → `/(ko|en)/` 수정
   - `src/middleware.ts`: admin 역할 검증 TODO → bi_users 테이블 role 조회 로직 구현
+  - `src/middleware.ts`: i18n 응답 덮어쓰기 버그 수정 (리다이렉트 루프 해결)
+  - `supabase/triggers.sql`: handle_new_user locale 캐스팅 안전하게 수정
+  - `EmptyState` 서버 컴포넌트 직렬화 에러 수정 (icon을 ReactNode로, onClick→href)
 - [x] **T8.5.3** Major 버그 수정
   - 12개 파일 하드코딩 한국어/영어 문자열 → i18n 키 전환 (150+ 키 추가)
+  - 로그인 페이지 에러 메시지: 실제 Supabase 에러 표시하도록 개선
 - [x] **T8.5.4** Minor 버그는 백로그로 이동
   - `dashboard-layout.tsx` ESLint 경고 2건 (pre-existing, 기능 영향 없음)
+  - `/forgot-password`를 publicPaths에 추가
 
 ### Phase 8 완료 체크리스트
 - [x] E2E 테스트 전체 통과
@@ -1054,14 +1059,12 @@ PRD.md에 정의된 CASA MVP를 **견고하고 즉시 사용 가능한 수준**�
 
 #### T9.1: Vercel 배포 설정
 
-- [ ] **T9.1.1** Vercel 프로젝트 연결
-  - GitHub 리포지토리 연결
+- [x] **T9.1.1** Vercel 프로젝트 연결
+  - GitHub 리포지토리 연결, 자동 배포 파이프라인 동작 확인 (casa-sable.vercel.app)
   - **완료 조건:** 자동 배포 파이프라인 동작
 
-- [ ] **T9.1.2** 환경 변수 설정 (Production)
-  - Supabase Production 키
-  - Claude API 키
-  - Upstash Redis Production
+- [x] **T9.1.2** 환경 변수 설정 (Production)
+  - Supabase Production 키, AI API 키 등 Vercel에 설정 완료
   - **완료 조건:** 프로덕션 환경 변수 설정 완료
 
 - [ ] **T9.1.3** 도메인 설정
@@ -1129,7 +1132,7 @@ PRD.md에 정의된 CASA MVP를 **견고하고 즉시 사용 가능한 수준**�
   - **완료 조건:** 첫 베타 사용자 가입/사용
 
 ### Phase 9 완료 체크리스트
-- [ ] Vercel 프로덕션 배포 완료
+- [x] Vercel 프로덕션 배포 완료
 - [ ] 커스텀 도메인 연결 완료
 - [ ] 모니터링 설정 완료
 - [ ] 베타 테스터 10팀 확보
@@ -1198,8 +1201,8 @@ T1 (DB & Auth)            T2 (공통 UI)
 | Phase 6 | ✅ | 14 | 15 | 93% |
 | Phase 7 | ✅ | 13 | 13 | 100% |
 | Phase 8 | 🔄 | 11 | 16 | 69% |
-| Phase 9 | 🔄 | 2 | 14 | 14% |
-| **전체** | **🔄** | **134** | **154** | **87%** |
+| Phase 9 | 🔄 | 4 | 14 | 29% |
+| **전체** | **🔄** | **136** | **154** | **88%** |
 
 ---
 
