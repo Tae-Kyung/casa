@@ -88,7 +88,7 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
               description={t('createFirst')}
               action={{
                 label: tProject('title'),
-                onClick: () => {},
+                href: '/projects/new',
               }}
             />
           ) : (
