@@ -20,7 +20,7 @@ export function HeroSection() {
   return (
     <section className="relative min-h-[100dvh] flex items-center pt-16">
       {/* Background pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_theme(colors.primary/0.05)_1px,_transparent_0)] [background-size:24px_24px]" />
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_1px_1px,_theme(colors.primary/0.05)_1px,_transparent_0)] [background-size:24px_24px]" />
 
       <div className="container mx-auto px-4 py-16 md:py-20">
         <div className="grid lg:grid-cols-5 gap-12 items-center">

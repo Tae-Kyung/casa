@@ -119,7 +119,7 @@ export default function SignupPage() {
               />
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="pt-2">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? t('common.loading') : t('auth.signup')}
             </Button>
