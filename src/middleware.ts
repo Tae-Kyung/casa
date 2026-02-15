@@ -4,7 +4,7 @@ import createMiddleware from 'next-intl/middleware'
 import { routing } from './i18n/routing'
 
 // 인증이 필요 없는 경로
-const publicPaths = ['/login', '/signup', '/auth/callback']
+const publicPaths = ['/login', '/signup', '/auth/callback', '/forgot-password']
 
 // 관리자만 접근 가능한 경로
 const adminPaths = ['/admin']
@@ -23,9 +23,9 @@ export async function middleware(request: NextRequest) {
 
   // next-intl 미들웨어 적용
   const handleI18nRouting = createMiddleware(routing)
-  let response = handleI18nRouting(request)
+  const response = handleI18nRouting(request)
 
-  // Supabase 세션 갱신
+  // Supabase 세션 갱신 — 기존 i18n 응답에 쿠키만 추가
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -38,9 +38,6 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
-          response = NextResponse.next({
-            request,
-          })
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           )

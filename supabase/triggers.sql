@@ -14,7 +14,7 @@ BEGIN
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
     'user',
-    COALESCE((NEW.raw_user_meta_data->>'locale')::locale, 'ko'),
+    COALESCE(NULLIF(NEW.raw_user_meta_data->>'locale', '')::locale, 'ko'::locale),
     'system'
   );
   RETURN NEW;
