@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
 import { ArrowRight, Zap, BarChart3, Rocket, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
