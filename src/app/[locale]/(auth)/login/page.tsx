@@ -39,7 +39,8 @@ export default function LoginPage() {
     })
 
     if (error) {
-      toast.error(t('auth.invalidCredentials'))
+      console.error('Login error:', error.message, error.status)
+      toast.error(error.message)
       setIsLoading(false)
       return
     }
