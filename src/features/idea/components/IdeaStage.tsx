@@ -57,7 +57,13 @@ export function IdeaStage({
   useEffect(() => {
     if (streamData) {
       try {
-        const parsed = JSON.parse(streamData)
+        // markdown 코드 펜스 제거 (```json ... ``` 또는 ``` ... ```)
+        let cleanData = streamData.trim()
+        const fenceMatch = cleanData.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/)
+        if (fenceMatch) {
+          cleanData = fenceMatch[1].trim()
+        }
+        const parsed = JSON.parse(cleanData)
         setExpandedIdea(parsed)
       } catch {
         // JSON 파싱 실패 시 raw로 저장

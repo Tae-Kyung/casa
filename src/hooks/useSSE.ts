@@ -62,6 +62,8 @@ export function useSSE(options: SSEOptions = {}): UseSSEResult {
 
         const decoder = new TextDecoder()
         let buffer = ''
+        let currentEventType: string | null = null
+        let doneReceived = false
 
         while (true) {
           const { done, value } = await reader.read()
@@ -76,44 +78,33 @@ export function useSSE(options: SSEOptions = {}): UseSSEResult {
 
           for (const line of lines) {
             if (line.startsWith('event: ')) {
-              const eventType = line.slice(7)
-
-              // 다음 줄에서 데이터 읽기
-              const dataLineIndex = lines.indexOf(line) + 1
-              if (dataLineIndex < lines.length) {
-                const dataLine = lines[dataLineIndex]
-                if (dataLine.startsWith('data: ')) {
-                  try {
-                    const eventData = JSON.parse(dataLine.slice(6))
-
-                    if (eventType === 'text') {
-                      setData((prev) => prev + eventData)
-                      options.onMessage?.(eventData)
-                    } else if (eventType === 'error') {
-                      setError(eventData)
-                      options.onError?.(eventData)
-                    } else if (eventType === 'done') {
-                      options.onDone?.()
-                    }
-                  } catch {
-                    // JSON 파싱 실패 무시
-                  }
-                }
-              }
+              currentEventType = line.slice(7)
             } else if (line.startsWith('data: ')) {
-              // 단순 data 형식
+              const eventType = currentEventType || 'text'
               try {
                 const eventData = JSON.parse(line.slice(6))
-                setData((prev) => prev + eventData)
-                options.onMessage?.(eventData)
+
+                if (eventType === 'text') {
+                  setData((prev) => prev + eventData)
+                  options.onMessage?.(eventData)
+                } else if (eventType === 'error') {
+                  setError(eventData)
+                  options.onError?.(eventData)
+                } else if (eventType === 'done') {
+                  doneReceived = true
+                  options.onDone?.()
+                }
               } catch {
                 // JSON 파싱 실패 무시
               }
+              currentEventType = null
             }
           }
         }
 
-        options.onDone?.()
+        if (!doneReceived) {
+          options.onDone?.()
+        }
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
           // 사용자가 중단한 경우

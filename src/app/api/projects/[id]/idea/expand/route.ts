@@ -69,7 +69,13 @@ export async function POST(
 
       // 스트리밍 완료 후 결과 저장
       try {
-        const parsed = JSON.parse(fullContent)
+        // markdown 코드 펜스 제거 (```json ... ``` 또는 ``` ... ```)
+        let cleanContent = fullContent.trim()
+        const fenceMatch = cleanContent.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/)
+        if (fenceMatch) {
+          cleanContent = fenceMatch[1].trim()
+        }
+        const parsed = JSON.parse(cleanContent)
 
         await supabase
           .from('bi_idea_cards')
