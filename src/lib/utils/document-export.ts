@@ -121,12 +121,20 @@ ${bodyHtml}
 export async function exportToPdf(title: string, markdown: string): Promise<void> {
   const html = markdownToStyledHtml(title, markdown)
 
+  // 현재 스크롤 위치 저장
+  const scrollX = window.scrollX
+  const scrollY = window.scrollY
+
   const container = document.createElement('div')
   container.innerHTML = html
-  container.style.position = 'absolute'
+  container.style.position = 'fixed'
   container.style.left = '-9999px'
   container.style.top = '0'
   container.style.width = '210mm'
+  container.style.zIndex = '-9999'
+  container.style.overflow = 'hidden'
+  container.style.opacity = '0'
+  container.style.pointerEvents = 'none'
   document.body.appendChild(container)
 
   try {
@@ -140,6 +148,9 @@ export async function exportToPdf(title: string, markdown: string): Promise<void
         scale: 2,
         useCORS: true,
         letterRendering: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: container.scrollWidth,
       },
       jsPDF: {
         unit: 'mm' as const,
@@ -152,6 +163,8 @@ export async function exportToPdf(title: string, markdown: string): Promise<void
     await html2pdf().set(opt).from(container).save()
   } finally {
     document.body.removeChild(container)
+    // 스크롤 위치 복원
+    window.scrollTo(scrollX, scrollY)
   }
 }
 
