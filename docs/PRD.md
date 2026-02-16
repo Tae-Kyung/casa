@@ -181,8 +181,10 @@
 │                                                                 │
 │  📄 생성된 문서 (3)                                             │
 │  ┌───────────────────────────────────────────────────────────┐ │
-│  │ ✅ 사업계획서.pdf     [미리보기] [수정요청] [다운로드]    │ │
-│  │ ⏳ 요약 피치.pdf      [미리보기] [수정요청] [다운로드]    │ │
+│  │ ✅ 사업계획서         [미리보기] [수정요청] [다운로드 ▼]  │ │
+│  │                       MD / PDF / Word                     │ │
+│  │ ⏳ 요약 피치           [미리보기] [수정요청] [다운로드 ▼]  │ │
+│  │                       MD / PDF / Word                     │ │
 │  │ ⏳ 랜딩페이지.html    [미리보기] [수정요청] [다운로드]    │ │
 │  └───────────────────────────────────────────────────────────┘ │
 │                                                                 │
@@ -486,15 +488,15 @@ POST /api/projects/{id}/evaluation/dispute  # 이의 제기
 |------|------|
 | **목적** | 검증된 아이디어로 창업 필수 문서 자동 생성 |
 | **입력** | 확정된 아이디어 + 승인된 평가 결과 (Gate 1, 2 통과) |
-| **출력** | 사업계획서(MD/PDF), 요약 피치(1페이지), 랜딩페이지(HTML) |
+| **출력** | 사업계획서(MD/PDF/Word), 요약 피치(MD/PDF/Word), 랜딩페이지(HTML) |
 | **승인 게이트** | Gate 3: 문서별 검토 및 수정 요청, 최종 확정 |
 
 **문서 유형 및 담당 AI:**
 
 | 문서 | 형식 | 담당 AI (MVP) | 담당 AI (확장) | 용도 |
 |------|------|---------------|----------------|------|
-| **사업계획서** | Markdown → PDF | Claude | Claude (논리, 양식 준수) | 정부지원, 투자 |
-| **요약 피치** | Markdown → PDF | Claude | GPT-4o (스토리텔링) | 엘리베이터 피치 |
+| **사업계획서** | Markdown → PDF/Word | Claude | Claude (논리, 양식 준수) | 정부지원, 투자 |
+| **요약 피치** | Markdown → PDF/Word | Claude | GPT-4o (스토리텔링) | 엘리베이터 피치 |
 | **랜딩페이지** | HTML (Tailwind) | Claude | Claude (코드 생성) | 서비스 홍보 |
 
 **사용자 플로우 (Human-in-the-Loop 적용):**
@@ -505,7 +507,7 @@ POST /api/projects/{id}/evaluation/dispute  # 이의 제기
    - 섹션별 수정 요청 가능
    - 전체 재생성 요청 가능
 4. 수정 요청 시 AI가 해당 섹션만 재생성
-5. 모든 문서 확정 후 다운로드/배포 준비 단계 진행
+5. 모든 문서 확정 후 다운로드(MD/PDF/Word)/배포 준비 단계 진행
 
 **API 엔드포인트:**
 ```
@@ -517,7 +519,7 @@ GET  /api/projects/{id}/documents/{docId}/preview   # 문서 미리보기
 POST /api/projects/{id}/documents/{docId}/revise    # 섹션 수정 요청
 POST /api/projects/{id}/documents/{docId}/regenerate  # 전체 재생성
 POST /api/projects/{id}/documents/{docId}/confirm   # 문서 확정 (Gate 3)
-GET  /api/projects/{id}/documents/{docId}/download  # 다운로드 (Signed URL)
+GET  /api/projects/{id}/documents/{docId}/download  # 다운로드 (클라이언트 측 MD/PDF/Word 변환)
 ```
 
 #### F4: 배포 준비 및 최종 승인
@@ -1268,7 +1270,7 @@ src/
 │   │   │   │       ├── page.tsx  # 프로젝트 상세
 │   │   │   │       ├── idea/page.tsx
 │   │   │   │       ├── evaluation/page.tsx
-│   │   │   │       └── documents/page.tsx
+│   │   │   │       └── documents/page.tsx  # PDF/Word 다운로드 지원
 │   │   │   └── layout.tsx        # 대시보드 레이아웃
 │   │   └── layout.tsx            # 로케일 레이아웃
 │   ├── api/
@@ -1961,6 +1963,10 @@ export function detectLanguage(text: string): 'ko' | 'en' | 'ja' | 'zh' {
     "pitch": "요약 피치",
     "landing": "랜딩페이지",
     "download": "다운로드",
+    "downloadAs": "다운로드",
+    "downloadMd": "마크다운 (.md)",
+    "downloadPdf": "PDF (.pdf)",
+    "downloadDoc": "Word (.doc)",
     "generate": "생성하기"
   },
   "empty": {
@@ -2049,6 +2055,10 @@ export function detectLanguage(text: string): 'ko' | 'en' | 'ja' | 'zh' {
     "pitch": "Pitch Summary",
     "landing": "Landing Page",
     "download": "Download",
+    "downloadAs": "Download",
+    "downloadMd": "Markdown (.md)",
+    "downloadPdf": "PDF (.pdf)",
+    "downloadDoc": "Word (.doc)",
     "generate": "Generate"
   },
   "empty": {
@@ -2761,7 +2771,7 @@ export const maxDuration = 120;
 - [ ] 요약 피치 생성
 - [ ] 랜딩페이지 생성
 - [ ] **Gate 3: 문서 검토 UI (사용자 수정 요청/확정)**
-- [ ] 문서 다운로드 (PDF 변환)
+- [x] 문서 다운로드 (PDF/Word 변환 — 클라이언트 사이드 marked + html2pdf.js)
 
 ### Phase 4: 마무리 (Week 7-8)
 
