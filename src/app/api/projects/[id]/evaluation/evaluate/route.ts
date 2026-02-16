@@ -240,13 +240,30 @@ Keep each array item concise (1 sentence). Do NOT exceed 5 items per array.`
 
               try {
                 const raw = JSON.parse(cleanContent) as Record<string, unknown>
-                // summary → feedback 필드 정규화
+
+                // 디버그: AI 응답의 실제 필드명 로깅
+                console.log(`[eval:${persona.name}:${provider}] response keys:`, Object.keys(raw))
+
+                // 필드 정규화 헬퍼: 여러 후보 키에서 배열 추출
+                const findArray = (...keys: string[]): string[] | undefined => {
+                  for (const k of keys) {
+                    if (Array.isArray(raw[k]) && raw[k].length > 0) return raw[k] as string[]
+                  }
+                  return undefined
+                }
+                const findString = (...keys: string[]): string => {
+                  for (const k of keys) {
+                    if (typeof raw[k] === 'string' && raw[k]) return raw[k] as string
+                  }
+                  return ''
+                }
+
                 const parsed: PersonaResult = {
                   score: typeof raw.score === 'number' ? raw.score : 0,
-                  feedback: (raw.feedback || raw.summary || raw.analysis || raw.comment || '') as string,
-                  strengths: Array.isArray(raw.strengths) ? raw.strengths : undefined,
-                  weaknesses: Array.isArray(raw.weaknesses) ? raw.weaknesses : undefined,
-                  recommendations: Array.isArray(raw.recommendations) ? raw.recommendations : undefined,
+                  feedback: findString('feedback', 'summary', 'analysis', 'comment', 'overall', 'evaluation'),
+                  strengths: findArray('strengths', 'strength', 'pros', 'advantages', 'positive_points'),
+                  weaknesses: findArray('weaknesses', 'weakness', 'cons', 'disadvantages', 'risks', 'negative_points', 'challenges'),
+                  recommendations: findArray('recommendations', 'recommendation', 'suggestions', 'improvements', 'action_items'),
                   provider,
                   model: displayName,
                 }
