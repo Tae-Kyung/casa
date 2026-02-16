@@ -73,13 +73,13 @@ Return ONLY the revised section content, not the entire document.
 Write in Korean.`
 
     const userTemplate = prompt?.user_prompt_template || `## Current Document
-{document_content}
+{{document_content}}
 
 ## Section to Revise
-{section}
+{{section}}
 
 ## Revision Instructions
-{instruction}
+{{instruction}}
 
 Please revise only the specified section according to the instructions. Return the revised section content only.`
 

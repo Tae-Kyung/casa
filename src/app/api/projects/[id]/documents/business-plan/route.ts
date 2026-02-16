@@ -95,8 +95,41 @@ export async function POST(
       },
     }, null, 2)
 
+    // 평가 피드백 요약
+    const evaluationFeedback = [
+      `종합 점수: ${evaluation.total_score}점`,
+      evaluation.investor_feedback ? `투자 관점: ${evaluation.investor_feedback}` : '',
+      evaluation.market_feedback ? `시장 관점: ${evaluation.market_feedback}` : '',
+      evaluation.tech_feedback ? `기술 관점: ${evaluation.tech_feedback}` : '',
+      evaluation.recommendations ? `추천사항: ${Array.isArray(evaluation.recommendations) ? evaluation.recommendations.join(', ') : evaluation.recommendations}` : '',
+    ].filter(Boolean).join('\n')
+
+    // 프롬프트 템플릿 변수 (개별 필드 + 전체 JSON 모두 지원)
+    const promptVariables: Record<string, string> = {
+      context: promptContext,
+      project_name: project.name || '',
+      idea_summary: ideaCard.raw_input || '',
+      raw_input: ideaCard.raw_input || '',
+      problem: ideaCard.problem || '',
+      solution: ideaCard.solution || '',
+      target: ideaCard.target || '',
+      differentiation: ideaCard.differentiation || '',
+      ai_expanded: String(ideaCard.ai_expanded ?? ''),
+      total_score: String(evaluation.total_score ?? ''),
+      investor_score: String(evaluation.investor_score ?? ''),
+      market_score: String(evaluation.market_score ?? ''),
+      tech_score: String(evaluation.tech_score ?? ''),
+      investor_feedback: evaluation.investor_feedback || '',
+      market_feedback: evaluation.market_feedback || '',
+      tech_feedback: evaluation.tech_feedback || '',
+      evaluation_feedback: evaluationFeedback,
+      recommendations: Array.isArray(evaluation.recommendations)
+        ? evaluation.recommendations.join(', ')
+        : String(evaluation.recommendations ?? ''),
+    }
+
     // 프롬프트 준비
-    const prompt = await preparePrompt('business_plan', { context: promptContext })
+    const prompt = await preparePrompt('business_plan', promptVariables)
 
     if (!prompt) {
       return errorResponse('사업계획서 프롬프트를 찾을 수 없습니다.', 500)
@@ -115,7 +148,7 @@ export async function POST(
     async function* generateDocument() {
       let fullContent = ''
 
-      yield { type: 'start', data: JSON.stringify({ type: 'business_plan' }) }
+      yield { type: 'start', data: JSON.stringify({ type: 'business_plan', model }) }
 
       const stream = streamClaude(systemPrompt, userPrompt, {
         model,

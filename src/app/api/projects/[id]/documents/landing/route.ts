@@ -125,7 +125,7 @@ ${ideaCard.differentiation || ''}
     async function* generateDocument() {
       let fullContent = ''
 
-      yield { type: 'start', data: JSON.stringify({ type: 'landing' }) }
+      yield { type: 'start', data: JSON.stringify({ type: 'landing', model }) }
 
       const stream = streamClaude(LANDING_SYSTEM_PROMPT, userPrompt, {
         model,

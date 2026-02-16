@@ -87,8 +87,24 @@ export async function POST(
       },
     }, null, 2)
 
+    // 프롬프트 템플릿 변수 (개별 필드 + 전체 JSON 모두 지원)
+    const promptVariables: Record<string, string> = {
+      context: promptContext,
+      project_name: project.name || '',
+      idea_summary: ideaCard.raw_input || '',
+      raw_input: ideaCard.raw_input || '',
+      problem: ideaCard.problem || '',
+      solution: ideaCard.solution || '',
+      target: ideaCard.target || '',
+      differentiation: ideaCard.differentiation || '',
+      total_score: String(evaluation.total_score ?? ''),
+      recommendations: Array.isArray(evaluation.recommendations)
+        ? evaluation.recommendations.join(', ')
+        : String(evaluation.recommendations ?? ''),
+    }
+
     // 프롬프트 준비
-    const prompt = await preparePrompt('pitch_summary', { context: promptContext })
+    const prompt = await preparePrompt('pitch_summary', promptVariables)
 
     if (!prompt) {
       return errorResponse('피치 프롬프트를 찾을 수 없습니다.', 500)
@@ -107,7 +123,7 @@ export async function POST(
     async function* generateDocument() {
       let fullContent = ''
 
-      yield { type: 'start', data: JSON.stringify({ type: 'pitch' }) }
+      yield { type: 'start', data: JSON.stringify({ type: 'pitch', model }) }
 
       const stream = streamClaude(systemPrompt, userPrompt, {
         model,

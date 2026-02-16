@@ -12,7 +12,8 @@ import {
   Eye,
   AlertTriangle,
   Edit3,
-  ArrowLeft
+  ArrowLeft,
+  Undo2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -77,6 +78,8 @@ export function DocumentStage({
   }
   const [generatingType, setGeneratingType] = useState<DocumentTypeKey | null>(null)
   const [streamingContent, setStreamingContent] = useState('')
+  const [generatingModel, setGeneratingModel] = useState<string | null>(null)
+  const [streamingLength, setStreamingLength] = useState(0)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [previewDoc, setPreviewDoc] = useState<DocType | null>(null)
 
@@ -86,6 +89,9 @@ export function DocumentStage({
   const [reviseInstruction, setReviseInstruction] = useState('')
   const [isRevising, setIsRevising] = useState(false)
   const [reviseStreamContent, setReviseStreamContent] = useState('')
+
+  // 문서 확정 해제 관련 상태
+  const [unconfirmingId, setUnconfirmingId] = useState<string | null>(null)
 
   // 평가 단계로 돌아가기 관련 상태
   const [showGoBackDialog, setShowGoBackDialog] = useState(false)
@@ -100,6 +106,8 @@ export function DocumentStage({
   const handleGenerate = useCallback(async (type: DocumentTypeKey) => {
     setGeneratingType(type)
     setStreamingContent('')
+    setGeneratingModel(null)
+    setStreamingLength(0)
 
     try {
       const response = await fetch(
@@ -120,25 +128,42 @@ export function DocumentStage({
       }
 
       let buffer = ''
+      let totalLength = 0
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
         buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n\n')
-        buffer = lines.pop() || ''
+        const blocks = buffer.split('\n\n')
+        buffer = blocks.pop() || ''
 
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const data = line.slice(6)
+        for (const block of blocks) {
+          // "event: type\ndata: value" 형식 파싱
+          const lines = block.split('\n')
+          const eventLine = lines.find(l => l.startsWith('event: '))
+          const dataLine = lines.find(l => l.startsWith('data: '))
+          if (!dataLine) continue
+
+          const eventType = eventLine ? eventLine.slice(7) : null
+          const rawData = dataLine.slice(6)
 
           try {
-            const event = JSON.parse(data)
+            const parsed = JSON.parse(rawData)
 
-            if (event.type === 'text') {
-              setStreamingContent(prev => prev + event.data)
-            } else if (event.type === 'complete') {
+            if (eventType === 'start') {
+              // start 이벤트: 모델 정보 추출 (double-stringified JSON)
+              try {
+                const inner = typeof parsed === 'string' ? JSON.parse(parsed) : parsed
+                if (inner.model) setGeneratingModel(inner.model)
+              } catch { /* ignore */ }
+            } else if (eventType === 'text') {
+              // text 이벤트: 스트리밍 콘텐츠
+              const text = typeof parsed === 'string' ? parsed : String(parsed)
+              totalLength += text.length
+              setStreamingLength(totalLength)
+              setStreamingContent(prev => prev + text)
+            } else if (eventType === 'complete') {
               toast.success(t('documentStage.generateComplete', { label: documentConfig[type].label }))
               onUpdate()
             }
@@ -152,6 +177,8 @@ export function DocumentStage({
     } finally {
       setGeneratingType(null)
       setStreamingContent('')
+      setGeneratingModel(null)
+      setStreamingLength(0)
     }
   }, [projectId, onUpdate])
 
@@ -175,6 +202,29 @@ export function DocumentStage({
       toast.error(t('toast.confirmFailed'))
     } finally {
       setConfirmingId(null)
+    }
+  }
+
+  const handleUnconfirm = async (docId: string) => {
+    setUnconfirmingId(docId)
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/documents/${docId}/unconfirm`,
+        { method: 'POST' }
+      )
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast.success(t('documentStage.unconfirmSuccess'))
+        onUpdate()
+      } else {
+        toast.error(result.error || t('documentStage.unconfirmFailed'))
+      }
+    } catch {
+      toast.error(t('documentStage.unconfirmFailed'))
+    } finally {
+      setUnconfirmingId(null)
     }
   }
 
@@ -398,7 +448,17 @@ export function DocumentStage({
                     <div className="flex items-center gap-2">
                       <LoadingSpinner size="sm" />
                       <span className="text-sm">{t('documentStage.generating')}</span>
+                      {generatingModel && (
+                        <Badge variant="outline" className="text-xs">
+                          {generatingModel}
+                        </Badge>
+                      )}
                     </div>
+                    {streamingLength > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {t('documentStage.generatingChars', { count: streamingLength.toLocaleString() })}
+                      </p>
+                    )}
                     {streamingContent && (
                       <div className="max-h-32 overflow-y-auto rounded bg-muted p-2">
                         <pre className="whitespace-pre-wrap text-xs">
@@ -409,9 +469,14 @@ export function DocumentStage({
                   </div>
                 ) : doc ? (
                   <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      {t('documentStage.createdAt', { date: new Date(doc.created_at).toLocaleDateString() })}
-                    </p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>{t('documentStage.createdAt', { date: new Date(doc.created_at).toLocaleDateString() })}</span>
+                      {doc.ai_model_used && (
+                        <Badge variant="outline" className="text-xs">
+                          {doc.ai_model_used}
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       <Button
                         size="sm"
@@ -430,7 +495,23 @@ export function DocumentStage({
                         {t('document.download')}
                       </Button>
                     </div>
-                    {!doc.is_confirmed && (
+                    {doc.is_confirmed ? (
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleUnconfirm(doc.id)}
+                          disabled={unconfirmingId === doc.id}
+                        >
+                          {unconfirmingId === doc.id ? (
+                            <LoadingSpinner size="sm" className="mr-1" />
+                          ) : (
+                            <Undo2 className="mr-1 h-4 w-4" />
+                          )}
+                          {t('documentStage.unconfirm')}
+                        </Button>
+                      </div>
+                    ) : (
                       <div className="flex flex-wrap gap-2 pt-2">
                         <Button
                           size="sm"

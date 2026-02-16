@@ -93,7 +93,7 @@ export function DeployStage({
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     })
-    toast.success(t('deploy.downloadComplete'))
+    toast.success(t('deploy.downloadAllComplete'))
   }
 
   const handleGenerateShareUrl = async () => {
@@ -101,7 +101,7 @@ export function DeployStage({
     const url = `${window.location.origin}/share/${project.id}`
     setShareUrl(url)
     navigator.clipboard.writeText(url)
-    toast.success(t('deploy.shareLinkGenerated'))
+    toast.success(t('deploy.shareLinkCopied'))
   }
 
   const handleDeployLanding = async () => {
