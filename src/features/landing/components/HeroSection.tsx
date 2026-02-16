@@ -22,10 +22,10 @@ export function HeroSection() {
       {/* Background pattern */}
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_1px_1px,_theme(colors.primary/0.05)_1px,_transparent_0)] [background-size:24px_24px]" />
 
-      <div className="container mx-auto px-4 py-16 md:py-20">
+      <div className="container mx-auto px-4 py-10 md:py-20">
         <div className="grid lg:grid-cols-5 gap-12 items-center">
           {/* Left: Text content */}
-          <div className="lg:col-span-3 space-y-8">
+          <div className="lg:col-span-3 space-y-5 md:space-y-8">
             <Badge variant="secondary" className="px-4 py-1.5 text-sm font-medium">
               {t('hero.badge')}
             </Badge>

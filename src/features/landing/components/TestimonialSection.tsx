@@ -46,7 +46,7 @@ export function TestimonialSection() {
             >
               {testimonials.map((item, i) => (
                 <div key={i} className="w-full flex-none px-4">
-                  <div className="rounded-2xl border bg-card p-8 md:p-10">
+                  <div className="rounded-2xl border bg-card p-5 sm:p-8 md:p-10">
                     <Quote className="h-8 w-8 text-primary/20 mb-4" />
                     <div className="flex gap-1 mb-4">
                       {[...Array(5)].map((_, si) => (
@@ -75,10 +75,10 @@ export function TestimonialSection() {
           <div className="flex items-center justify-center gap-4 mt-6">
             <button
               onClick={prev}
-              className="h-8 w-8 rounded-full border flex items-center justify-center hover:bg-muted transition-colors"
+              className="h-10 w-10 rounded-full border flex items-center justify-center hover:bg-muted transition-colors"
               aria-label="Previous testimonial"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5" />
             </button>
             <div className="flex gap-2">
               {testimonials.map((_, i) => (
@@ -94,10 +94,10 @@ export function TestimonialSection() {
             </div>
             <button
               onClick={next}
-              className="h-8 w-8 rounded-full border flex items-center justify-center hover:bg-muted transition-colors"
+              className="h-10 w-10 rounded-full border flex items-center justify-center hover:bg-muted transition-colors"
               aria-label="Next testimonial"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-5 w-5" />
             </button>
           </div>
 

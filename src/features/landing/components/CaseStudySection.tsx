@@ -101,10 +101,10 @@ export function CaseStudySection() {
           style={{ transitionDelay: isVisible ? '200ms' : '0ms' }}
         >
           <Tabs defaultValue="case1" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-8">
-              <TabsTrigger value="case1">{t('case1Tab')}</TabsTrigger>
-              <TabsTrigger value="case2">{t('case2Tab')}</TabsTrigger>
-              <TabsTrigger value="case3">{t('case3Tab')}</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 mb-8 h-auto">
+              <TabsTrigger value="case1" className="text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2">{t('case1Tab')}</TabsTrigger>
+              <TabsTrigger value="case2" className="text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2">{t('case2Tab')}</TabsTrigger>
+              <TabsTrigger value="case3" className="text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2">{t('case3Tab')}</TabsTrigger>
             </TabsList>
             <TabsContent value="case1">
               <CaseCard caseKey="case1" t={t} />

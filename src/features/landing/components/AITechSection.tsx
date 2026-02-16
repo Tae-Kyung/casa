@@ -59,7 +59,7 @@ export function AITechSection() {
             <div className="text-center mb-6">
               <span className="text-sm font-semibold text-primary">{t('orchestrator')}</span>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               {aiModels.map((m) => (
                 <div
                   key={m.name}

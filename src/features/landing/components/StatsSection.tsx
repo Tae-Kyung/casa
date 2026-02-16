@@ -35,7 +35,7 @@ function StatItem({
       }`}
       style={{ transitionDelay: isVisible ? `${delay}ms` : '0ms' }}
     >
-      <div className="text-5xl md:text-6xl lg:text-7xl font-bold text-primary mb-2">
+      <div className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-primary mb-2">
         {isStatic ? value : animated}{suffix}
       </div>
       <div className="text-base md:text-lg font-medium mb-1">{label}</div>

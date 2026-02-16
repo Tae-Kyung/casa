@@ -66,7 +66,7 @@ export function LandingNav() {
         </div>
 
         {/* Mobile */}
-        <div className="flex md:hidden items-center gap-2">
+        <div className="flex md:hidden items-center gap-1">
           <ThemeToggle />
           <LocaleSelector />
           <Sheet open={open} onOpenChange={setOpen}>

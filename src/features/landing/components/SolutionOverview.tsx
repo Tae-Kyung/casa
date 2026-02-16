@@ -30,7 +30,7 @@ export function SolutionOverview() {
           <p className="text-lg text-muted-foreground">{t('subtitle')}</p>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
           {steps.map((step, i) => {
             const Icon = stepIcons[i]
             return (
