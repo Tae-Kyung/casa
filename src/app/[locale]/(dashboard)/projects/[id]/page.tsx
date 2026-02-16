@@ -121,7 +121,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -155,7 +155,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
             totalStages={5}
             stages={stageLabels}
           />
-          <div className="mt-4 flex items-center gap-4">
+          <div className="mt-6 flex flex-wrap items-center gap-3">
             <Badge variant="outline">
               {t('project.stage')}: {t(`project.${project.current_stage}`)}
             </Badge>

@@ -35,10 +35,14 @@ export async function GET(request: NextRequest) {
 
     const { count } = await countQuery
 
-    // 데이터 조회
+    // 데이터 조회 (평가 점수 + 아이디어 요약 포함)
     let dataQuery = supabase
       .from('bi_projects')
-      .select('*')
+      .select(`
+        *,
+        evaluation:bi_evaluations(total_score),
+        idea_card:bi_idea_cards(problem)
+      `)
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
       .range(offset, offset + limit - 1)
@@ -53,7 +57,14 @@ export async function GET(request: NextRequest) {
       return errorResponse(error.message, 500)
     }
 
-    return paginatedResponse(data || [], count || 0, page, limit)
+    // Supabase one-to-many join returns arrays — flatten to single objects
+    const items = (data || []).map((item: Record<string, unknown>) => ({
+      ...item,
+      evaluation: Array.isArray(item.evaluation) ? item.evaluation[0] ?? null : item.evaluation,
+      idea_card: Array.isArray(item.idea_card) ? item.idea_card[0] ?? null : item.idea_card,
+    }))
+
+    return paginatedResponse(items, count || 0, page, limit)
   } catch (error) {
     return handleApiError(error)
   }

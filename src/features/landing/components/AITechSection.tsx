@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useTranslations } from 'next-intl'
 import { Check, X } from 'lucide-react'
 import { useScrollAnimation } from '../hooks/useScrollAnimation'
@@ -44,36 +45,29 @@ export function AITechSection() {
           <p className="text-lg text-slate-300">{t('subtitle')}</p>
         </div>
 
-        {/* Orchestrator diagram */}
+        {/* Orchestrator illustration */}
         <div
-          className={`max-w-2xl mx-auto mb-16 transition-all duration-700 ${
+          className={`max-w-3xl mx-auto mb-16 transition-all duration-700 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
           style={{ transitionDelay: isVisible ? '200ms' : '0ms' }}
         >
-          <div className="text-center mb-4">
-            <span className="text-sm text-slate-400">{t('input')}</span>
-            <div className="mx-auto my-2 h-6 w-px bg-slate-600" />
+          <div className="rounded-2xl overflow-hidden border border-slate-700">
+            <Image
+              src="/images/landing/ai-orchestration.png"
+              alt={t('orchestrator')}
+              width={800}
+              height={450}
+              className="w-full h-auto"
+            />
           </div>
-          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 md:p-8">
-            <div className="text-center mb-6">
-              <span className="text-sm font-semibold text-primary">{t('orchestrator')}</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              {aiModels.map((m) => (
-                <div
-                  key={m.name}
-                  className="rounded-lg border border-slate-600 bg-slate-800 p-3 md:p-4 text-center"
-                >
-                  <div className="text-sm font-bold mb-1">{m.name}</div>
-                  <div className="text-xs text-slate-400">{m.role}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="text-center mt-4">
-            <div className="mx-auto my-2 h-6 w-px bg-slate-600" />
-            <span className="text-sm text-slate-400">{t('output')}</span>
+          <div className="flex justify-center gap-8 mt-6">
+            {aiModels.map((m) => (
+              <div key={m.name} className="text-center">
+                <div className="text-sm font-bold">{m.name}</div>
+                <div className="text-xs text-slate-400">{m.role}</div>
+              </div>
+            ))}
           </div>
         </div>
 

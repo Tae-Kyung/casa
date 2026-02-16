@@ -53,7 +53,8 @@
     "settings": "설정",
     "admin": "관리자",
     "prompts": "프롬프트 관리",
-    "approvals": "승인 관리"
+    "approvals": "승인 관리",
+    "users": "가입자 관리"
   },
   "dashboard": {
     "title": "대시보드",
@@ -130,6 +131,7 @@
     "evaluatingPersonaModel": "{persona} 평가 중... ({model})",
     "waiting": "대기 중...",
     "score": "{score}점",
+    "scoreUnit": "점",
     "averageScore": "3개 AI 모델 평균 점수",
     "evalComplete": "평가 완료! 종합 점수: {score}점",
     "evalFailed": "평가 시작에 실패했습니다.",
@@ -287,6 +289,41 @@
     "goToDashboard": "대시보드로 이동"
   },
   "admin": {
+    "dashboard": {
+      "title": "관리자 대시보드",
+      "description": "플랫폼 현황을 한눈에 확인합니다.",
+      "fetchFailed": "대시보드 데이터를 불러오는데 실패했습니다.",
+      "totalUsers": "전체 가입자",
+      "totalProjects": "전체 프로젝트",
+      "pendingApprovals": "승인 대기",
+      "totalDocuments": "생성 문서",
+      "activeProjects": "진행 중 {count}개",
+      "awaitingReview": "검토 대기 중",
+      "confirmedDocuments": "확정 {count}건",
+      "projectsByStage": "프로젝트 단계별 분포",
+      "recentUsers": "최근 가입자",
+      "noRecentUsers": "최근 가입자가 없습니다.",
+      "roleUser": "사용자",
+      "roleMentor": "멘토",
+      "roleAdmin": "관리자"
+    },
+    "users": {
+      "title": "가입자 관리",
+      "description": "가입자별 프로젝트 현황을 확인합니다.",
+      "fetchFailed": "가입자 목록을 불러오는데 실패했습니다.",
+      "searchPlaceholder": "이름 또는 이메일로 검색...",
+      "noUsers": "가입자가 없습니다",
+      "noUsersDesc": "조건에 맞는 가입자가 없습니다.",
+      "nameLabel": "이름",
+      "emailLabel": "이메일",
+      "roleLabel": "역할",
+      "projectCount": "프로젝트",
+      "joinDate": "가입일",
+      "roleUser": "사용자",
+      "roleMentor": "멘토",
+      "roleAdmin": "관리자",
+      "userProjects": "{name}님의 프로젝트"
+    },
     "approvals": {
       "title": "승인 관리",
       "description": "프로젝트 승인 요청을 검토하고 처리합니다.",

@@ -89,7 +89,7 @@ export function StageProgress({
           </div>
         ))}
       </div>
-      <div className="relative mt-4">
+      <div className="relative mt-4 mb-2">
         <div className="absolute left-0 top-0 h-1 w-full rounded-full bg-secondary" />
         <div
           className="absolute left-0 top-0 h-1 rounded-full bg-primary transition-all duration-300"

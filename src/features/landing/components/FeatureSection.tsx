@@ -1,11 +1,18 @@
 'use client'
 
+import Image from 'next/image'
 import { useTranslations } from 'next-intl'
 import { Lightbulb, BarChart3, FileText, Rocket, Check } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useScrollAnimation } from '../hooks/useScrollAnimation'
 
 const featureIcons = [Lightbulb, BarChart3, FileText, Rocket]
+const featureImages = [
+  '/images/landing/feature-idea.png',
+  '/images/landing/feature-eval.png',
+  '/images/landing/feature-docs.png',
+  '/images/landing/feature-deploy.png',
+]
 
 function FeatureBlock({ index }: { index: number }) {
   const t = useTranslations('landing.features')
@@ -68,21 +75,20 @@ function FeatureBlock({ index }: { index: number }) {
         </ul>
       </div>
 
-      {/* Visual placeholder */}
+      {/* Feature illustration */}
       <div
         className={`transition-all duration-700 ${
           isVisible ? 'opacity-100 translate-x-0' : isEven ? 'opacity-0 translate-x-10' : 'opacity-0 -translate-x-10'
         } ${!isEven ? 'lg:order-1' : ''}`}
       >
-        <div className="rounded-2xl border bg-muted/30 p-8 md:p-12 flex items-center justify-center min-h-[240px]">
-          <div className="text-center space-y-3">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-              <Icon className="h-8 w-8 text-primary" />
-            </div>
-            <p className="text-sm text-muted-foreground font-medium">
-              {t(`f${n}Label` as 'f1Label')}
-            </p>
-          </div>
+        <div className="rounded-2xl border bg-muted/30 overflow-hidden">
+          <Image
+            src={featureImages[index]}
+            alt={t(`f${n}Label` as 'f1Label')}
+            width={600}
+            height={400}
+            className="w-full h-auto"
+          />
         </div>
       </div>
     </div>

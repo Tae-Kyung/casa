@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { Link } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
 import { ArrowRight, Zap, BarChart3, Rocket, Check } from 'lucide-react'
@@ -79,47 +80,17 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* Right: Dashboard mockup */}
+          {/* Right: Hero illustration */}
           <div className="lg:col-span-2 hidden lg:block">
             <div className="relative">
-              <div className="rounded-2xl border bg-card p-6 shadow-2xl">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="h-3 w-3 rounded-full bg-red-400" />
-                    <div className="h-3 w-3 rounded-full bg-yellow-400" />
-                    <div className="h-3 w-3 rounded-full bg-green-400" />
-                    <span className="ml-2 text-xs text-muted-foreground">CASA Dashboard</span>
-                  </div>
-                  {/* Idea card mockup */}
-                  <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-                    <div className="text-xs font-medium text-primary">IDEA CARD</div>
-                    <div className="h-2 w-3/4 bg-muted rounded" />
-                    <div className="h-2 w-1/2 bg-muted rounded" />
-                  </div>
-                  {/* Evaluation mockup */}
-                  <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-                    <div className="text-xs font-medium text-primary">AI EVALUATION</div>
-                    <div className="flex gap-2">
-                      <div className="h-8 flex-1 bg-primary/20 rounded flex items-center justify-center text-xs font-bold text-primary">85</div>
-                      <div className="h-8 flex-1 bg-primary/15 rounded flex items-center justify-center text-xs font-bold text-primary">78</div>
-                      <div className="h-8 flex-1 bg-primary/10 rounded flex items-center justify-center text-xs font-bold text-primary">92</div>
-                    </div>
-                  </div>
-                  {/* Document mockup */}
-                  <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-                    <div className="text-xs font-medium text-primary">DOCUMENTS</div>
-                    <div className="flex gap-2">
-                      <Badge variant="secondary" className="text-xs">BP</Badge>
-                      <Badge variant="secondary" className="text-xs">Pitch</Badge>
-                      <Badge variant="outline" className="text-xs">Landing</Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Floating elements */}
-              <div className="absolute -top-4 -right-4 rounded-lg bg-card border shadow-lg p-3 animate-bounce [animation-duration:3s]">
-                <div className="text-xs font-medium text-green-600">+85 Score</div>
-              </div>
+              <Image
+                src="/images/landing/hero-dashboard.png"
+                alt="CASA AI Dashboard"
+                width={600}
+                height={400}
+                className="rounded-2xl shadow-2xl"
+                priority
+              />
             </div>
           </div>
         </div>

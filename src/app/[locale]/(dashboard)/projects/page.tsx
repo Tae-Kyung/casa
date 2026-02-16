@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Plus, FolderKanban, Search } from 'lucide-react'
+import { Plus, FolderKanban, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,6 +32,11 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import type { Project, ProjectStatus } from '@/types/database'
 
+interface ProjectWithExtras extends Project {
+  evaluation: { total_score: number | null } | null
+  idea_card: { problem: string | null } | null
+}
+
 const statusColors: Record<ProjectStatus, string> = {
   draft: 'bg-gray-500',
   in_progress: 'bg-blue-500',
@@ -49,7 +54,7 @@ export default function ProjectsPage() {
     archived: t('project.archived'),
   }
   const router = useRouter()
-  const [projects, setProjects] = useState<Project[]>([])
+  const [projects, setProjects] = useState<ProjectWithExtras[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [status, setStatus] = useState<string>('all')
   const [page, setPage] = useState(1)
@@ -222,24 +227,50 @@ export default function ProjectsPage() {
             {projects.map((project) => (
               <Link key={project.id} href={`/projects/${project.id}`}>
                 <Card className="transition-colors hover:bg-accent">
-                  <CardHeader className="pb-2">
+                  <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{project.name}</CardTitle>
-                      <Badge
-                        variant="secondary"
-                        className={`${statusColors[project.status]} text-white`}
-                      >
-                        {statusLabels[project.status]}
-                      </Badge>
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="truncate text-lg">{project.name}</CardTitle>
+                        {/* 아이디어 주제 (있을 경우) */}
+                        {project.idea_card?.problem && (
+                          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                            {project.idea_card.problem}
+                          </p>
+                        )}
+                      </div>
+                      <div className="ml-4 flex shrink-0 items-center gap-2">
+                        {/* 평가 점수 (있을 경우) */}
+                        {project.evaluation?.total_score != null && (
+                          <Badge
+                            variant="outline"
+                            className={`gap-1 ${
+                              project.evaluation.total_score >= 80
+                                ? 'border-green-500 text-green-600 dark:text-green-400'
+                                : project.evaluation.total_score >= 60
+                                ? 'border-yellow-500 text-yellow-600 dark:text-yellow-400'
+                                : 'border-red-500 text-red-600 dark:text-red-400'
+                            }`}
+                          >
+                            <Star className="h-3 w-3" />
+                            {project.evaluation.total_score}
+                          </Badge>
+                        )}
+                        <Badge
+                          variant="secondary"
+                          className={`${statusColors[project.status]} text-white`}
+                        >
+                          {statusLabels[project.status]}
+                        </Badge>
+                      </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-4">
                     <StageProgress
                       currentStage={stageToIndex[project.current_stage] || 0}
                       totalStages={5}
                       stages={stageLabels}
                     />
-                    <div className="mt-4 flex justify-between text-sm text-muted-foreground">
+                    <div className="flex justify-between border-t pt-3 text-xs text-muted-foreground">
                       <span>{t('project.createdAt')}: {new Date(project.created_at).toLocaleDateString()}</span>
                       <span>{t('project.updatedAt')}: {new Date(project.updated_at).toLocaleDateString()}</span>
                     </div>

@@ -14,6 +14,7 @@ import {
   Shield,
   MessageSquare,
   CheckCircle,
+  Users,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -69,6 +70,12 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
       href: '/admin/prompts',
       label: t('prompts'),
       icon: <MessageSquare className="h-5 w-5" />,
+      roles: ['admin'],
+    },
+    {
+      href: '/admin/users',
+      label: t('users'),
+      icon: <Users className="h-5 w-5" />,
       roles: ['admin'],
     },
     {

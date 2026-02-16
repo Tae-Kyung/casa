@@ -53,7 +53,8 @@
     "settings": "Settings",
     "admin": "Admin",
     "prompts": "Prompt Management",
-    "approvals": "Approvals"
+    "approvals": "Approvals",
+    "users": "User Management"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -130,6 +131,7 @@
     "evaluatingPersonaModel": "Evaluating {persona}... ({model})",
     "waiting": "Waiting...",
     "score": "{score} pts",
+    "scoreUnit": " pts",
     "averageScore": "Average score from 3 AI models",
     "evalComplete": "Evaluation complete! Total score: {score} pts",
     "evalFailed": "Failed to start evaluation.",
@@ -287,6 +289,41 @@
     "goToDashboard": "Go to Dashboard"
   },
   "admin": {
+    "dashboard": {
+      "title": "Admin Dashboard",
+      "description": "Platform overview at a glance.",
+      "fetchFailed": "Failed to load dashboard data.",
+      "totalUsers": "Total Users",
+      "totalProjects": "Total Projects",
+      "pendingApprovals": "Pending Approvals",
+      "totalDocuments": "Documents",
+      "activeProjects": "{count} active",
+      "awaitingReview": "Awaiting review",
+      "confirmedDocuments": "{count} confirmed",
+      "projectsByStage": "Projects by Stage",
+      "recentUsers": "Recent Users",
+      "noRecentUsers": "No recent users.",
+      "roleUser": "User",
+      "roleMentor": "Mentor",
+      "roleAdmin": "Admin"
+    },
+    "users": {
+      "title": "User Management",
+      "description": "View user project status.",
+      "fetchFailed": "Failed to load user list.",
+      "searchPlaceholder": "Search by name or email...",
+      "noUsers": "No users found",
+      "noUsersDesc": "No users match the criteria.",
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "roleLabel": "Role",
+      "projectCount": "Projects",
+      "joinDate": "Joined",
+      "roleUser": "User",
+      "roleMentor": "Mentor",
+      "roleAdmin": "Admin",
+      "userProjects": "{name}'s Projects"
+    },
     "approvals": {
       "title": "Approval Management",
       "description": "Review and process project approval requests.",

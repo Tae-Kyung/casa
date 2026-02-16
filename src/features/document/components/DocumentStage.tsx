@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   Undo2
 } from 'lucide-react'
+import { marked } from 'marked'
 import { exportToPdf, exportToDocx } from '@/lib/utils/document-export'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -643,11 +644,12 @@ export function DocumentStage({
                 title="Landing Page Preview"
               />
             ) : (
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                <pre className="whitespace-pre-wrap">
-                  {previewDoc?.content}
-                </pre>
-              </div>
+              <div
+                className="markdown-preview"
+                dangerouslySetInnerHTML={{
+                  __html: marked.parse(previewDoc?.content || '', { async: false }) as string,
+                }}
+              />
             )}
           </div>
         </DialogContent>

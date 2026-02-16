@@ -394,8 +394,8 @@ export function EvaluationStage({
         </Card>
       )}
 
-      {/* 페르소나별 결과 카드 */}
-      {(hasResults || isEvaluating) && (
+      {/* 평가 진행 중 - 스트리밍 카드 */}
+      {isEvaluating && (
         <div className="grid gap-4 md:grid-cols-3">
           {(Object.entries(personaConfig) as [PersonaName, typeof personaConfig.investor][]).map(([key, config]) => {
             const Icon = config.icon
@@ -406,25 +406,10 @@ export function EvaluationStage({
             return (
               <Card key={key} className={isCurrentlyEvaluating ? 'border-primary' : ''}>
                 <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Icon className="h-5 w-5" />
-                      <CardTitle className="text-base">{config.label}</CardTitle>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {result?.model && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          {result.model}
-                        </Badge>
-                      )}
-                      {result && (
-                        <Badge variant={getScoreBadgeVariant(result.score)}>
-                          {t('evaluationStage.score', { score: result.score })}
-                        </Badge>
-                      )}
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-5 w-5" />
+                    <CardTitle className="text-base">{config.label}</CardTitle>
                   </div>
-                  <CardDescription>{config.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {isCurrentlyEvaluating && streaming ? (
@@ -435,28 +420,12 @@ export function EvaluationStage({
                       </p>
                     </div>
                   ) : result ? (
-                    <button
-                      type="button"
-                      className="w-full cursor-pointer space-y-2 text-left"
-                      onClick={() => setDetailPersona(key)}
-                    >
-                      <p className={`text-2xl font-bold ${getScoreColor(result.score)}`}>
-                        {t('evaluationStage.score', { score: result.score })}
-                      </p>
-                      <p className="text-sm text-muted-foreground line-clamp-3">
-                        {result.feedback}
-                      </p>
-                      <p className="text-xs font-medium text-primary">
-                        {t('evaluationStage.viewDetail')}
-                      </p>
-                    </button>
-                  ) : isEvaluating ? (
-                    <div className="flex items-center justify-center py-4">
-                      <span className="text-sm text-muted-foreground">{t('evaluationStage.waiting')}</span>
-                    </div>
+                    <p className={`text-2xl font-bold ${getScoreColor(result.score)}`}>
+                      {t('evaluationStage.score', { score: result.score })}
+                    </p>
                   ) : (
                     <div className="flex items-center justify-center py-4">
-                      <span className="text-sm text-muted-foreground">-</span>
+                      <span className="text-sm text-muted-foreground">{t('evaluationStage.waiting')}</span>
                     </div>
                   )}
                 </CardContent>
@@ -466,33 +435,111 @@ export function EvaluationStage({
         </div>
       )}
 
-      {/* 종합 점수 */}
-      {totalScore !== null && totalScore !== undefined && !isEvaluating && (
+      {/* 통합 평가 결과 */}
+      {hasResults && !isEvaluating && (
         <Card className="border-2">
-          <CardContent className="py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">{t('evaluation.totalScore')}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {t('evaluationStage.averageScore')}
-                </p>
+          <CardContent className="py-6 space-y-6">
+            {/* 종합 점수 + 한줄 요약 */}
+            {totalScore !== null && totalScore !== undefined && (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={`text-4xl font-bold ${getScoreColor(totalScore)}`}>
+                    {totalScore}
+                    <span className="text-lg font-medium text-muted-foreground">{t('evaluationStage.scoreUnit')}</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">{t('evaluation.totalScore')}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {t('evaluationStage.averageScore')}
+                    </p>
+                  </div>
+                </div>
+                {/* 한줄 요약: 첫 번째 추천사항 */}
+                {evaluation?.recommendations && Array.isArray(evaluation.recommendations) && (evaluation.recommendations as string[]).length > 0 && (
+                  <p className="max-w-md text-sm text-muted-foreground italic leading-relaxed">
+                    &ldquo;{(evaluation.recommendations as string[])[0]}&rdquo;
+                  </p>
+                )}
               </div>
-              <div className={`text-4xl font-bold ${getScoreColor(totalScore)}`}>
-                {t('evaluationStage.score', { score: totalScore })}
-              </div>
+            )}
+
+            {/* 구분선 */}
+            <div className="border-t" />
+
+            {/* 3개 점수 - 컴팩트 수평 레이아웃 */}
+            <div className="grid gap-4 md:grid-cols-3">
+              {(Object.entries(personaConfig) as [PersonaName, typeof personaConfig.investor][]).map(([key, config]) => {
+                const Icon = config.icon
+                const result = personaResults[key]
+                if (!result) return null
+
+                const firstSentence = result.feedback
+                  ? result.feedback.split(/[.!?。]\s/)[0] + (result.feedback.includes('.') ? '.' : '')
+                  : ''
+
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className="group cursor-pointer rounded-xl border bg-muted/30 p-4 text-left transition-colors hover:bg-muted/60"
+                    onClick={() => setDetailPersona(key)}
+                  >
+                    {/* 헤더: 아이콘 + 라벨 + 점수 */}
+                    <div className="mb-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-semibold">{config.label}</span>
+                        {result.model && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            {result.model}
+                          </Badge>
+                        )}
+                      </div>
+                      <span className={`text-lg font-bold ${getScoreColor(result.score)}`}>
+                        {result.score}
+                      </span>
+                    </div>
+
+                    {/* 수평 프로그레스 바 */}
+                    <div className="mb-3 h-2 w-full overflow-hidden rounded-full bg-secondary">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          result.score >= 80 ? 'bg-green-500' : result.score >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${result.score}%` }}
+                      />
+                    </div>
+
+                    {/* 한줄 피드백 */}
+                    <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">
+                      {firstSentence}
+                    </p>
+
+                    {/* 상세보기 힌트 */}
+                    <p className="mt-2 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                      {t('evaluationStage.viewDetail')}
+                    </p>
+                  </button>
+                )
+              })}
             </div>
-            {evaluation?.recommendations && Array.isArray(evaluation.recommendations) && (
-              <div className="mt-4 border-t pt-4">
-                <h4 className="mb-2 font-medium">{t('evaluation.recommendations')}</h4>
-                <ul className="space-y-1">
-                  {(evaluation.recommendations as string[]).slice(0, 5).map((rec, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary" />
-                      {rec}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+
+            {/* 개선 제안 */}
+            {evaluation?.recommendations && Array.isArray(evaluation.recommendations) && (evaluation.recommendations as string[]).length > 1 && (
+              <>
+                <div className="border-t" />
+                <div>
+                  <h4 className="mb-2 text-sm font-semibold">{t('evaluation.recommendations')}</h4>
+                  <ul className="space-y-1.5">
+                    {(evaluation.recommendations as string[]).slice(0, 5).map((rec, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                        {rec}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
