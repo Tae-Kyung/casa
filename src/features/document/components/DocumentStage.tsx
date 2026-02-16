@@ -11,7 +11,8 @@ import {
   Download,
   Eye,
   AlertTriangle,
-  Edit3
+  Edit3,
+  ArrowLeft
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -85,6 +86,10 @@ export function DocumentStage({
   const [reviseInstruction, setReviseInstruction] = useState('')
   const [isRevising, setIsRevising] = useState(false)
   const [reviseStreamContent, setReviseStreamContent] = useState('')
+
+  // 평가 단계로 돌아가기 관련 상태
+  const [showGoBackDialog, setShowGoBackDialog] = useState(false)
+  const [isGoingBack, setIsGoingBack] = useState(false)
 
   // 문서 타입별로 매핑
   const docByType: Partial<Record<DocumentTypeKey, DocType>> = {}
@@ -264,6 +269,28 @@ export function DocumentStage({
     }
   }
 
+  const handleGoBack = async () => {
+    setIsGoingBack(true)
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/evaluation/reset`,
+        { method: 'POST' }
+      )
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('documentStage.goBackSuccess'))
+        setShowGoBackDialog(false)
+        onUpdate()
+      } else {
+        toast.error(result.error || t('documentStage.goBackFailed'))
+      }
+    } catch {
+      toast.error(t('documentStage.goBackFailed'))
+    } finally {
+      setIsGoingBack(false)
+    }
+  }
+
   // 문서에서 섹션 목록 추출 (## 로 시작하는 헤더)
   const extractSections = (content: string | null): string[] => {
     if (!content) return []
@@ -311,6 +338,37 @@ export function DocumentStage({
           </div>
         </CardContent>
       </Card>
+
+      {/* 평가 단계로 돌아가기 */}
+      {!isGate3Passed && (
+        <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+          <CardContent className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-3">
+              <ArrowLeft className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <div>
+                <h3 className="font-medium text-blue-700 dark:text-blue-300">
+                  {t('documentStage.goBackToEvaluation')}
+                </h3>
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  {confirmedCount > 0
+                    ? t('documentStage.goBackHasConfirmedDocs')
+                    : t('documentStage.goBackToEvaluationDesc')}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowGoBackDialog(true)}
+              disabled={confirmedCount > 0}
+              className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900"
+            >
+              <ArrowLeft className="mr-1 h-4 w-4" />
+              {t('documentStage.goBackToEvaluation')}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 문서 카드 목록 */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -467,6 +525,38 @@ export function DocumentStage({
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 평가 단계로 돌아가기 확인 다이얼로그 */}
+      <Dialog open={showGoBackDialog} onOpenChange={(open) => !isGoingBack && setShowGoBackDialog(open)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('documentStage.goBackConfirmTitle')}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t('documentStage.goBackConfirmDesc')}
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowGoBackDialog(false)}
+              disabled={isGoingBack}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={handleGoBack}
+              disabled={isGoingBack}
+            >
+              {isGoingBack ? (
+                <LoadingSpinner size="sm" className="mr-2" />
+              ) : (
+                <ArrowLeft className="mr-2 h-4 w-4" />
+              )}
+              {t('documentStage.goBackToEvaluation')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

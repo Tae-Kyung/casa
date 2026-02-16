@@ -184,7 +184,14 @@
     "revising": "Revising...",
     "landingNoRevise": "Landing page does not support section revision",
     "gate3Passed": "Gate 3 Passed",
-    "gate3PassedDesc": "All documents have been confirmed. You can now proceed to the deployment stage."
+    "gate3PassedDesc": "All documents have been confirmed. You can now proceed to the deployment stage.",
+    "goBackToEvaluation": "Go back to Evaluation",
+    "goBackToEvaluationDesc": "Not satisfied with the evaluation results?",
+    "goBackConfirmTitle": "Go back to Evaluation",
+    "goBackConfirmDesc": "The evaluation confirmation will be undone. Generated documents will be kept, but you may need to regenerate them after re-evaluation.",
+    "goBackHasConfirmedDocs": "Cannot go back while documents are confirmed.",
+    "goBackSuccess": "Returned to evaluation stage. Please proceed with re-evaluation.",
+    "goBackFailed": "Failed to go back."
   },
   "deploy": {
     "gate3Required": "Gate 3 Required",
