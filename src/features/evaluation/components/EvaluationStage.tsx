@@ -42,6 +42,8 @@ interface PersonaResult {
   strengths?: string[]
   weaknesses?: string[]
   recommendations?: string[]
+  provider?: string
+  model?: string
 }
 
 interface EvaluationProgress {
@@ -49,6 +51,9 @@ interface EvaluationProgress {
   total: number
   persona: string
   status: string
+  provider?: string
+  model?: string
+  isFallback?: boolean
 }
 
 type PersonaName = 'investor' | 'market' | 'tech'
@@ -127,30 +132,35 @@ export function EvaluationStage({
         if (done) break
 
         buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n\n')
-        buffer = lines.pop() || ''
+        const blocks = buffer.split('\n\n')
+        buffer = blocks.pop() || ''
 
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const data = line.slice(6)
+        for (const block of blocks) {
+          // data: {JSON} 형식의 라인 찾기
+          const dataLine = block.split('\n').find((l) => l.startsWith('data: '))
+          if (!dataLine) continue
 
           try {
-            const event = JSON.parse(data)
+            const event = JSON.parse(dataLine.slice(6))
 
             if (event.type === 'progress') {
-              const progressData = JSON.parse(event.data)
-              setProgress(progressData)
+              setProgress(event.data)
             } else if (event.type === 'persona_text') {
-              const textData = JSON.parse(event.data)
+              const textData = event.data
               setStreamingText((prev) => ({
                 ...prev,
                 [textData.persona as PersonaName]: (prev[textData.persona as PersonaName] || '') + textData.text,
               }))
             } else if (event.type === 'persona_complete') {
-              const resultData = JSON.parse(event.data)
+              const resultData = event.data
+              const result = {
+                ...resultData.result,
+                provider: resultData.provider || resultData.result?.provider,
+                model: resultData.model || resultData.result?.model,
+              }
               setPersonaResults((prev) => ({
                 ...prev,
-                [resultData.persona as PersonaName]: resultData.result,
+                [resultData.persona as PersonaName]: result,
               }))
               setStreamingText((prev) => {
                 const next = { ...prev }
@@ -158,12 +168,11 @@ export function EvaluationStage({
                 return next
               })
             } else if (event.type === 'complete') {
-              const completeData = JSON.parse(event.data)
-              toast.success(t('evaluationStage.evalComplete', { score: completeData.totalScore }))
+              toast.success(t('evaluationStage.evalComplete', { score: event.data.totalScore }))
               onUpdate()
             } else if (event.type === 'error') {
-              const errorData = JSON.parse(event.data)
-              toast.error(`${errorData.persona}: ${errorData.message}`)
+              const errorData = event.data
+              toast.error(`${errorData.persona || 'Error'}: ${errorData.message}`)
             }
           } catch {
             // 파싱 오류 무시
@@ -271,16 +280,19 @@ export function EvaluationStage({
       icon: TrendingUp,
       label: t('evaluation.investor'),
       description: t('evaluationStage.investorDesc'),
+      defaultModel: 'Claude',
     },
     market: {
       icon: Users,
       label: t('evaluation.market'),
       description: t('evaluationStage.marketDesc'),
+      defaultModel: 'GPT-4o',
     },
     tech: {
       icon: Cpu,
       label: t('evaluation.tech'),
       description: t('evaluationStage.techDesc'),
+      defaultModel: 'Gemini',
     },
   }
 
@@ -322,6 +334,7 @@ export function EvaluationStage({
                       <Icon className="h-6 w-6" />
                     </div>
                     <span className="text-xs text-muted-foreground">{config.label}</span>
+                    <span className="text-[10px] font-medium text-muted-foreground/70">{config.defaultModel}</span>
                   </div>
                 )
               })}
@@ -329,7 +342,7 @@ export function EvaluationStage({
             <div className="text-center">
               <h3 className="text-lg font-semibold">{t('evaluationStage.aiMultiEval')}</h3>
               <p className="text-sm text-muted-foreground">
-                {t('evaluationStage.aiMultiEvalDesc')}
+                {t('evaluationStage.multiModelDesc')}
               </p>
             </div>
             <Button size="lg" onClick={handleEvaluate}>
@@ -345,7 +358,12 @@ export function EvaluationStage({
           <CardContent className="py-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="font-medium">{t('evaluationStage.evaluatingPersona', { persona: progress.persona })}</span>
+                <span className="font-medium">
+                  {progress.model
+                    ? t('evaluationStage.evaluatingPersonaModel', { persona: progress.persona, model: progress.model })
+                    : t('evaluationStage.evaluatingPersona', { persona: progress.persona })
+                  }
+                </span>
                 <span className="text-sm text-muted-foreground">
                   {progress.current} / {progress.total}
                 </span>
@@ -373,11 +391,18 @@ export function EvaluationStage({
                       <Icon className="h-5 w-5" />
                       <CardTitle className="text-base">{config.label}</CardTitle>
                     </div>
-                    {result && (
-                      <Badge variant={getScoreBadgeVariant(result.score)}>
-                        {t('evaluationStage.score', { score: result.score })}
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {result?.model && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          {result.model}
+                        </Badge>
+                      )}
+                      {result && (
+                        <Badge variant={getScoreBadgeVariant(result.score)}>
+                          {t('evaluationStage.score', { score: result.score })}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <CardDescription>{config.description}</CardDescription>
                 </CardHeader>

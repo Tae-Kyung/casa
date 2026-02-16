@@ -3,7 +3,7 @@ import { requireProjectOwner } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { preparePrompt } from '@/lib/prompts'
-import { streamClaude, createSSEResponse } from '@/lib/ai/claude'
+import { streamAI, getAvailableProviders, type AIProvider } from '@/lib/ai'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -15,6 +15,38 @@ interface PersonaResult {
   strengths?: string[]
   weaknesses?: string[]
   recommendations?: string[]
+  provider?: string
+  model?: string
+}
+
+// 페르소나별 기본 프로바이더 매핑
+const PERSONA_PROVIDER_MAP: Record<string, AIProvider> = {
+  investor: 'claude',
+  market: 'openai',
+  tech: 'gemini',
+}
+
+// 프로바이더별 모델명 약어
+const PROVIDER_DISPLAY_NAMES: Record<AIProvider, string> = {
+  claude: 'Claude',
+  openai: 'GPT-4o',
+  gemini: 'Gemini',
+}
+
+function resolveProvider(personaName: string): { provider: AIProvider; displayName: string; isFallback: boolean } {
+  const preferred = PERSONA_PROVIDER_MAP[personaName]
+  const available = getAvailableProviders()
+
+  if (preferred && available.includes(preferred)) {
+    return { provider: preferred, displayName: PROVIDER_DISPLAY_NAMES[preferred], isFallback: false }
+  }
+
+  const fallback = available[0]
+  if (!fallback) {
+    throw new Error('No AI provider available. Please configure at least one API key.')
+  }
+
+  return { provider: fallback, displayName: PROVIDER_DISPLAY_NAMES[fallback], isFallback: true }
 }
 
 // POST: AI 다면 평가 실행 (SSE 스트리밍)
@@ -83,167 +115,179 @@ export async function POST(
     const projectId = id
     const evalId = evaluationId
 
-    // SSE 스트리밍 생성기
-    async function* generateEvaluations() {
-      const personas = [
-        { key: 'evaluation_investor', name: 'investor', label: '투자심사역' },
-        { key: 'evaluation_market', name: 'market', label: '시장분석가' },
-        { key: 'evaluation_tech', name: 'tech', label: '기술전문가' },
-      ]
+    // SSE 이벤트 전송 헬퍼
+    const encoder = new TextEncoder()
 
-      const results: Record<string, PersonaResult> = {}
-
-      // 시작 이벤트
-      yield { type: 'start', data: JSON.stringify({ total: 3 }) }
-
-      for (let i = 0; i < personas.length; i++) {
-        const persona = personas[i]!
-
-        // 진행률 이벤트
-        yield {
-          type: 'progress',
-          data: JSON.stringify({
-            current: i + 1,
-            total: 3,
-            persona: persona.label,
-            status: 'evaluating'
-          })
-        }
-
-        try {
-          // 프롬프트 준비
-          const prompt = await preparePrompt(persona.key, { idea: ideaContext })
-
-          if (!prompt) {
-            yield {
-              type: 'error',
-              data: JSON.stringify({
-                persona: persona.name,
-                message: `${persona.label} 프롬프트를 찾을 수 없습니다.`
-              })
-            }
-            continue
-          }
-
-          // AI 호출 및 스트리밍
-          let fullContent = ''
-          const stream = streamClaude(prompt.systemPrompt, prompt.userPrompt, {
-            model: prompt.model,
-            temperature: prompt.temperature,
-            maxTokens: prompt.maxTokens,
-          })
-
-          for await (const event of stream) {
-            if (event.type === 'text') {
-              fullContent += event.data
-              // 각 페르소나의 스트리밍 텍스트 전송
-              yield {
-                type: 'persona_text',
-                data: JSON.stringify({
-                  persona: persona.name,
-                  text: event.data
-                })
-              }
-            }
-          }
-
-          // 결과 파싱
-          try {
-            const parsed = JSON.parse(fullContent) as PersonaResult
-            results[persona.name] = parsed
-
-            // 페르소나 완료 이벤트
-            yield {
-              type: 'persona_complete',
-              data: JSON.stringify({
-                persona: persona.name,
-                label: persona.label,
-                result: parsed
-              })
-            }
-          } catch {
-            // JSON 파싱 실패 시 기본 구조 생성
-            results[persona.name] = {
-              score: 0,
-              feedback: fullContent,
-            }
-            yield {
-              type: 'persona_complete',
-              data: JSON.stringify({
-                persona: persona.name,
-                label: persona.label,
-                result: results[persona.name],
-                parseError: true
-              })
-            }
-          }
-        } catch (error) {
-          yield {
-            type: 'error',
-            data: JSON.stringify({
-              persona: persona.name,
-              message: error instanceof Error ? error.message : 'Unknown error'
-            })
-          }
-        }
-      }
-
-      // 종합 점수 계산
-      const investorScore = results.investor?.score || 0
-      const marketScore = results.market?.score || 0
-      const techScore = results.tech?.score || 0
-      const totalScore = Math.round((investorScore + marketScore + techScore) / 3)
-
-      // 종합 추천 생성
-      const recommendations = [
-        ...(results.investor?.recommendations || []),
-        ...(results.market?.recommendations || []),
-        ...(results.tech?.recommendations || []),
-      ]
-
-      // DB 저장
-      const supabaseUpdate = await createClient()
-      await supabaseUpdate
-        .from('bi_evaluations')
-        .update({
-          investor_score: investorScore,
-          investor_feedback: results.investor?.feedback || null,
-          investor_ai_model: 'claude-sonnet-4-20250514',
-          market_score: marketScore,
-          market_feedback: results.market?.feedback || null,
-          market_ai_model: 'claude-sonnet-4-20250514',
-          tech_score: techScore,
-          tech_feedback: results.tech?.feedback || null,
-          tech_ai_model: 'claude-sonnet-4-20250514',
-          total_score: totalScore,
-          recommendations: recommendations.length > 0 ? recommendations : null,
-        })
-        .eq('id', evalId)
-
-      // 프로젝트 상태 업데이트
-      await supabaseUpdate
-        .from('bi_projects')
-        .update({
-          status: 'in_progress',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', projectId)
-
-      // 완료 이벤트
-      yield {
-        type: 'complete',
-        data: JSON.stringify({
-          evaluationId: evalId,
-          totalScore,
-          investorScore,
-          marketScore,
-          techScore,
-          recommendations,
-        })
-      }
+    function sseEvent(type: string, data: Record<string, unknown>): Uint8Array {
+      return encoder.encode(`data: ${JSON.stringify({ type, data })}\n\n`)
     }
 
-    return createSSEResponse(generateEvaluations())
+    // SSE 스트리밍
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          const personas = [
+            { key: 'evaluation_investor', name: 'investor', label: '투자심사역' },
+            { key: 'evaluation_market', name: 'market', label: '시장분석가' },
+            { key: 'evaluation_tech', name: 'tech', label: '기술전문가' },
+          ]
+
+          const results: Record<string, PersonaResult> = {}
+          const modelNames: Record<string, string> = {}
+          const providerNames: Record<string, string> = {}
+
+          controller.enqueue(sseEvent('start', { total: 3 }))
+
+          for (let i = 0; i < personas.length; i++) {
+            const persona = personas[i]!
+
+            // 프로바이더 결정
+            const { provider, displayName, isFallback } = resolveProvider(persona.name)
+
+            controller.enqueue(sseEvent('progress', {
+              current: i + 1,
+              total: 3,
+              persona: persona.label,
+              status: 'evaluating',
+              provider,
+              model: displayName,
+              isFallback,
+            }))
+
+            try {
+              const prompt = await preparePrompt(persona.key, { idea: ideaContext })
+
+              if (!prompt) {
+                controller.enqueue(sseEvent('error', {
+                  persona: persona.name,
+                  message: `${persona.label} 프롬프트를 찾을 수 없습니다.`,
+                }))
+                continue
+              }
+
+              modelNames[persona.name] = prompt.model
+              providerNames[persona.name] = provider
+
+              let fullContent = ''
+              const aiStream = streamAI(prompt.systemPrompt, prompt.userPrompt, {
+                provider,
+                model: prompt.model,
+                temperature: prompt.temperature,
+                maxTokens: prompt.maxTokens,
+              })
+
+              for await (const event of aiStream) {
+                if (event.type === 'text') {
+                  fullContent += event.data
+                  controller.enqueue(sseEvent('persona_text', {
+                    persona: persona.name,
+                    text: event.data,
+                  }))
+                }
+              }
+
+              // markdown 코드 펜스 제거
+              let cleanContent = fullContent.trim()
+              const fenceMatch = cleanContent.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/)
+              if (fenceMatch) {
+                cleanContent = fenceMatch[1].trim()
+              }
+
+              try {
+                const parsed = JSON.parse(cleanContent) as PersonaResult
+                parsed.provider = provider
+                parsed.model = displayName
+                results[persona.name] = parsed
+
+                controller.enqueue(sseEvent('persona_complete', {
+                  persona: persona.name,
+                  label: persona.label,
+                  result: parsed,
+                  provider,
+                  model: displayName,
+                }))
+              } catch {
+                results[persona.name] = { score: 0, feedback: fullContent, provider, model: displayName }
+                controller.enqueue(sseEvent('persona_complete', {
+                  persona: persona.name,
+                  label: persona.label,
+                  result: results[persona.name],
+                  provider,
+                  model: displayName,
+                  parseError: true,
+                }))
+              }
+            } catch (error) {
+              controller.enqueue(sseEvent('error', {
+                persona: persona.name,
+                message: error instanceof Error ? error.message : 'Unknown error',
+              }))
+            }
+          }
+
+          // 종합 점수 계산
+          const investorScore = results.investor?.score || 0
+          const marketScore = results.market?.score || 0
+          const techScore = results.tech?.score || 0
+          const totalScore = Math.round((investorScore + marketScore + techScore) / 3)
+
+          const recommendations = [
+            ...(results.investor?.recommendations || []),
+            ...(results.market?.recommendations || []),
+            ...(results.tech?.recommendations || []),
+          ]
+
+          // DB 저장
+          const supabaseUpdate = await createClient()
+          await supabaseUpdate
+            .from('bi_evaluations')
+            .update({
+              investor_score: investorScore,
+              investor_feedback: results.investor?.feedback || null,
+              investor_ai_model: modelNames.investor || `${providerNames.investor || 'claude'}:claude-sonnet-4-20250514`,
+              market_score: marketScore,
+              market_feedback: results.market?.feedback || null,
+              market_ai_model: modelNames.market || `${providerNames.market || 'claude'}:claude-sonnet-4-20250514`,
+              tech_score: techScore,
+              tech_feedback: results.tech?.feedback || null,
+              tech_ai_model: modelNames.tech || `${providerNames.tech || 'claude'}:claude-sonnet-4-20250514`,
+              total_score: totalScore,
+              recommendations: recommendations.length > 0 ? recommendations : null,
+            })
+            .eq('id', evalId)
+
+          await supabaseUpdate
+            .from('bi_projects')
+            .update({
+              status: 'in_progress',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', projectId)
+
+          controller.enqueue(sseEvent('complete', {
+            evaluationId: evalId,
+            totalScore,
+            investorScore,
+            marketScore,
+            techScore,
+            recommendations,
+          }))
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : 'Unknown error'
+          controller.enqueue(sseEvent('error', { message: msg }))
+        } finally {
+          controller.close()
+        }
+      },
+    })
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      },
+    })
   } catch (error) {
     return handleApiError(error)
   }
