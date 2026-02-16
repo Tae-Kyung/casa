@@ -165,13 +165,21 @@ export async function POST(
                 continue
               }
 
-              modelNames[persona.name] = prompt.model
+              // 실제 사용되는 모델명 기록 (claude만 prompt.model 사용, 나머지는 기본 모델)
+              const DEFAULT_MODELS: Record<string, string> = {
+                claude: 'claude-sonnet-4-20250514',
+                openai: 'gpt-4o',
+                gemini: 'gemini-1.5-pro',
+              }
+              modelNames[persona.name] = provider === 'claude' ? prompt.model : DEFAULT_MODELS[provider] || prompt.model
               providerNames[persona.name] = provider
 
               let fullContent = ''
+              // prompt.model은 DB에 저장된 Claude 모델명이므로, claude provider일 때만 사용
+              // 다른 provider는 DEFAULT_MODELS에서 자동 선택
               const aiStream = streamAI(prompt.systemPrompt, prompt.userPrompt, {
                 provider,
-                model: prompt.model,
+                model: provider === 'claude' ? prompt.model : undefined,
                 temperature: prompt.temperature,
                 maxTokens: prompt.maxTokens,
               })
