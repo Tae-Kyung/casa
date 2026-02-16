@@ -207,7 +207,12 @@ IMPORTANT: Write all string values in the SAME LANGUAGE as the user's idea input
               let fullContent = ''
               // 시스템 프롬프트 앞에 JSON 스키마 지시문 배치 (DB 프롬프트보다 우선)
               const systemPromptWithSchema = JSON_SCHEMA_INSTRUCTION + prompt.systemPrompt
-              const aiStream = streamAI(systemPromptWithSchema, prompt.userPrompt, {
+              // 아이디어가 한국어면 사용자 프롬프트에 한국어 응답 지시 추가
+              const hasKorean = /[가-힣]/.test(ideaCard.raw_input || '')
+              const userPromptWithLang = hasKorean
+                ? prompt.userPrompt + '\n\n[중요] 반드시 한국어(Korean)로 작성하세요. 모든 feedback, strengths, weaknesses, recommendations 값을 한국어로 작성해야 합니다.'
+                : prompt.userPrompt
+              const aiStream = streamAI(systemPromptWithSchema, userPromptWithLang, {
                 provider,
                 model: provider === 'claude' ? prompt.model : undefined,
                 temperature: prompt.temperature,
