@@ -29,6 +29,13 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
     .order('updated_at', { ascending: false })
     .limit(5)
 
+  const statusToI18nKey: Record<string, string> = {
+    draft: 'draft',
+    in_progress: 'inProgress',
+    completed: 'completed',
+    archived: 'archived',
+  }
+
   const stageLabels = [
     tProject('idea'),
     tProject('evaluation'),
@@ -100,7 +107,7 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
                   <div className="mb-4 flex items-center justify-between">
                     <h3 className="font-semibold">{project.name}</h3>
                     <span className="text-sm text-muted-foreground">
-                      {tProject(project.status as 'draft' | 'inProgress' | 'completed' | 'archived')}
+                      {tProject(statusToI18nKey[project.status] || 'draft')}
                     </span>
                   </div>
                   <StageProgress

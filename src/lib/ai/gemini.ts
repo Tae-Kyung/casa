@@ -6,6 +6,7 @@ export interface GeminiOptions {
   model?: string
   temperature?: number
   maxTokens?: number
+  jsonMode?: boolean
 }
 
 export interface GeminiResponse {
@@ -26,7 +27,7 @@ export async function callGemini(
   options: GeminiOptions = {}
 ): Promise<GeminiResponse> {
   const {
-    model = 'gemini-1.5-pro',
+    model = 'gemini-2.5-flash',
     temperature = 0.7,
     maxTokens = 2000,
   } = options
@@ -36,21 +37,13 @@ export async function callGemini(
     generationConfig: {
       temperature,
       maxOutputTokens: maxTokens,
-    },
-  })
-
-  // Gemini는 system instruction을 별도로 설정
-  const chat = geminiModel.startChat({
-    history: [],
-    generationConfig: {
-      temperature,
-      maxOutputTokens: maxTokens,
+      ...(options.jsonMode && { responseMimeType: 'application/json' }),
     },
   })
 
   // System prompt와 user prompt를 결합
   const combinedPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}`
-  const result = await chat.sendMessage(combinedPrompt)
+  const result = await geminiModel.generateContent(combinedPrompt)
   const response = result.response
   const content = response.text()
 
@@ -77,7 +70,7 @@ export async function* streamGemini(
   options: GeminiOptions = {}
 ): AsyncGenerator<{ type: string; data: string }, void, unknown> {
   const {
-    model = 'gemini-1.5-pro',
+    model = 'gemini-2.5-flash',
     temperature = 0.7,
     maxTokens = 2000,
   } = options
@@ -87,6 +80,7 @@ export async function* streamGemini(
     generationConfig: {
       temperature,
       maxOutputTokens: maxTokens,
+      ...(options.jsonMode && { responseMimeType: 'application/json' }),
     },
   })
 

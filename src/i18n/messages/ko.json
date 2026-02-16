@@ -142,7 +142,12 @@
     "disputeReceived": "이의 제기 접수됨",
     "confirmGate2": "평가 확정 (Gate 2 통과)",
     "gate2Passed": "Gate 2 통과",
-    "gate2PassedDesc": "평가가 확정되었습니다. 문서 생성 단계로 이동할 수 있습니다."
+    "gate2PassedDesc": "평가가 확정되었습니다. 문서 생성 단계로 이동할 수 있습니다.",
+    "viewDetail": "상세 보기 →",
+    "detailFeedback": "종합 의견",
+    "detailStrengths": "강점",
+    "detailWeaknesses": "약점",
+    "detailRecommendations": "개선 제안"
   },
   "document": {
     "title": "문서 생성",

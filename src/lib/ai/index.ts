@@ -14,6 +14,7 @@ export interface AIOptions {
   model?: string
   temperature?: number
   maxTokens?: number
+  jsonMode?: boolean
 }
 
 export interface AIResponse {
@@ -30,7 +31,7 @@ export interface AIResponse {
 const DEFAULT_MODELS: Record<AIProvider, string> = {
   claude: 'claude-sonnet-4-20250514',
   openai: 'gpt-4o',
-  gemini: 'gemini-1.5-pro',
+  gemini: 'gemini-2.5-flash',
 }
 
 // 환경변수에서 기본 프로바이더 결정
@@ -74,6 +75,7 @@ export async function callAI(
     model,
     temperature: options.temperature,
     maxTokens: options.maxTokens,
+    jsonMode: options.jsonMode,
   }
 
   let response
@@ -117,6 +119,7 @@ export async function* streamAI(
     model,
     temperature: options.temperature,
     maxTokens: options.maxTokens,
+    jsonMode: options.jsonMode,
   }
 
   let generator

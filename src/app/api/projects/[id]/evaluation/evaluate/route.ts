@@ -123,6 +123,21 @@ export async function POST(
       ai_expanded: String(ideaCard.ai_expanded ?? ''),
     }
 
+    // JSON 출력 형식 강제 지시문
+    const JSON_SCHEMA_INSTRUCTION = `
+
+[OUTPUT FORMAT - CRITICAL]
+You MUST respond with ONLY a valid JSON object. No markdown, no explanation, no code fences.
+The JSON MUST have exactly these fields:
+{
+  "score": <number 0-100>,
+  "feedback": "<string: overall evaluation summary>",
+  "strengths": ["<string>", ...],
+  "weaknesses": ["<string>", ...],
+  "recommendations": ["<string>", ...]
+}
+Do NOT use field names like "summary", "analysis", or "comment". Use exactly "feedback".`
+
     // 저장을 위한 변수
     const projectId = id
     const evalId = evaluationId
@@ -181,19 +196,20 @@ export async function POST(
               const DEFAULT_MODELS: Record<string, string> = {
                 claude: 'claude-sonnet-4-20250514',
                 openai: 'gpt-4o',
-                gemini: 'gemini-1.5-pro',
+                gemini: 'gemini-2.5-flash',
               }
               modelNames[persona.name] = provider === 'claude' ? prompt.model : DEFAULT_MODELS[provider] || prompt.model
               providerNames[persona.name] = provider
 
               let fullContent = ''
-              // prompt.model은 DB에 저장된 Claude 모델명이므로, claude provider일 때만 사용
-              // 다른 provider는 DEFAULT_MODELS에서 자동 선택
-              const aiStream = streamAI(prompt.systemPrompt, prompt.userPrompt, {
+              // 시스템 프롬프트에 JSON 스키마 지시문 추가
+              const systemPromptWithSchema = prompt.systemPrompt + JSON_SCHEMA_INSTRUCTION
+              const aiStream = streamAI(systemPromptWithSchema, prompt.userPrompt, {
                 provider,
                 model: provider === 'claude' ? prompt.model : undefined,
                 temperature: prompt.temperature,
                 maxTokens: prompt.maxTokens,
+                jsonMode: provider !== 'claude', // OpenAI, Gemini에 JSON 모드 강제
               })
 
               for await (const event of aiStream) {
@@ -206,17 +222,33 @@ export async function POST(
                 }
               }
 
-              // markdown 코드 펜스 제거
+              // JSON 추출: 코드 펜스 내부 또는 첫 번째 {...} 블록
               let cleanContent = fullContent.trim()
-              const fenceMatch = cleanContent.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/)
+
+              // 1차: 코드 펜스 내부 추출
+              const fenceMatch = cleanContent.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/)
               if (fenceMatch) {
                 cleanContent = fenceMatch[1].trim()
+              } else {
+                // 2차: 첫 번째 JSON 객체 추출
+                const jsonMatch = cleanContent.match(/\{[\s\S]*\}/)
+                if (jsonMatch) {
+                  cleanContent = jsonMatch[0].trim()
+                }
               }
 
               try {
-                const parsed = JSON.parse(cleanContent) as PersonaResult
-                parsed.provider = provider
-                parsed.model = displayName
+                const raw = JSON.parse(cleanContent) as Record<string, unknown>
+                // summary → feedback 필드 정규화
+                const parsed: PersonaResult = {
+                  score: typeof raw.score === 'number' ? raw.score : 0,
+                  feedback: (raw.feedback || raw.summary || raw.analysis || raw.comment || '') as string,
+                  strengths: Array.isArray(raw.strengths) ? raw.strengths : undefined,
+                  weaknesses: Array.isArray(raw.weaknesses) ? raw.weaknesses : undefined,
+                  recommendations: Array.isArray(raw.recommendations) ? raw.recommendations : undefined,
+                  provider,
+                  model: displayName,
+                }
                 results[persona.name] = parsed
 
                 controller.enqueue(sseEvent('persona_complete', {
@@ -263,13 +295,28 @@ export async function POST(
             .from('bi_evaluations')
             .update({
               investor_score: investorScore,
-              investor_feedback: results.investor?.feedback || null,
+              investor_feedback: results.investor ? JSON.stringify({
+                feedback: results.investor.feedback,
+                strengths: results.investor.strengths,
+                weaknesses: results.investor.weaknesses,
+                recommendations: results.investor.recommendations,
+              }) : null,
               investor_ai_model: modelNames.investor || `${providerNames.investor || 'claude'}:claude-sonnet-4-20250514`,
               market_score: marketScore,
-              market_feedback: results.market?.feedback || null,
+              market_feedback: results.market ? JSON.stringify({
+                feedback: results.market.feedback,
+                strengths: results.market.strengths,
+                weaknesses: results.market.weaknesses,
+                recommendations: results.market.recommendations,
+              }) : null,
               market_ai_model: modelNames.market || `${providerNames.market || 'claude'}:claude-sonnet-4-20250514`,
               tech_score: techScore,
-              tech_feedback: results.tech?.feedback || null,
+              tech_feedback: results.tech ? JSON.stringify({
+                feedback: results.tech.feedback,
+                strengths: results.tech.strengths,
+                weaknesses: results.tech.weaknesses,
+                recommendations: results.tech.recommendations,
+              }) : null,
               tech_ai_model: modelNames.tech || `${providerNames.tech || 'claude'}:claude-sonnet-4-20250514`,
               total_score: totalScore,
               recommendations: recommendations.length > 0 ? recommendations : null,

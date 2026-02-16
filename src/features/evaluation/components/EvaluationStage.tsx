@@ -75,6 +75,26 @@ export function EvaluationStage({
   const [showDisputeDialog, setShowDisputeDialog] = useState(false)
   const [disputeComment, setDisputeComment] = useState('')
   const [isSubmittingDispute, setIsSubmittingDispute] = useState(false)
+  const [detailPersona, setDetailPersona] = useState<PersonaName | null>(null)
+
+  // feedback JSON 파싱 헬퍼
+  const parseFeedback = (raw: string | null): Omit<PersonaResult, 'score'> => {
+    if (!raw) return { feedback: '' }
+    try {
+      const parsed = JSON.parse(raw)
+      if (parsed && typeof parsed === 'object' && parsed.feedback) {
+        return {
+          feedback: parsed.feedback,
+          strengths: parsed.strengths,
+          weaknesses: parsed.weaknesses,
+          recommendations: parsed.recommendations,
+        }
+      }
+    } catch {
+      // JSON이 아닌 경우 (이전 형식) — 문자열 그대로 사용
+    }
+    return { feedback: raw }
+  }
 
   // 기존 평가 결과 로드
   useEffect(() => {
@@ -83,19 +103,19 @@ export function EvaluationStage({
       if (evaluation.investor_score !== null) {
         results.investor = {
           score: evaluation.investor_score,
-          feedback: evaluation.investor_feedback || '',
+          ...parseFeedback(evaluation.investor_feedback),
         }
       }
       if (evaluation.market_score !== null) {
         results.market = {
           score: evaluation.market_score,
-          feedback: evaluation.market_feedback || '',
+          ...parseFeedback(evaluation.market_feedback),
         }
       }
       if (evaluation.tech_score !== null) {
         results.tech = {
           score: evaluation.tech_score,
-          feedback: evaluation.tech_feedback || '',
+          ...parseFeedback(evaluation.tech_feedback),
         }
       }
       setPersonaResults(results)
@@ -415,14 +435,21 @@ export function EvaluationStage({
                       </p>
                     </div>
                   ) : result ? (
-                    <div className="space-y-2">
+                    <button
+                      type="button"
+                      className="w-full cursor-pointer space-y-2 text-left"
+                      onClick={() => setDetailPersona(key)}
+                    >
                       <p className={`text-2xl font-bold ${getScoreColor(result.score)}`}>
                         {t('evaluationStage.score', { score: result.score })}
                       </p>
-                      <p className="text-sm text-muted-foreground line-clamp-4">
+                      <p className="text-sm text-muted-foreground line-clamp-3">
                         {result.feedback}
                       </p>
-                    </div>
+                      <p className="text-xs font-medium text-primary">
+                        {t('evaluationStage.viewDetail')}
+                      </p>
+                    </button>
                   ) : isEvaluating ? (
                     <div className="flex items-center justify-center py-4">
                       <span className="text-sm text-muted-foreground">{t('evaluationStage.waiting')}</span>
@@ -557,6 +584,100 @@ export function EvaluationStage({
           </CardContent>
         </Card>
       )}
+
+      {/* 평가 상세 보기 다이얼로그 */}
+      <Dialog open={!!detailPersona} onOpenChange={() => setDetailPersona(null)}>
+        <DialogContent className="max-h-[85vh] max-w-2xl overflow-hidden">
+          {detailPersona && personaResults[detailPersona] && (() => {
+            const config = personaConfig[detailPersona]
+            const result = personaResults[detailPersona]!
+            const Icon = config.icon
+            return (
+              <>
+                <DialogHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-full bg-muted p-2">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <DialogTitle className="flex items-center gap-2">
+                        {config.label}
+                        {result.model && (
+                          <Badge variant="outline" className="text-xs">
+                            {result.model}
+                          </Badge>
+                        )}
+                      </DialogTitle>
+                      <DialogDescription>{config.description}</DialogDescription>
+                    </div>
+                    <Badge variant={getScoreBadgeVariant(result.score)} className="ml-auto text-lg px-3 py-1">
+                      {t('evaluationStage.score', { score: result.score })}
+                    </Badge>
+                  </div>
+                </DialogHeader>
+                <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
+                  {/* 피드백 */}
+                  <div>
+                    <h4 className="mb-2 font-semibold">{t('evaluationStage.detailFeedback')}</h4>
+                    <p className="whitespace-pre-wrap text-sm text-muted-foreground">{result.feedback}</p>
+                  </div>
+
+                  {/* 강점 */}
+                  {result.strengths && result.strengths.length > 0 && (
+                    <div>
+                      <h4 className="mb-2 font-semibold text-green-700 dark:text-green-400">
+                        {t('evaluationStage.detailStrengths')}
+                      </h4>
+                      <ul className="space-y-1">
+                        {result.strengths.map((s, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" />
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* 약점 */}
+                  {result.weaknesses && result.weaknesses.length > 0 && (
+                    <div>
+                      <h4 className="mb-2 font-semibold text-red-700 dark:text-red-400">
+                        {t('evaluationStage.detailWeaknesses')}
+                      </h4>
+                      <ul className="space-y-1">
+                        {result.weaknesses.map((w, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+                            {w}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* 개선 제안 */}
+                  {result.recommendations && result.recommendations.length > 0 && (
+                    <div>
+                      <h4 className="mb-2 font-semibold text-blue-700 dark:text-blue-400">
+                        {t('evaluationStage.detailRecommendations')}
+                      </h4>
+                      <ul className="space-y-1">
+                        {result.recommendations.map((r, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
+                            {r}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </>
+            )
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* 이의 제기 다이얼로그 */}
       <Dialog open={showDisputeDialog} onOpenChange={setShowDisputeDialog}>

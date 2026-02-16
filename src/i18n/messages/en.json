@@ -142,7 +142,12 @@
     "disputeReceived": "Dispute Received",
     "confirmGate2": "Confirm Evaluation (Pass Gate 2)",
     "gate2Passed": "Gate 2 Passed",
-    "gate2PassedDesc": "Evaluation has been confirmed. You can now proceed to the document generation stage."
+    "gate2PassedDesc": "Evaluation has been confirmed. You can now proceed to the document generation stage.",
+    "viewDetail": "View details →",
+    "detailFeedback": "Overall Feedback",
+    "detailStrengths": "Strengths",
+    "detailWeaknesses": "Weaknesses",
+    "detailRecommendations": "Recommendations"
   },
   "document": {
     "title": "Document Generation",

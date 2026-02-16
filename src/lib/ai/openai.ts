@@ -8,6 +8,7 @@ export interface OpenAIOptions {
   model?: string
   temperature?: number
   maxTokens?: number
+  jsonMode?: boolean
 }
 
 export interface OpenAIResponse {
@@ -37,6 +38,7 @@ export async function callOpenAI(
     model,
     max_tokens: maxTokens,
     temperature,
+    ...(options.jsonMode && { response_format: { type: 'json_object' as const } }),
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
@@ -75,6 +77,7 @@ export async function* streamOpenAI(
     max_tokens: maxTokens,
     temperature,
     stream: true,
+    ...(options.jsonMode && { response_format: { type: 'json_object' as const } }),
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
