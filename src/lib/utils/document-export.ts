@@ -15,6 +15,9 @@ function markdownToStyledHtml(title: string, markdown: string): string {
     size: A4;
     margin: 20mm 25mm;
   }
+  @media print {
+    body { margin: 0; padding: 0; }
+  }
   body {
     font-family: 'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
     font-size: 11pt;
@@ -41,6 +44,7 @@ function markdownToStyledHtml(title: string, markdown: string): string {
     margin-bottom: 12px;
     border-bottom: 1px solid #dbeafe;
     padding-bottom: 6px;
+    page-break-after: avoid;
   }
   h3 {
     font-size: 13pt;
@@ -48,6 +52,7 @@ function markdownToStyledHtml(title: string, markdown: string): string {
     color: #1e3a5f;
     margin-top: 24px;
     margin-bottom: 8px;
+    page-break-after: avoid;
   }
   p {
     margin: 8px 0;
@@ -65,6 +70,7 @@ function markdownToStyledHtml(title: string, markdown: string): string {
     border-collapse: collapse;
     margin: 16px 0;
     font-size: 10pt;
+    page-break-inside: avoid;
   }
   th, td {
     border: 1px solid #d1d5db;
@@ -97,6 +103,7 @@ function markdownToStyledHtml(title: string, markdown: string): string {
     border-radius: 8px;
     overflow-x: auto;
     font-size: 10pt;
+    page-break-inside: avoid;
   }
   pre code {
     background: none;
@@ -118,53 +125,28 @@ ${bodyHtml}
 </html>`
 }
 
-export async function exportToPdf(title: string, markdown: string): Promise<void> {
+export function exportToPdf(title: string, markdown: string): void {
   const html = markdownToStyledHtml(title, markdown)
 
-  // 현재 스크롤 위치 저장
-  const scrollX = window.scrollX
-  const scrollY = window.scrollY
+  // 새 창에서 열고 인쇄 다이얼로그 표시 (PDF로 저장 선택)
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) {
+    // 팝업 차단 시 Blob URL 폴백
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
+    return
+  }
 
-  const container = document.createElement('div')
-  container.innerHTML = html
-  container.style.position = 'fixed'
-  container.style.left = '-9999px'
-  container.style.top = '0'
-  container.style.width = '210mm'
-  container.style.zIndex = '-9999'
-  container.style.overflow = 'hidden'
-  container.style.opacity = '0'
-  container.style.pointerEvents = 'none'
-  document.body.appendChild(container)
+  printWindow.document.write(html)
+  printWindow.document.close()
 
-  try {
-    const html2pdf = (await import('html2pdf.js')).default
-
-    const opt = {
-      margin: [10, 15, 10, 15] as [number, number, number, number],
-      filename: `${title}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        letterRendering: true,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: container.scrollWidth,
-      },
-      jsPDF: {
-        unit: 'mm' as const,
-        format: 'a4' as const,
-        orientation: 'portrait' as const,
-      },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] as string[] },
-    }
-
-    await html2pdf().set(opt).from(container).save()
-  } finally {
-    document.body.removeChild(container)
-    // 스크롤 위치 복원
-    window.scrollTo(scrollX, scrollY)
+  // 폰트 로딩 대기 후 인쇄
+  printWindow.onload = () => {
+    setTimeout(() => {
+      printWindow.print()
+    }, 300)
   }
 }
 

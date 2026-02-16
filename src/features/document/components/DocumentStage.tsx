@@ -253,13 +253,9 @@ export function DocumentStage({
     URL.revokeObjectURL(url)
   }
 
-  const handleDownloadPdf = async (doc: DocType) => {
+  const handleDownloadPdf = (doc: DocType) => {
     if (!doc.content) return
-    try {
-      await exportToPdf(doc.title, doc.content)
-    } catch {
-      toast.error('PDF export failed')
-    }
+    exportToPdf(doc.title, doc.content)
   }
 
   const handleDownloadDocx = (doc: DocType) => {

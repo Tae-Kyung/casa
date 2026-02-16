@@ -75,9 +75,9 @@ export function DeployStage({
     }
   }
 
-  const handleDownloadAll = async () => {
-    for (const doc of documents) {
-      if (!doc.content) continue
+  const handleDownloadAll = () => {
+    documents.forEach(doc => {
+      if (!doc.content) return
 
       if (doc.type === 'landing') {
         // 랜딩페이지는 HTML로 다운로드
@@ -91,23 +91,10 @@ export function DeployStage({
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
       } else {
-        // 사업계획서/피치는 PDF로 다운로드
-        try {
-          await exportToPdf(doc.title, doc.content)
-        } catch {
-          // PDF 실패 시 마크다운으로 폴백
-          const blob = new Blob([doc.content], { type: 'text/markdown' })
-          const url = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = `${doc.title}.md`
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-          URL.revokeObjectURL(url)
-        }
+        // 사업계획서/피치는 PDF 인쇄 창으로 다운로드
+        exportToPdf(doc.title, doc.content)
       }
-    }
+    })
     toast.success(t('deploy.downloadAllComplete'))
   }
 
