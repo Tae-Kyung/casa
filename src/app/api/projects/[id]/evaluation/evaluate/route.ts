@@ -131,12 +131,13 @@ You MUST respond with ONLY a valid JSON object. No markdown, no explanation, no 
 The JSON MUST have exactly these fields:
 {
   "score": <number 0-100>,
-  "feedback": "<string: overall evaluation summary>",
-  "strengths": ["<string>", ...],
-  "weaknesses": ["<string>", ...],
-  "recommendations": ["<string>", ...]
+  "feedback": "<string: 2-3 sentence overall evaluation summary>",
+  "strengths": ["<string: 1 sentence each, max 5 items>"],
+  "weaknesses": ["<string: 1 sentence each, max 5 items>"],
+  "recommendations": ["<string: 1 sentence each, max 5 items>"]
 }
-Do NOT use field names like "summary", "analysis", or "comment". Use exactly "feedback".`
+Do NOT use field names like "summary", "analysis", or "comment". Use exactly "feedback".
+Keep each array item concise (1 sentence). Do NOT exceed 5 items per array.`
 
     // 저장을 위한 변수
     const projectId = id
@@ -208,7 +209,7 @@ Do NOT use field names like "summary", "analysis", or "comment". Use exactly "fe
                 provider,
                 model: provider === 'claude' ? prompt.model : undefined,
                 temperature: prompt.temperature,
-                maxTokens: prompt.maxTokens,
+                maxTokens: Math.max(prompt.maxTokens, 4000),
                 jsonMode: provider !== 'claude', // OpenAI, Gemini에 JSON 모드 강제
               })
 
