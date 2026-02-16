@@ -157,6 +157,10 @@
     "generating": "Generating document...",
     "preview": "Preview",
     "download": "Download",
+    "downloadAs": "Download",
+    "downloadMd": "Markdown (.md)",
+    "downloadPdf": "PDF (.pdf)",
+    "downloadDoc": "Word (.doc)",
     "revise": "Request Revision",
     "confirmDoc": "Confirm Document"
   },

@@ -9,16 +9,24 @@ import {
   Check,
   RefreshCw,
   Download,
+  ChevronDown,
   Eye,
   AlertTriangle,
   Edit3,
   ArrowLeft,
   Undo2
 } from 'lucide-react'
+import { exportToPdf, exportToDocx } from '@/lib/utils/document-export'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -228,22 +236,39 @@ export function DocumentStage({
     }
   }
 
-  const handleDownload = (doc: DocType) => {
+  const handleDownloadMd = (doc: DocType) => {
     if (!doc.content) return
 
+    const isLanding = doc.type === 'landing'
     const blob = new Blob([doc.content], {
-      type: doc.type === 'landing' ? 'text/html' : 'text/markdown'
+      type: isLanding ? 'text/html' : 'text/markdown'
     })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = doc.type === 'landing'
-      ? `${doc.title}.html`
-      : `${doc.title}.md`
+    a.download = isLanding ? `${doc.title}.html` : `${doc.title}.md`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+  }
+
+  const handleDownloadPdf = async (doc: DocType) => {
+    if (!doc.content) return
+    try {
+      await exportToPdf(doc.title, doc.content)
+    } catch {
+      toast.error('PDF export failed')
+    }
+  }
+
+  const handleDownloadDocx = (doc: DocType) => {
+    if (!doc.content) return
+    try {
+      exportToDocx(doc.title, doc.content)
+    } catch {
+      toast.error('Word export failed')
+    }
   }
 
   const handleRevise = async () => {
@@ -486,14 +511,37 @@ export function DocumentStage({
                         <Eye className="mr-1 h-4 w-4" />
                         {t('document.preview')}
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDownload(doc)}
-                      >
-                        <Download className="mr-1 h-4 w-4" />
-                        {t('document.download')}
-                      </Button>
+                      {doc.type === 'landing' ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownloadMd(doc)}
+                        >
+                          <Download className="mr-1 h-4 w-4" />
+                          {t('document.download')}
+                        </Button>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="outline">
+                              <Download className="mr-1 h-4 w-4" />
+                              {t('document.downloadAs')}
+                              <ChevronDown className="ml-1 h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuItem onClick={() => handleDownloadMd(doc)}>
+                              {t('document.downloadMd')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDownloadPdf(doc)}>
+                              {t('document.downloadPdf')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDownloadDocx(doc)}>
+                              {t('document.downloadDoc')}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
                     {doc.is_confirmed ? (
                       <div className="flex flex-wrap gap-2 pt-2">

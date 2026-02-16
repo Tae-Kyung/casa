@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { toast } from 'sonner'
+import { exportToPdf } from '@/lib/utils/document-export'
 import type { Project, IdeaCard, Evaluation, Document as DocType } from '@/types/database'
 
 interface DeployStageProps {
@@ -74,25 +75,39 @@ export function DeployStage({
     }
   }
 
-  const handleDownloadAll = () => {
-    // 모든 문서 다운로드
-    documents.forEach(doc => {
-      if (!doc.content) return
+  const handleDownloadAll = async () => {
+    for (const doc of documents) {
+      if (!doc.content) continue
 
-      const blob = new Blob([doc.content], {
-        type: doc.type === 'landing' ? 'text/html' : 'text/markdown'
-      })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = doc.type === 'landing'
-        ? `${doc.title}.html`
-        : `${doc.title}.md`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    })
+      if (doc.type === 'landing') {
+        // 랜딩페이지는 HTML로 다운로드
+        const blob = new Blob([doc.content], { type: 'text/html' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${doc.title}.html`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      } else {
+        // 사업계획서/피치는 PDF로 다운로드
+        try {
+          await exportToPdf(doc.title, doc.content)
+        } catch {
+          // PDF 실패 시 마크다운으로 폴백
+          const blob = new Blob([doc.content], { type: 'text/markdown' })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `${doc.title}.md`
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+        }
+      }
+    }
     toast.success(t('deploy.downloadAllComplete'))
   }
 

@@ -157,6 +157,10 @@
     "generating": "문서 생성 중...",
     "preview": "미리보기",
     "download": "다운로드",
+    "downloadAs": "다운로드",
+    "downloadMd": "마크다운 (.md)",
+    "downloadPdf": "PDF (.pdf)",
+    "downloadDoc": "Word (.doc)",
     "revise": "수정 요청",
     "confirmDoc": "문서 확정"
   },
