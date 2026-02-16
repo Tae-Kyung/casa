@@ -111,6 +111,18 @@ export async function POST(
       ai_expanded: ideaCard.ai_expanded,
     }, null, 2)
 
+    // 프롬프트 템플릿 변수 (개별 필드 + 전체 JSON 모두 지원)
+    const promptVariables: Record<string, string> = {
+      idea: ideaContext,
+      idea_summary: ideaCard.raw_input || '',
+      raw_input: ideaCard.raw_input || '',
+      problem: ideaCard.problem || '',
+      solution: ideaCard.solution || '',
+      target: ideaCard.target || '',
+      differentiation: ideaCard.differentiation || '',
+      ai_expanded: String(ideaCard.ai_expanded ?? ''),
+    }
+
     // 저장을 위한 변수
     const projectId = id
     const evalId = evaluationId
@@ -155,7 +167,7 @@ export async function POST(
             }))
 
             try {
-              const prompt = await preparePrompt(persona.key, { idea: ideaContext })
+              const prompt = await preparePrompt(persona.key, promptVariables)
 
               if (!prompt) {
                 controller.enqueue(sseEvent('error', {
