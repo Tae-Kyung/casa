@@ -137,6 +137,7 @@ Any other output format instructions below are SUPERSEDED by this schema:
 }
 Use EXACTLY these 5 field names: "score", "feedback", "strengths", "weaknesses", "recommendations".
 Do NOT use any other field names (no "summary", "marketAnalysis", "competitors", "opportunities", "threats", etc.).
+IMPORTANT: Write all string values in the SAME LANGUAGE as the user's idea input below. If the idea is in Korean, respond in Korean. If in English, respond in English.
 
 `
 
