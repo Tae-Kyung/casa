@@ -123,12 +123,11 @@ export async function POST(
       ai_expanded: String(ideaCard.ai_expanded ?? ''),
     }
 
-    // JSON 출력 형식 강제 지시문
-    const JSON_SCHEMA_INSTRUCTION = `
-
-[OUTPUT FORMAT - CRITICAL]
-You MUST respond with ONLY a valid JSON object. No markdown, no explanation, no code fences.
-The JSON MUST have exactly these fields:
+    // JSON 출력 형식 강제 지시문 (시스템 프롬프트 앞에 배치하여 우선순위 확보)
+    const JSON_SCHEMA_INSTRUCTION = `[MANDATORY OUTPUT FORMAT - THIS OVERRIDES ALL OTHER FORMAT INSTRUCTIONS]
+You MUST respond with ONLY a valid JSON object matching this EXACT schema.
+No markdown, no code fences, no extra text. Only the JSON object.
+Any other output format instructions below are SUPERSEDED by this schema:
 {
   "score": <number 0-100>,
   "feedback": "<string: 2-3 sentence overall evaluation summary>",
@@ -136,8 +135,10 @@ The JSON MUST have exactly these fields:
   "weaknesses": ["<string: 1 sentence each, max 5 items>"],
   "recommendations": ["<string: 1 sentence each, max 5 items>"]
 }
-Do NOT use field names like "summary", "analysis", or "comment". Use exactly "feedback".
-Keep each array item concise (1 sentence). Do NOT exceed 5 items per array.`
+Use EXACTLY these 5 field names: "score", "feedback", "strengths", "weaknesses", "recommendations".
+Do NOT use any other field names (no "summary", "marketAnalysis", "competitors", "opportunities", "threats", etc.).
+
+`
 
     // 저장을 위한 변수
     const projectId = id
@@ -203,8 +204,8 @@ Keep each array item concise (1 sentence). Do NOT exceed 5 items per array.`
               providerNames[persona.name] = provider
 
               let fullContent = ''
-              // 시스템 프롬프트에 JSON 스키마 지시문 추가
-              const systemPromptWithSchema = prompt.systemPrompt + JSON_SCHEMA_INSTRUCTION
+              // 시스템 프롬프트 앞에 JSON 스키마 지시문 배치 (DB 프롬프트보다 우선)
+              const systemPromptWithSchema = JSON_SCHEMA_INSTRUCTION + prompt.systemPrompt
               const aiStream = streamAI(systemPromptWithSchema, prompt.userPrompt, {
                 provider,
                 model: provider === 'claude' ? prompt.model : undefined,
@@ -261,8 +262,8 @@ Keep each array item concise (1 sentence). Do NOT exceed 5 items per array.`
                 const parsed: PersonaResult = {
                   score: typeof raw.score === 'number' ? raw.score : 0,
                   feedback: findString('feedback', 'summary', 'analysis', 'comment', 'overall', 'evaluation'),
-                  strengths: findArray('strengths', 'strength', 'pros', 'advantages', 'positive_points'),
-                  weaknesses: findArray('weaknesses', 'weakness', 'cons', 'disadvantages', 'risks', 'negative_points', 'challenges'),
+                  strengths: findArray('strengths', 'strength', 'pros', 'advantages', 'positive_points', 'opportunities'),
+                  weaknesses: findArray('weaknesses', 'weakness', 'cons', 'disadvantages', 'risks', 'negative_points', 'challenges', 'threats'),
                   recommendations: findArray('recommendations', 'recommendation', 'suggestions', 'improvements', 'action_items'),
                   provider,
                   model: displayName,
