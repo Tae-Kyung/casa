@@ -41,8 +41,15 @@ export async function GET(
     })
   }
 
+  // 코드 펜스 제거 (AI가 ```html ... ``` 로 감싼 경우)
+  let html = landingDoc.content.trim()
+  const fenceMatch = html.match(/^```(?:html)?\s*\n?([\s\S]*?)\n?\s*```$/)
+  if (fenceMatch) {
+    html = fenceMatch[1].trim()
+  }
+
   // 랜딩페이지 HTML 직접 반환
-  return new NextResponse(landingDoc.content, {
+  return new NextResponse(html, {
     status: 200,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',

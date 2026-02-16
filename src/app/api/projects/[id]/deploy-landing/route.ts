@@ -50,8 +50,15 @@ export async function POST(
     const fileName = `landing-${id}.html`
     const filePath = `public/${fileName}`
 
+    // 코드 펜스 제거 (AI가 ```html ... ``` 로 감싼 경우)
+    let cleanContent = landingDoc.content.trim()
+    const fenceMatch = cleanContent.match(/^```(?:html)?\s*\n?([\s\S]*?)\n?\s*```$/)
+    if (fenceMatch) {
+      cleanContent = fenceMatch[1].trim()
+    }
+
     // HTML 컨텐츠에 메타데이터 추가
-    const htmlContent = landingDoc.content.replace(
+    const htmlContent = cleanContent.replace(
       '</head>',
       `<meta name="project-id" content="${id}">
       <meta name="deployed-at" content="${new Date().toISOString()}">

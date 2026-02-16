@@ -140,6 +140,13 @@ ${ideaCard.differentiation || ''}
         }
       }
 
+      // 코드 펜스 제거 (AI가 ```html ... ``` 로 감싸는 경우)
+      fullContent = fullContent.trim()
+      const fenceMatch = fullContent.match(/^```(?:html)?\s*\n?([\s\S]*?)\n?\s*```$/)
+      if (fenceMatch) {
+        fullContent = fenceMatch[1].trim()
+      }
+
       // DB 저장
       const supabaseUpdate = await createClient()
 
