@@ -42,7 +42,45 @@ ON CONFLICT (key) DO UPDATE SET
   user_prompt_template = EXCLUDED.user_prompt_template,
   updated_at = NOW();
 
--- 2. 투자심사역 평가 프롬프트
+-- 2. 아이디어 내용 완성 프롬프트
+INSERT INTO bi_prompts (key, name, description, category, system_prompt, user_prompt_template, model, temperature, max_tokens)
+VALUES (
+  'idea_enhancement',
+  '아이디어 내용 완성',
+  '짧은 아이디어 문장을 500자 이상의 상세한 설명 텍스트로 완성합니다.',
+  'ideation',
+  '당신은 창업 아이디어를 풍부하게 확장해주는 전문 컨설턴트입니다.
+사용자가 간단히 작성한 아이디어를 받아, 500자 이상의 상세하고 구체적인 아이디어 설명으로 완성해주세요.
+
+다음 요소들을 자연스럽게 포함하여 작성하세요:
+- 해결하고자 하는 문제와 그 배경
+- 제안하는 솔루션의 핵심 내용과 작동 방식
+- 목표 고객과 그들의 니즈
+- 기존 대안 대비 차별화 포인트
+- 기대되는 효과와 시장 가능성
+
+작성 규칙:
+- 자연스러운 서술형 문장으로 작성하세요 (JSON이 아닌 일반 텍스트).
+- 원래 아이디어의 핵심을 유지하면서 구체적인 내용을 추가하세요.
+- 창업 경진대회나 사업계획서에 바로 활용할 수 있는 수준으로 작성하세요.
+- 500자 이상 1000자 이내로 작성하세요.',
+  '다음 아이디어를 500자 이상의 상세한 설명으로 완성해주세요:
+
+{{idea}}
+
+위 아이디어의 핵심을 유지하면서, 문제 배경, 솔루션, 목표 고객, 차별점, 기대 효과를 자연스럽게 포함한 상세 설명을 작성해주세요.',
+  'claude-sonnet-4-20250514',
+  0.7,
+  2000
+)
+ON CONFLICT (key) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  system_prompt = EXCLUDED.system_prompt,
+  user_prompt_template = EXCLUDED.user_prompt_template,
+  updated_at = NOW();
+
+-- 3. 투자심사역 평가 프롬프트
 INSERT INTO bi_prompts (key, name, description, category, system_prompt, user_prompt_template, model, temperature, max_tokens)
 VALUES (
   'evaluation_investor',

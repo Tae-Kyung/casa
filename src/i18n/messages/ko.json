@@ -94,7 +94,10 @@
     "problem": "해결하려는 문제",
     "solution": "제안하는 솔루션",
     "target": "목표 고객",
-    "differentiation": "차별화 포인트"
+    "differentiation": "차별화 포인트",
+    "enhance": "AI로 내용 완성",
+    "enhancing": "내용 완성 중...",
+    "enhanceHint": "간단히 작성하면 AI가 상세 내용을 완성해드립니다"
   },
   "ideaStage": {
     "writeMore": "아이디어를 더 자세히 작성해주세요. (최소 50자)",
@@ -103,7 +106,8 @@
     "aiResponseRaw": "AI 응답 (원본)",
     "confirmQuestion": "아이디어를 확정하고 다음 단계로 진행하시겠습니까?",
     "confirmedMessage": "아이디어가 확정되었습니다. 평가 단계로 이동할 수 있습니다.",
-    "charCount": "{count}자"
+    "charCount": "{count}자",
+    "enhanceError": "AI 내용 완성 오류: {error}"
   },
   "evaluation": {
     "title": "사업성 평가",

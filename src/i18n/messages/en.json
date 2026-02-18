@@ -94,7 +94,10 @@
     "problem": "Problem to Solve",
     "solution": "Proposed Solution",
     "target": "Target Customers",
-    "differentiation": "Differentiation"
+    "differentiation": "Differentiation",
+    "enhance": "AI Auto-Complete",
+    "enhancing": "Completing content...",
+    "enhanceHint": "Write briefly and AI will complete the details for you"
   },
   "ideaStage": {
     "writeMore": "Please write more details. (minimum 50 characters)",
@@ -103,7 +106,8 @@
     "aiResponseRaw": "AI Response (Raw)",
     "confirmQuestion": "Would you like to confirm the idea and proceed to the next stage?",
     "confirmedMessage": "Idea has been confirmed. You can now proceed to the evaluation stage.",
-    "charCount": "{count} characters"
+    "charCount": "{count} characters",
+    "enhanceError": "AI auto-complete error: {error}"
   },
   "evaluation": {
     "title": "Business Evaluation",

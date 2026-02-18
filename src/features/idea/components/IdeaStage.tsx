@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { Sparkles, Edit2, Check, RefreshCw } from 'lucide-react'
+import { Sparkles, Edit2, Check, RefreshCw, Wand2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -50,6 +50,16 @@ export function IdeaStage({
     },
     onError: (error) => {
       toast.error(t('ideaStage.aiExpandError', { error }))
+    },
+  })
+
+  // AI 내용 완성 SSE
+  const { isLoading: isEnhancing, start: startEnhance } = useSSE({
+    onMessage: (chunk) => {
+      setRawInput((prev) => prev + chunk)
+    },
+    onError: (error) => {
+      toast.error(t('ideaStage.enhanceError', { error }))
     },
   })
 
@@ -101,6 +111,13 @@ export function IdeaStage({
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleEnhance = async () => {
+    setRawInput('')
+    startEnhance(`/api/projects/${projectId}/idea/enhance`, {
+      raw_input: rawInput,
+    })
   }
 
   const handleExpand = async () => {
@@ -158,15 +175,35 @@ export function IdeaStage({
                 onChange={(e) => setRawInput(e.target.value)}
                 placeholder={t('idea.placeholder')}
                 rows={8}
-                disabled={isSaving || isConfirmed}
+                disabled={isSaving || isConfirmed || isEnhancing}
               />
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  {rawInput.length}자
-                  {rawInput.length < 500 && (
-                    <span className="text-orange-500"> ({t('idea.minLength')})</span>
-                  )}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground">
+                    {rawInput.length}자
+                    {rawInput.length < 500 && (
+                      <span className="text-orange-500"> ({t('idea.minLength')})</span>
+                    )}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEnhance}
+                    disabled={rawInput.length < 50 || isEnhancing || isSaving || isConfirmed}
+                  >
+                    {isEnhancing ? (
+                      <>
+                        <LoadingSpinner size="sm" className="mr-2" />
+                        {t('idea.enhancing')}
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="mr-2 h-4 w-4" />
+                        {t('idea.enhance')}
+                      </>
+                    )}
+                  </Button>
+                </div>
                 <div className="flex gap-2">
                   {ideaCard && (
                     <Button
@@ -175,12 +212,12 @@ export function IdeaStage({
                         setRawInput(ideaCard.raw_input)
                         setIsEditing(false)
                       }}
-                      disabled={isSaving}
+                      disabled={isSaving || isEnhancing}
                     >
                       {t('common.cancel')}
                     </Button>
                   )}
-                  <Button onClick={handleSave} disabled={isSaving}>
+                  <Button onClick={handleSave} disabled={isSaving || isEnhancing}>
                     {isSaving ? (
                       <>
                         <LoadingSpinner size="sm" className="mr-2" />
@@ -192,6 +229,11 @@ export function IdeaStage({
                   </Button>
                 </div>
               </div>
+              {rawInput.length > 0 && rawInput.length < 50 && (
+                <p className="text-xs text-muted-foreground">
+                  {t('idea.enhanceHint')}
+                </p>
+              )}
             </>
           ) : (
             <div className="whitespace-pre-wrap rounded bg-muted p-4">
