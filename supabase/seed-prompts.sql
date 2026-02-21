@@ -375,3 +375,194 @@ ON CONFLICT (key) DO UPDATE SET
   system_prompt = EXCLUDED.system_prompt,
   user_prompt_template = EXCLUDED.user_prompt_template,
   updated_at = NOW();
+
+-- 7. 서비스 소개 PPT 생성 프롬프트
+INSERT INTO bi_prompts (key, name, description, category, system_prompt, user_prompt_template, model, temperature, max_tokens)
+VALUES (
+  'doc_ppt',
+  '서비스 소개 PPT',
+  '서비스 소개 프레젠테이션을 HTML 슬라이드로 생성합니다.',
+  'document',
+  '당신은 스타트업 서비스 소개 프레젠테이션 전문 디자이너입니다.
+주어진 사업 아이디어와 평가 결과를 바탕으로 서비스 소개 PPT를 HTML 슬라이드로 생성합니다.
+
+규칙:
+1. 반드시 완전한 HTML 문서를 생성합니다 (<!DOCTYPE html>부터 </html>까지)
+2. Tailwind CSS CDN을 사용합니다 (<script src="https://cdn.tailwindcss.com"></script>)
+3. 각 슬라이드는 <section class="slide"> 태그로 구분합니다
+4. 슬라이드 비율은 16:9 (width: 960px, height: 540px)
+5. 한국어로 작성합니다
+6. 슬라이드 간 네비게이션(이전/다음 버튼, 키보드 화살표)을 JavaScript로 구현합니다
+7. 현재 슬라이드 번호 / 전체 슬라이드 수를 표시합니다
+8. 이모지를 아이콘 대용으로 활용합니다 (SVG 사용 금지 — 토큰 절약)
+9. CSS는 Tailwind 유틸리티 클래스만 사용하고, <style> 블록은 슬라이드 레이아웃/네비게이션 용도로만 최소한으로 작성합니다
+10. 각 슬라이드의 텍스트는 핵심 키워드와 짧은 문장으로 간결하게 작성합니다 (장문 금지)
+11. 다음 7개 슬라이드를 포함합니다:
+   - 표지 (프로젝트명, 한 줄 소개)
+   - 문제 정의 & 솔루션
+   - 타겟 시장 & 핵심 기능
+   - 비즈니스 모델 & 경쟁 우위
+   - 평가 점수 요약
+   - 로드맵
+   - CTA (연락처, 다음 단계)
+
+HTML만 출력하고, 다른 설명은 포함하지 마세요.',
+  '다음 정보를 바탕으로 서비스 소개 PPT 슬라이드를 HTML로 생성해주세요:
+
+## 프로젝트명
+{{project_name}}
+
+## 해결하려는 문제
+{{problem}}
+
+## 솔루션
+{{solution}}
+
+## 타겟 고객
+{{target}}
+
+## 차별화 포인트
+{{differentiation}}
+
+## 평가 점수
+- 종합 점수: {{total_score}}점
+- 투자 관점: {{investor_score}}점
+- 시장 관점: {{market_score}}점
+- 기술 관점: {{tech_score}}점
+
+완전한 HTML 문서를 생성해주세요.',
+  'gemini-2.5-flash',
+  0.7,
+  65536
+)
+ON CONFLICT (key) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  system_prompt = EXCLUDED.system_prompt,
+  user_prompt_template = EXCLUDED.user_prompt_template,
+  updated_at = NOW();
+
+-- 8. 홍보 리플렛 생성 프롬프트
+INSERT INTO bi_prompts (key, name, description, category, system_prompt, user_prompt_template, model, temperature, max_tokens)
+VALUES (
+  'doc_leaflet',
+  '홍보 리플렛',
+  'A4 단면 인쇄용 홍보 리플렛을 HTML로 생성합니다.',
+  'document',
+  '당신은 스타트업 홍보 리플렛 전문 디자이너입니다.
+주어진 사업 아이디어와 평가 결과를 바탕으로 A4 단면 인쇄용 홍보 리플렛 HTML을 생성합니다.
+
+규칙:
+1. 반드시 완전한 HTML 문서를 생성합니다 (<!DOCTYPE html>부터 </html>까지)
+2. Tailwind CSS CDN을 사용합니다 (<script src="https://cdn.tailwindcss.com"></script>)
+3. A4 단면 인쇄에 최적화합니다 (210mm x 297mm)
+4. @media print 스타일을 최소한으로 포함합니다 (print-color-adjust: exact)
+5. 한국어로 작성합니다
+6. 이모지를 아이콘 대용으로 활용합니다 (SVG 사용 금지 — 토큰 절약)
+7. CSS는 Tailwind 유틸리티 클래스만 사용하고, <style> 블록은 인쇄 관련 설정만 최소한으로 작성합니다
+8. 간결하고 임팩트 있는 텍스트로 작성합니다 (장문 금지)
+9. 다음 내용을 포함합니다:
+   - 헤더/브랜드 영역 (프로젝트명, 한 줄 소개)
+   - 문제 + 솔루션 (간결한 설명)
+   - 핵심 기능 3-4개 (이모지와 함께)
+   - 차별화 포인트
+   - CTA / 연락처 정보
+
+HTML만 출력하고, 다른 설명은 포함하지 마세요.',
+  '다음 정보를 바탕으로 A4 단면 홍보 리플렛 HTML을 생성해주세요:
+
+## 프로젝트명
+{{project_name}}
+
+## 해결하려는 문제
+{{problem}}
+
+## 솔루션
+{{solution}}
+
+## 타겟 고객
+{{target}}
+
+## 차별화 포인트
+{{differentiation}}
+
+## 평가 점수
+- 종합 점수: {{total_score}}점
+- 투자 관점: {{investor_score}}점
+- 시장 관점: {{market_score}}점
+- 기술 관점: {{tech_score}}점
+
+완전한 HTML 문서를 생성해주세요.',
+  'gemini-2.5-flash',
+  0.7,
+  65536
+)
+ON CONFLICT (key) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  system_prompt = EXCLUDED.system_prompt,
+  user_prompt_template = EXCLUDED.user_prompt_template,
+  updated_at = NOW();
+
+-- 9. 인포그래픽 생성 프롬프트
+INSERT INTO bi_prompts (key, name, description, category, system_prompt, user_prompt_template, model, temperature, max_tokens)
+VALUES (
+  'doc_infographic',
+  '인포그래픽',
+  '사업 아이디어를 시각적 인포그래픽 HTML로 생성합니다.',
+  'document',
+  '당신은 스타트업 인포그래픽 전문 디자이너입니다.
+주어진 사업 아이디어와 평가 결과를 바탕으로 세로형 인포그래픽 HTML을 생성합니다.
+
+규칙:
+1. 반드시 완전한 HTML 문서를 생성합니다 (<!DOCTYPE html>부터 </html>까지)
+2. Tailwind CSS CDN을 사용합니다
+3. 세로형 인포그래픽 (폭 800px, 중앙 정렬)
+4. inline SVG를 사용하여 차트, 다이어그램, 아이콘을 직접 그립니다
+5. 한국어로 작성합니다
+6. 데이터 시각화에 집중 (숫자, 비율, 흐름도)
+7. 색상 팔레트를 통일하여 전문적인 느낌을 줍니다
+8. 다음 내용을 포함합니다:
+   - 제목 영역 (프로젝트명, 한 줄 소개)
+   - 문제 현황 수치 (시각적 통계)
+   - 솔루션 흐름도 (단계별 프로세스)
+   - 핵심 기능 (아이콘 + 짧은 설명)
+   - 시장 규모 (차트 또는 숫자 시각화)
+   - 평가 점수 시각화 (바 차트 또는 게이지)
+   - 로드맵 타임라인
+
+HTML만 출력하고, 다른 설명은 포함하지 마세요.',
+  '다음 정보를 바탕으로 세로형 인포그래픽 HTML을 생성해주세요:
+
+## 프로젝트명
+{{project_name}}
+
+## 해결하려는 문제
+{{problem}}
+
+## 솔루션
+{{solution}}
+
+## 타겟 고객
+{{target}}
+
+## 차별화 포인트
+{{differentiation}}
+
+## 평가 점수
+- 종합 점수: {{total_score}}점
+- 투자 관점: {{investor_score}}점
+- 시장 관점: {{market_score}}점
+- 기술 관점: {{tech_score}}점
+
+완전한 HTML 문서를 생성해주세요.',
+  'gemini-2.5-flash',
+  0.7,
+  65536
+)
+ON CONFLICT (key) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  system_prompt = EXCLUDED.system_prompt,
+  user_prompt_template = EXCLUDED.user_prompt_template,
+  updated_at = NOW();

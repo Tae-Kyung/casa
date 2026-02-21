@@ -2,33 +2,13 @@ import { NextRequest } from 'next/server'
 import { requireProjectOwner } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
+import { preparePrompt } from '@/lib/prompts'
 import { createSSEResponse } from '@/lib/ai/claude'
 import { streamGemini } from '@/lib/ai/gemini'
 
 interface RouteContext {
   params: Promise<{ id: string }>
 }
-
-const LEAFLET_SYSTEM_PROMPT = `당신은 스타트업 홍보 리플렛 전문 디자이너입니다.
-주어진 사업 아이디어와 평가 결과를 바탕으로 A4 단면 인쇄용 홍보 리플렛 HTML을 생성합니다.
-
-규칙:
-1. 반드시 완전한 HTML 문서를 생성합니다 (<!DOCTYPE html>부터 </html>까지)
-2. Tailwind CSS CDN을 사용합니다 (<script src="https://cdn.tailwindcss.com"></script>)
-3. A4 단면 인쇄에 최적화합니다 (210mm x 297mm)
-4. @media print 스타일을 최소한으로 포함합니다 (print-color-adjust: exact)
-5. 한국어로 작성합니다
-6. 이모지를 아이콘 대용으로 활용합니다 (SVG 사용 금지 — 토큰 절약)
-7. CSS는 Tailwind 유틸리티 클래스만 사용하고, <style> 블록은 인쇄 관련 설정만 최소한으로 작성합니다
-8. 간결하고 임팩트 있는 텍스트로 작성합니다 (장문 금지)
-9. 다음 내용을 포함합니다:
-   - 헤더/브랜드 영역 (프로젝트명, 한 줄 소개)
-   - 문제 + 솔루션 (간결한 설명)
-   - 핵심 기능 3-4개 (이모지와 함께)
-   - 차별화 포인트
-   - CTA / 연락처 정보
-
-HTML만 출력하고, 다른 설명은 포함하지 마세요.`
 
 export async function POST(
   request: NextRequest,
@@ -89,45 +69,42 @@ export async function POST(
       return errorResponse('이미 확정된 리플렛이 있습니다.', 400)
     }
 
-    const userPrompt = `다음 정보를 바탕으로 A4 단면 홍보 리플렛 HTML을 생성해주세요:
+    const promptVariables: Record<string, string> = {
+      project_name: project.name || '',
+      problem: ideaCard.problem || ideaCard.raw_input || '',
+      solution: ideaCard.solution || '',
+      target: ideaCard.target || '',
+      differentiation: ideaCard.differentiation || '',
+      total_score: String(evaluation.total_score ?? ''),
+      investor_score: String(evaluation.investor_score ?? ''),
+      market_score: String(evaluation.market_score ?? ''),
+      tech_score: String(evaluation.tech_score ?? ''),
+    }
 
-## 프로젝트명
-${project.name}
+    const prompt = await preparePrompt('doc_leaflet', promptVariables)
 
-## 해결하려는 문제
-${ideaCard.problem || ideaCard.raw_input}
-
-## 솔루션
-${ideaCard.solution || ''}
-
-## 타겟 고객
-${ideaCard.target || ''}
-
-## 차별화 포인트
-${ideaCard.differentiation || ''}
-
-## 평가 점수
-- 종합 점수: ${evaluation.total_score}점
-- 투자 관점: ${evaluation.investor_score}점
-- 시장 관점: ${evaluation.market_score}점
-- 기술 관점: ${evaluation.tech_score}점
-
-완전한 HTML 문서를 생성해주세요.`
+    if (!prompt) {
+      return errorResponse('리플렛 프롬프트를 찾을 수 없습니다.', 500)
+    }
 
     const projectId = id
     const existingDocId = existingDoc?.id
     const projectName = project.name
-    const model = 'gemini-2.5-flash'
+    const systemPrompt = prompt.systemPrompt
+    const userPrompt = prompt.userPrompt
+    const model = prompt.model
+    const temperature = prompt.temperature
+    const maxTokens = prompt.maxTokens
 
     async function* generateDocument() {
       let fullContent = ''
 
       yield { type: 'start', data: JSON.stringify({ type: 'leaflet', model }) }
 
-      const stream = streamGemini(LEAFLET_SYSTEM_PROMPT, userPrompt, {
+      const stream = streamGemini(systemPrompt, userPrompt, {
         model,
-        temperature: 0.7,
-        maxTokens: 65536,
+        temperature,
+        maxTokens,
       })
 
       for await (const event of stream) {

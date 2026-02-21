@@ -2,34 +2,13 @@ import { NextRequest } from 'next/server'
 import { requireProjectOwner } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
+import { preparePrompt } from '@/lib/prompts'
 import { createSSEResponse } from '@/lib/ai/claude'
 import { streamGemini } from '@/lib/ai/gemini'
 
 interface RouteContext {
   params: Promise<{ id: string }>
 }
-
-const INFOGRAPHIC_SYSTEM_PROMPT = `당신은 스타트업 인포그래픽 전문 디자이너입니다.
-주어진 사업 아이디어와 평가 결과를 바탕으로 세로형 인포그래픽 HTML을 생성합니다.
-
-규칙:
-1. 반드시 완전한 HTML 문서를 생성합니다 (<!DOCTYPE html>부터 </html>까지)
-2. Tailwind CSS CDN을 사용합니다
-3. 세로형 인포그래픽 (폭 800px, 중앙 정렬)
-4. inline SVG를 사용하여 차트, 다이어그램, 아이콘을 직접 그립니다
-5. 한국어로 작성합니다
-6. 데이터 시각화에 집중 (숫자, 비율, 흐름도)
-7. 색상 팔레트를 통일하여 전문적인 느낌을 줍니다
-8. 다음 내용을 포함합니다:
-   - 제목 영역 (프로젝트명, 한 줄 소개)
-   - 문제 현황 수치 (시각적 통계)
-   - 솔루션 흐름도 (단계별 프로세스)
-   - 핵심 기능 (아이콘 + 짧은 설명)
-   - 시장 규모 (차트 또는 숫자 시각화)
-   - 평가 점수 시각화 (바 차트 또는 게이지)
-   - 로드맵 타임라인
-
-HTML만 출력하고, 다른 설명은 포함하지 마세요.`
 
 export async function POST(
   request: NextRequest,
@@ -90,45 +69,42 @@ export async function POST(
       return errorResponse('이미 확정된 인포그래픽이 있습니다.', 400)
     }
 
-    const userPrompt = `다음 정보를 바탕으로 세로형 인포그래픽 HTML을 생성해주세요:
+    const promptVariables: Record<string, string> = {
+      project_name: project.name || '',
+      problem: ideaCard.problem || ideaCard.raw_input || '',
+      solution: ideaCard.solution || '',
+      target: ideaCard.target || '',
+      differentiation: ideaCard.differentiation || '',
+      total_score: String(evaluation.total_score ?? ''),
+      investor_score: String(evaluation.investor_score ?? ''),
+      market_score: String(evaluation.market_score ?? ''),
+      tech_score: String(evaluation.tech_score ?? ''),
+    }
 
-## 프로젝트명
-${project.name}
+    const prompt = await preparePrompt('doc_infographic', promptVariables)
 
-## 해결하려는 문제
-${ideaCard.problem || ideaCard.raw_input}
-
-## 솔루션
-${ideaCard.solution || ''}
-
-## 타겟 고객
-${ideaCard.target || ''}
-
-## 차별화 포인트
-${ideaCard.differentiation || ''}
-
-## 평가 점수
-- 종합 점수: ${evaluation.total_score}점
-- 투자 관점: ${evaluation.investor_score}점
-- 시장 관점: ${evaluation.market_score}점
-- 기술 관점: ${evaluation.tech_score}점
-
-완전한 HTML 문서를 생성해주세요.`
+    if (!prompt) {
+      return errorResponse('인포그래픽 프롬프트를 찾을 수 없습니다.', 500)
+    }
 
     const projectId = id
     const existingDocId = existingDoc?.id
     const projectName = project.name
-    const model = 'gemini-2.5-flash'
+    const systemPrompt = prompt.systemPrompt
+    const userPrompt = prompt.userPrompt
+    const model = prompt.model
+    const temperature = prompt.temperature
+    const maxTokens = prompt.maxTokens
 
     async function* generateDocument() {
       let fullContent = ''
 
       yield { type: 'start', data: JSON.stringify({ type: 'infographic', model }) }
 
-      const stream = streamGemini(INFOGRAPHIC_SYSTEM_PROMPT, userPrompt, {
+      const stream = streamGemini(systemPrompt, userPrompt, {
         model,
-        temperature: 0.7,
-        maxTokens: 65536,
+        temperature,
+        maxTokens,
       })
 
       for await (const event of stream) {

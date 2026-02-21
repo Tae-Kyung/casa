@@ -2,37 +2,13 @@ import { NextRequest } from 'next/server'
 import { requireProjectOwner } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
+import { preparePrompt } from '@/lib/prompts'
 import { createSSEResponse } from '@/lib/ai/claude'
 import { streamGemini } from '@/lib/ai/gemini'
 
 interface RouteContext {
   params: Promise<{ id: string }>
 }
-
-const PPT_SYSTEM_PROMPT = `당신은 스타트업 서비스 소개 프레젠테이션 전문 디자이너입니다.
-주어진 사업 아이디어와 평가 결과를 바탕으로 서비스 소개 PPT를 HTML 슬라이드로 생성합니다.
-
-규칙:
-1. 반드시 완전한 HTML 문서를 생성합니다 (<!DOCTYPE html>부터 </html>까지)
-2. Tailwind CSS CDN을 사용합니다 (<script src="https://cdn.tailwindcss.com"></script>)
-3. 각 슬라이드는 <section class="slide"> 태그로 구분합니다
-4. 슬라이드 비율은 16:9 (width: 960px, height: 540px)
-5. 한국어로 작성합니다
-6. 슬라이드 간 네비게이션(이전/다음 버튼, 키보드 화살표)을 JavaScript로 구현합니다
-7. 현재 슬라이드 번호 / 전체 슬라이드 수를 표시합니다
-8. 이모지를 아이콘 대용으로 활용합니다 (SVG 사용 금지 — 토큰 절약)
-9. CSS는 Tailwind 유틸리티 클래스만 사용하고, <style> 블록은 슬라이드 레이아웃/네비게이션 용도로만 최소한으로 작성합니다
-10. 각 슬라이드의 텍스트는 핵심 키워드와 짧은 문장으로 간결하게 작성합니다 (장문 금지)
-11. 다음 7개 슬라이드를 포함합니다:
-   - 표지 (프로젝트명, 한 줄 소개)
-   - 문제 정의 & 솔루션
-   - 타겟 시장 & 핵심 기능
-   - 비즈니스 모델 & 경쟁 우위
-   - 평가 점수 요약
-   - 로드맵
-   - CTA (연락처, 다음 단계)
-
-HTML만 출력하고, 다른 설명은 포함하지 마세요.`
 
 export async function POST(
   request: NextRequest,
@@ -93,45 +69,42 @@ export async function POST(
       return errorResponse('이미 확정된 PPT가 있습니다.', 400)
     }
 
-    const userPrompt = `다음 정보를 바탕으로 서비스 소개 PPT 슬라이드를 HTML로 생성해주세요:
+    const promptVariables: Record<string, string> = {
+      project_name: project.name || '',
+      problem: ideaCard.problem || ideaCard.raw_input || '',
+      solution: ideaCard.solution || '',
+      target: ideaCard.target || '',
+      differentiation: ideaCard.differentiation || '',
+      total_score: String(evaluation.total_score ?? ''),
+      investor_score: String(evaluation.investor_score ?? ''),
+      market_score: String(evaluation.market_score ?? ''),
+      tech_score: String(evaluation.tech_score ?? ''),
+    }
 
-## 프로젝트명
-${project.name}
+    const prompt = await preparePrompt('doc_ppt', promptVariables)
 
-## 해결하려는 문제
-${ideaCard.problem || ideaCard.raw_input}
-
-## 솔루션
-${ideaCard.solution || ''}
-
-## 타겟 고객
-${ideaCard.target || ''}
-
-## 차별화 포인트
-${ideaCard.differentiation || ''}
-
-## 평가 점수
-- 종합 점수: ${evaluation.total_score}점
-- 투자 관점: ${evaluation.investor_score}점
-- 시장 관점: ${evaluation.market_score}점
-- 기술 관점: ${evaluation.tech_score}점
-
-완전한 HTML 문서를 생성해주세요.`
+    if (!prompt) {
+      return errorResponse('PPT 프롬프트를 찾을 수 없습니다.', 500)
+    }
 
     const projectId = id
     const existingDocId = existingDoc?.id
     const projectName = project.name
-    const model = 'gemini-2.5-flash'
+    const systemPrompt = prompt.systemPrompt
+    const userPrompt = prompt.userPrompt
+    const model = prompt.model
+    const temperature = prompt.temperature
+    const maxTokens = prompt.maxTokens
 
     async function* generateDocument() {
       let fullContent = ''
 
       yield { type: 'start', data: JSON.stringify({ type: 'ppt', model }) }
 
-      const stream = streamGemini(PPT_SYSTEM_PROMPT, userPrompt, {
+      const stream = streamGemini(systemPrompt, userPrompt, {
         model,
-        temperature: 0.7,
-        maxTokens: 65536,
+        temperature,
+        maxTokens,
       })
 
       for await (const event of stream) {
