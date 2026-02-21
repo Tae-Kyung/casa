@@ -41,6 +41,41 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import type { Document as DocType } from '@/types/database'
 
+// 기존 JSON 형식 피치를 마크다운으로 변환하는 헬퍼
+function formatPitchContent(content: string): string {
+  try {
+    const parsed = JSON.parse(content)
+    if (typeof parsed !== 'object' || parsed === null) return content
+
+    const lines: string[] = ['# 요약 피치', '']
+
+    if (parsed.oneLiner) {
+      lines.push('## 한 줄 요약 (One-Liner)', '', parsed.oneLiner, '')
+    }
+    if (parsed.hook) {
+      lines.push('## 훅 (Hook)', '', parsed.hook, '')
+    }
+    if (parsed.pitch30s) {
+      lines.push('## 30초 피치', '', parsed.pitch30s, '')
+    }
+    if (parsed.pitch2m) {
+      lines.push('## 2분 피치', '', parsed.pitch2m, '')
+    }
+    if (Array.isArray(parsed.keyMessages) && parsed.keyMessages.length > 0) {
+      lines.push('## 핵심 메시지', '')
+      parsed.keyMessages.forEach((msg: string) => {
+        lines.push(`- ${msg}`)
+      })
+      lines.push('')
+    }
+
+    return lines.join('\n')
+  } catch {
+    // JSON 파싱 실패 → 이미 마크다운이므로 그대로 반환
+    return content
+  }
+}
+
 interface DocumentStageProps {
   projectId: string
   documents: DocType[]
@@ -364,9 +399,10 @@ export function DocumentStage({
   }
 
   // 문서에서 섹션 목록 추출 (## 로 시작하는 헤더)
-  const extractSections = (content: string | null): string[] => {
+  const extractSections = (content: string | null, docType?: string): string[] => {
     if (!content) return []
-    const matches = content.match(/^##\s+(.+)$/gm)
+    const normalized = docType === 'pitch' ? formatPitchContent(content) : content
+    const matches = normalized.match(/^##\s+(.+)$/gm)
     return matches ? matches.map(m => m.replace(/^##\s+/, '').trim()) : []
   }
 
@@ -647,7 +683,12 @@ export function DocumentStage({
               <div
                 className="markdown-preview"
                 dangerouslySetInnerHTML={{
-                  __html: marked.parse(previewDoc?.content || '', { async: false }) as string,
+                  __html: marked.parse(
+                    previewDoc?.type === 'pitch'
+                      ? formatPitchContent(previewDoc?.content || '')
+                      : (previewDoc?.content || ''),
+                    { async: false }
+                  ) as string,
                 }}
               />
             )}
@@ -697,7 +738,7 @@ export function DocumentStage({
             <div>
               <Label htmlFor="section">{t('documentStage.sectionLabel')}</Label>
               <div className="mt-1.5">
-                {extractSections(reviseDoc?.content || '').length > 0 ? (
+                {extractSections(reviseDoc?.content || '', reviseDoc?.type).length > 0 ? (
                   <select
                     id="section"
                     value={reviseSection}
@@ -706,7 +747,7 @@ export function DocumentStage({
                     disabled={isRevising}
                   >
                     <option value="">{t('documentStage.selectSection')}</option>
-                    {extractSections(reviseDoc?.content || '').map((section) => (
+                    {extractSections(reviseDoc?.content || '', reviseDoc?.type).map((section) => (
                       <option key={section} value={section}>
                         {section}
                       </option>
