@@ -115,7 +115,15 @@ export function createSSEResponse(
           controller.enqueue(encoder.encode(data))
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        let errorMessage = 'Unknown error'
+        if (error instanceof Error) {
+          errorMessage = error.message
+        } else if (typeof error === 'string') {
+          errorMessage = error
+        } else if (error && typeof error === 'object') {
+          errorMessage = JSON.stringify(error)
+        }
+        console.error('[SSE Generator Error]', error)
         const errorData = `event: error\ndata: ${JSON.stringify(errorMessage)}\n\n`
         controller.enqueue(encoder.encode(errorData))
       } finally {
