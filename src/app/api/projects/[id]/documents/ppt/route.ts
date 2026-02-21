@@ -131,7 +131,7 @@ ${ideaCard.differentiation || ''}
       const stream = streamGemini(PPT_SYSTEM_PROMPT, userPrompt, {
         model,
         temperature: 0.7,
-        maxTokens: 32000,
+        maxTokens: 65536,
       })
 
       for await (const event of stream) {
