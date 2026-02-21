@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server'
 import { requireProjectOwner } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
-import { streamClaude, createSSEResponse } from '@/lib/ai/claude'
+import { createSSEResponse } from '@/lib/ai/claude'
+import { streamGemini } from '@/lib/ai/gemini'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -120,17 +121,17 @@ ${ideaCard.differentiation || ''}
     const projectId = id
     const existingDocId = existingDoc?.id
     const projectName = project.name
-    const model = 'claude-sonnet-4-20250514'
+    const model = 'gemini-2.5-flash'
 
     async function* generateDocument() {
       let fullContent = ''
 
       yield { type: 'start', data: JSON.stringify({ type: 'ppt', model }) }
 
-      const stream = streamClaude(PPT_SYSTEM_PROMPT, userPrompt, {
+      const stream = streamGemini(PPT_SYSTEM_PROMPT, userPrompt, {
         model,
         temperature: 0.7,
-        maxTokens: 16000,
+        maxTokens: 32000,
       })
 
       for await (const event of stream) {
