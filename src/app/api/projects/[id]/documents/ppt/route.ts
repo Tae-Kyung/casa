@@ -5,6 +5,7 @@ import { errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { preparePrompt } from '@/lib/prompts'
 import { createSSEResponse } from '@/lib/ai/claude'
 import { streamGemini } from '@/lib/ai/gemini'
+import { buildPptHtml, PptSlideContent } from '@/lib/templates/ppt-template'
 
 // Gemini 스트리밍은 오래 걸릴 수 있으므로 타임아웃 확장
 export const maxDuration = 120
@@ -100,7 +101,7 @@ export async function POST(
     const maxTokens = prompt.maxTokens
 
     async function* generateDocument() {
-      let fullContent = ''
+      let fullJson = ''
 
       yield { type: 'start', data: JSON.stringify({ type: 'ppt', model }) }
 
@@ -108,31 +109,75 @@ export async function POST(
         model,
         temperature,
         maxTokens,
-        thinkingBudget: 0, // HTML 생성은 thinking 불필요, 출력 토큰 절약
+        thinkingBudget: 0,
+        jsonMode: true,
       })
 
       for await (const event of stream) {
         if (event.type === 'text') {
-          fullContent += event.data
+          fullJson += event.data
           yield { type: 'text', data: event.data }
         }
       }
 
-      fullContent = fullContent.trim()
-      const fenceMatch = fullContent.match(/^```(?:html)?\s*\n?([\s\S]*?)\n?\s*```$/)
+      // JSON 파싱: 코드 펜스 제거 후 파싱
+      fullJson = fullJson.trim()
+      const fenceMatch = fullJson.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/)
       if (fenceMatch) {
-        fullContent = fenceMatch[1].trim()
+        fullJson = fenceMatch[1].trim()
       }
 
-      const supabaseUpdate = await createClient()
+      let slideContent: PptSlideContent
+      try {
+        slideContent = JSON.parse(fullJson) as PptSlideContent
+      } catch {
+        // JSON 파싱 실패 시 원본 텍스트를 그대로 저장 (폴백)
+        const supabaseUpdate = await createClient()
+        let documentId: string
 
+        if (existingDocId) {
+          const { data: updated, error: updateError } = await supabaseUpdate
+            .from('bi_documents')
+            .update({ content: fullJson, ai_model_used: model })
+            .eq('id', existingDocId)
+            .select('id')
+            .single()
+          if (updateError) throw updateError
+          documentId = updated.id
+        } else {
+          const { data: created, error: createError } = await supabaseUpdate
+            .from('bi_documents')
+            .insert({
+              project_id: projectId,
+              type: 'ppt',
+              title: `${projectName} 서비스 소개 PPT`,
+              content: fullJson,
+              ai_model_used: model,
+            })
+            .select('id')
+            .single()
+          if (createError) throw createError
+          documentId = created.id
+        }
+
+        yield {
+          type: 'complete',
+          data: JSON.stringify({ documentId, type: 'ppt' }),
+        }
+        return
+      }
+
+      // 템플릿에 JSON 주입하여 최종 HTML 생성
+      const finalHtml = buildPptHtml(slideContent)
+
+      const supabaseUpdate = await createClient()
       let documentId: string
 
       if (existingDocId) {
         const { data: updated, error: updateError } = await supabaseUpdate
           .from('bi_documents')
           .update({
-            content: fullContent,
+            content: finalHtml,
             ai_model_used: model,
           })
           .eq('id', existingDocId)
@@ -148,7 +193,7 @@ export async function POST(
             project_id: projectId,
             type: 'ppt',
             title: `${projectName} 서비스 소개 PPT`,
-            content: fullContent,
+            content: finalHtml,
             ai_model_used: model,
           })
           .select('id')

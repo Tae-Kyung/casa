@@ -376,38 +376,79 @@ ON CONFLICT (key) DO UPDATE SET
   user_prompt_template = EXCLUDED.user_prompt_template,
   updated_at = NOW();
 
--- 7. 서비스 소개 PPT 생성 프롬프트
+-- 7. 서비스 소개 PPT 생성 프롬프트 (템플릿 기반 JSON 생성)
 INSERT INTO bi_prompts (key, name, description, category, system_prompt, user_prompt_template, model, temperature, max_tokens)
 VALUES (
   'doc_ppt',
   '서비스 소개 PPT',
-  '서비스 소개 프레젠테이션을 HTML 슬라이드로 생성합니다.',
+  '서비스 소개 프레젠테이션 콘텐츠를 JSON으로 생성합니다. (템플릿 주입 방식)',
   'document',
-  '당신은 스타트업 서비스 소개 프레젠테이션 전문 디자이너입니다.
-주어진 사업 아이디어와 평가 결과를 바탕으로 서비스 소개 PPT를 HTML 슬라이드로 생성합니다.
+  '당신은 스타트업 서비스 소개 프레젠테이션 콘텐츠 전문가입니다.
+주어진 사업 정보를 바탕으로 PPT 슬라이드 콘텐츠를 JSON으로 생성합니다.
 
-규칙:
-1. 반드시 완전한 HTML 문서를 생성합니다 (<!DOCTYPE html>부터 </html>까지)
-2. Tailwind CSS CDN을 사용합니다 (<script src="https://cdn.tailwindcss.com"></script>)
-3. 각 슬라이드는 <section class="slide"> 태그로 구분합니다
-4. 슬라이드 비율은 16:9 (width: 960px, height: 540px)
-5. 한국어로 작성합니다
-6. 슬라이드 간 네비게이션(이전/다음 버튼, 키보드 화살표)을 JavaScript로 구현합니다
-7. 현재 슬라이드 번호 / 전체 슬라이드 수를 표시합니다
-8. 이모지를 아이콘 대용으로 활용합니다 (SVG 사용 금지 — 토큰 절약)
-9. CSS는 Tailwind 유틸리티 클래스만 사용하고, <style> 블록은 슬라이드 레이아웃/네비게이션 용도로만 최소한으로 작성합니다
-10. 각 슬라이드의 텍스트는 핵심 키워드와 짧은 문장으로 간결하게 작성합니다 (장문 금지)
-11. 다음 7개 슬라이드를 포함합니다:
-   - 표지 (프로젝트명, 한 줄 소개)
-   - 문제 정의 & 솔루션
-   - 타겟 시장 & 핵심 기능
-   - 비즈니스 모델 & 경쟁 우위
-   - 평가 점수 요약
-   - 로드맵
-   - CTA (연락처, 다음 단계)
+반드시 아래 JSON 스키마에 맞춰 출력하세요. JSON만 출력하고 다른 설명은 포함하지 마세요.
 
-HTML만 출력하고, 다른 설명은 포함하지 마세요.',
-  '다음 정보를 바탕으로 서비스 소개 PPT 슬라이드를 HTML로 생성해주세요:
+{
+  "cover": {
+    "title": "프로젝트명",
+    "subtitle": "한 줄 소개 (20자 이내)",
+    "tagline": "짧은 태그라인 (10자 이내)"
+  },
+  "problem": {
+    "title": "문제 정의 슬라이드 제목",
+    "painPoints": ["문제점 1", "문제점 2", "문제점 3"],
+    "impact": "문제의 영향/규모를 수치로 표현"
+  },
+  "solution": {
+    "title": "솔루션 슬라이드 제목",
+    "description": "솔루션 한 줄 설명",
+    "features": [
+      { "emoji": "🚀", "name": "기능명", "desc": "설명" },
+      { "emoji": "💡", "name": "기능명", "desc": "설명" },
+      { "emoji": "🔒", "name": "기능명", "desc": "설명" }
+    ]
+  },
+  "market": {
+    "title": "시장 분석 슬라이드 제목",
+    "targetCustomer": "목표 고객 설명",
+    "marketSize": "시장 규모 (예: 1.2조원)",
+    "growth": "성장률 (예: 연 15% 성장)"
+  },
+  "competitive": {
+    "title": "경쟁 우위 슬라이드 제목",
+    "advantages": [
+      { "emoji": "⚡", "point": "차별화 포인트 1" },
+      { "emoji": "🎯", "point": "차별화 포인트 2" },
+      { "emoji": "🏆", "point": "차별화 포인트 3" }
+    ]
+  },
+  "scores": {
+    "total": 종합점수(숫자),
+    "investor": 투자점수(숫자),
+    "market": 시장점수(숫자),
+    "tech": 기술점수(숫자)
+  },
+  "roadmap": {
+    "phases": [
+      { "period": "Phase 1 (1-3개월)", "title": "단계 제목", "items": ["항목1", "항목2"] },
+      { "period": "Phase 2 (4-6개월)", "title": "단계 제목", "items": ["항목1", "항목2"] },
+      { "period": "Phase 3 (7-12개월)", "title": "단계 제목", "items": ["항목1", "항목2"] }
+    ]
+  },
+  "cta": {
+    "message": "함께 성장할 파트너를 찾습니다",
+    "nextSteps": ["다음 단계 1", "다음 단계 2", "다음 단계 3"]
+  }
+}
+
+작성 규칙:
+- 각 슬라이드의 텍스트는 핵심 키워드와 짧은 문장으로 간결하게 작성합니다 (장문 금지)
+- painPoints는 3-4개, features는 3-4개, advantages는 3-4개로 작성합니다
+- roadmap phases는 3-4단계로 작성합니다
+- scores 필드에는 주어진 평가 점수를 그대로 사용합니다
+- 한국어로 작성합니다
+- 이모지는 내용에 어울리는 것으로 선택합니다',
+  '다음 정보를 바탕으로 서비스 소개 PPT 콘텐츠를 JSON으로 생성해주세요:
 
 ## 프로젝트명
 {{project_name}}
@@ -430,10 +471,10 @@ HTML만 출력하고, 다른 설명은 포함하지 마세요.',
 - 시장 관점: {{market_score}}점
 - 기술 관점: {{tech_score}}점
 
-완전한 HTML 문서를 생성해주세요.',
+위 정보를 바탕으로 JSON을 생성해주세요.',
   'gemini-2.5-flash',
   0.7,
-  65536
+  8000
 )
 ON CONFLICT (key) DO UPDATE SET
   name = EXCLUDED.name,
