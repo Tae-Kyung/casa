@@ -13,22 +13,22 @@ const PPT_SYSTEM_PROMPT = `당신은 스타트업 서비스 소개 프레젠테�
 
 규칙:
 1. 반드시 완전한 HTML 문서를 생성합니다 (<!DOCTYPE html>부터 </html>까지)
-2. Tailwind CSS CDN을 사용합니다
+2. Tailwind CSS CDN을 사용합니다 (<script src="https://cdn.tailwindcss.com"></script>)
 3. 각 슬라이드는 <section class="slide"> 태그로 구분합니다
 4. 슬라이드 비율은 16:9 (width: 960px, height: 540px)
 5. 한국어로 작성합니다
 6. 슬라이드 간 네비게이션(이전/다음 버튼, 키보드 화살표)을 JavaScript로 구현합니다
 7. 현재 슬라이드 번호 / 전체 슬라이드 수를 표시합니다
-8. 각 슬라이드에 적절한 아이콘(SVG 또는 이모지)을 활용합니다
-9. 다음 슬라이드를 포함합니다:
+8. 이모지를 아이콘 대용으로 활용합니다 (SVG 사용 금지 — 토큰 절약)
+9. CSS는 Tailwind 유틸리티 클래스만 사용하고, <style> 블록은 슬라이드 레이아웃/네비게이션 용도로만 최소한으로 작성합니다
+10. 각 슬라이드의 텍스트는 핵심 키워드와 짧은 문장으로 간결하게 작성합니다 (장문 금지)
+11. 다음 7개 슬라이드를 포함합니다:
    - 표지 (프로젝트명, 한 줄 소개)
-   - 문제 정의 (해결하려는 문제)
-   - 솔루션 (제안하는 솔루션)
-   - 타겟 시장 (목표 고객, 시장 규모)
-   - 핵심 기능 (주요 기능 3-4가지)
-   - 비즈니스 모델 (수익 구조)
-   - 경쟁 우위 (차별화 포인트)
-   - 로드맵 (향후 계획)
+   - 문제 정의 & 솔루션
+   - 타겟 시장 & 핵심 기능
+   - 비즈니스 모델 & 경쟁 우위
+   - 평가 점수 요약
+   - 로드맵
    - CTA (연락처, 다음 단계)
 
 HTML만 출력하고, 다른 설명은 포함하지 마세요.`
@@ -130,7 +130,7 @@ ${ideaCard.differentiation || ''}
       const stream = streamClaude(PPT_SYSTEM_PROMPT, userPrompt, {
         model,
         temperature: 0.7,
-        maxTokens: 12000,
+        maxTokens: 16000,
       })
 
       for await (const event of stream) {

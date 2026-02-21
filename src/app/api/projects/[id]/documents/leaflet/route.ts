@@ -13,16 +13,17 @@ const LEAFLET_SYSTEM_PROMPT = `당신은 스타트업 홍보 리플렛 전문 �
 
 규칙:
 1. 반드시 완전한 HTML 문서를 생성합니다 (<!DOCTYPE html>부터 </html>까지)
-2. Tailwind CSS CDN을 사용합니다
+2. Tailwind CSS CDN을 사용합니다 (<script src="https://cdn.tailwindcss.com"></script>)
 3. A4 단면 인쇄에 최적화합니다 (210mm x 297mm)
-4. @media print 스타일을 포함합니다
+4. @media print 스타일을 최소한으로 포함합니다 (print-color-adjust: exact)
 5. 한국어로 작성합니다
-6. 인쇄 시 배경색과 이미지가 출력되도록 -webkit-print-color-adjust: exact 적용
-7. 시각적으로 매력적인 레이아웃 (그리드, 카드, 아이콘 활용)
-8. 다음 내용을 포함합니다:
-   - 헤더/브랜드 영역 (프로젝트명, 한 줄 소개, 로고 영역)
+6. 이모지를 아이콘 대용으로 활용합니다 (SVG 사용 금지 — 토큰 절약)
+7. CSS는 Tailwind 유틸리티 클래스만 사용하고, <style> 블록은 인쇄 관련 설정만 최소한으로 작성합니다
+8. 간결하고 임팩트 있는 텍스트로 작성합니다 (장문 금지)
+9. 다음 내용을 포함합니다:
+   - 헤더/브랜드 영역 (프로젝트명, 한 줄 소개)
    - 문제 + 솔루션 (간결한 설명)
-   - 핵심 기능 3-4개 (아이콘과 함께)
+   - 핵심 기능 3-4개 (이모지와 함께)
    - 차별화 포인트
    - CTA / 연락처 정보
 
@@ -125,7 +126,7 @@ ${ideaCard.differentiation || ''}
       const stream = streamClaude(LEAFLET_SYSTEM_PROMPT, userPrompt, {
         model,
         temperature: 0.7,
-        maxTokens: 8000,
+        maxTokens: 12000,
       })
 
       for await (const event of stream) {
