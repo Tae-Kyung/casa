@@ -217,6 +217,13 @@ export function DocumentStage({
           const eventType = eventLine ? eventLine.slice(7) : null
           const rawData = dataLine.slice(6)
 
+          // error 이벤트는 별도 처리 (내부 catch에 삼켜지지 않도록)
+          if (eventType === 'error') {
+            let errorMsg = rawData
+            try { errorMsg = JSON.parse(rawData) } catch { /* raw string 사용 */ }
+            throw new Error(typeof errorMsg === 'string' ? errorMsg : String(errorMsg))
+          }
+
           try {
             const parsed = JSON.parse(rawData)
 
@@ -235,12 +242,9 @@ export function DocumentStage({
             } else if (eventType === 'complete') {
               toast.success(t('documentStage.generateComplete', { label: documentConfig[type].label }))
               onUpdate()
-            } else if (eventType === 'error') {
-              const errorMsg = typeof parsed === 'string' ? parsed : String(parsed)
-              throw new Error(errorMsg)
             }
           } catch {
-            // 파싱 오류 무시
+            // JSON 파싱 오류 무시
           }
         }
       }

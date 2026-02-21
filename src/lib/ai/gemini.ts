@@ -7,6 +7,8 @@ export interface GeminiOptions {
   temperature?: number
   maxTokens?: number
   jsonMode?: boolean
+  /** Thinking 토큰 예산 (0=비활성, -1=동적). Gemini 2.5만 해당. */
+  thinkingBudget?: number
 }
 
 export interface GeminiResponse {
@@ -16,6 +18,25 @@ export interface GeminiResponse {
     outputTokens: number
   }
   stopReason: string | null
+}
+
+/** generationConfig에 thinkingConfig를 포함시키는 헬퍼 */
+function buildGenerationConfig(options: {
+  temperature: number
+  maxOutputTokens: number
+  jsonMode?: boolean
+  thinkingBudget?: number
+}) {
+  const config: Record<string, unknown> = {
+    temperature: options.temperature,
+    maxOutputTokens: options.maxOutputTokens,
+    ...(options.jsonMode && { responseMimeType: 'application/json' }),
+  }
+  // Gemini 2.5 thinking 예산 설정 (SDK 타입에 아직 없으므로 직접 추가)
+  if (options.thinkingBudget !== undefined) {
+    config.thinkingConfig = { thinkingBudget: options.thinkingBudget }
+  }
+  return config
 }
 
 /**
@@ -34,11 +55,13 @@ export async function callGemini(
 
   const geminiModel = genAI.getGenerativeModel({
     model,
-    generationConfig: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    generationConfig: buildGenerationConfig({
       temperature,
       maxOutputTokens: maxTokens,
-      ...(options.jsonMode && { responseMimeType: 'application/json' }),
-    },
+      jsonMode: options.jsonMode,
+      thinkingBudget: options.thinkingBudget,
+    }) as any,
   })
 
   // System prompt와 user prompt를 결합
@@ -89,11 +112,13 @@ export async function* streamGemini(
 
   const geminiModel = genAI.getGenerativeModel({
     model,
-    generationConfig: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    generationConfig: buildGenerationConfig({
       temperature,
       maxOutputTokens: maxTokens,
-      ...(options.jsonMode && { responseMimeType: 'application/json' }),
-    },
+      jsonMode: options.jsonMode,
+      thinkingBudget: options.thinkingBudget,
+    }) as any,
   })
 
   const combinedPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}`

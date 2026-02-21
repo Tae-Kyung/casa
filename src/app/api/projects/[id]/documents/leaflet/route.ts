@@ -6,6 +6,9 @@ import { preparePrompt } from '@/lib/prompts'
 import { createSSEResponse } from '@/lib/ai/claude'
 import { streamGemini } from '@/lib/ai/gemini'
 
+// Gemini 스트리밍은 오래 걸릴 수 있으므로 타임아웃 확장
+export const maxDuration = 120
+
 interface RouteContext {
   params: Promise<{ id: string }>
 }
@@ -105,6 +108,7 @@ export async function POST(
         model,
         temperature,
         maxTokens,
+        thinkingBudget: 0, // HTML 생성은 thinking 불필요, 출력 토큰 절약
       })
 
       for await (const event of stream) {
