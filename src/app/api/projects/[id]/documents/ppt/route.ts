@@ -5,7 +5,7 @@ import { errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { preparePrompt } from '@/lib/prompts'
 import { createSSEResponse } from '@/lib/ai/claude'
 import { streamGemini } from '@/lib/ai/gemini'
-import { buildPptHtml, PptSlideContent } from '@/lib/templates/ppt-template'
+import { buildPptHtml } from '@/lib/templates/ppt-template'
 
 // Gemini 스트리밍은 오래 걸릴 수 있으므로 타임아웃 확장
 export const maxDuration = 120
@@ -127,9 +127,9 @@ export async function POST(
         fullJson = fenceMatch[1].trim()
       }
 
-      let slideContent: PptSlideContent
+      let parsedJson: Record<string, unknown>
       try {
-        slideContent = JSON.parse(fullJson) as PptSlideContent
+        parsedJson = JSON.parse(fullJson) as Record<string, unknown>
       } catch {
         // JSON 파싱 실패 시 원본 텍스트를 그대로 저장 (폴백)
         const supabaseUpdate = await createClient()
@@ -167,8 +167,8 @@ export async function POST(
         return
       }
 
-      // 템플릿에 JSON 주입하여 최종 HTML 생성
-      const finalHtml = buildPptHtml(slideContent)
+      // 템플릿에 JSON 주입하여 최종 HTML 생성 (normalize 내장)
+      const finalHtml = buildPptHtml(parsedJson)
 
       const supabaseUpdate = await createClient()
       let documentId: string

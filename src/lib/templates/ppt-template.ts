@@ -53,8 +53,86 @@ function scoreColor(score: number): string {
   return '#ef4444'
 }
 
-export function buildPptHtml(content: PptSlideContent): string {
-  const c = content
+function normalize(raw: Record<string, unknown>): PptSlideContent {
+  const r = raw as Record<string, Record<string, unknown> | undefined>
+  const cover = r.cover ?? {}
+  const problem = r.problem ?? {}
+  const solution = r.solution ?? {}
+  const market = r.market ?? {}
+  const competitive = r.competitive ?? {}
+  const scores = r.scores ?? {}
+  const roadmap = r.roadmap ?? {}
+  const cta = r.cta ?? {}
+
+  const arr = (v: unknown): string[] =>
+    Array.isArray(v) ? v.map(String) : []
+
+  const str = (v: unknown, fallback = ''): string =>
+    typeof v === 'string' ? v : fallback
+
+  const num = (v: unknown, fallback = 0): number => {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : fallback
+  }
+
+  const objArr = <T>(v: unknown, mapFn: (item: Record<string, unknown>) => T): T[] =>
+    Array.isArray(v) ? v.map((item) => mapFn(item as Record<string, unknown>)) : []
+
+  return {
+    cover: {
+      title: str(cover.title, '프로젝트'),
+      subtitle: str(cover.subtitle, ''),
+      tagline: str(cover.tagline, ''),
+    },
+    problem: {
+      title: str(problem.title, '문제 정의'),
+      painPoints: arr(problem.painPoints),
+      impact: str(problem.impact, ''),
+    },
+    solution: {
+      title: str(solution.title, '솔루션'),
+      description: str(solution.description, ''),
+      features: objArr(solution.features, (f) => ({
+        emoji: str(f.emoji, '💡'),
+        name: str(f.name, ''),
+        desc: str(f.desc || f.description, ''),
+      })),
+    },
+    market: {
+      title: str(market.title, '시장 분석'),
+      targetCustomer: str(market.targetCustomer || market.target, ''),
+      marketSize: str(market.marketSize, ''),
+      growth: str(market.growth, ''),
+    },
+    competitive: {
+      title: str(competitive.title, '경쟁 우위'),
+      advantages: objArr(competitive.advantages, (a) => ({
+        emoji: str(a.emoji, '⚡'),
+        point: str(a.point, ''),
+      })),
+    },
+    scores: {
+      total: num(scores.total),
+      investor: num(scores.investor),
+      market: num(scores.market),
+      tech: num(scores.tech),
+    },
+    roadmap: {
+      phases: objArr(roadmap.phases, (p) => ({
+        period: str(p.period, ''),
+        title: str(p.title, ''),
+        items: arr(p.items),
+      })),
+    },
+    cta: {
+      message: str(cta.message, ''),
+      nextSteps: arr(cta.nextSteps),
+    },
+  }
+}
+
+export function buildPptHtml(raw: Record<string, unknown>): string {
+  const c = normalize(raw)
 
   const painPointsHtml = c.problem.painPoints
     .map(
