@@ -13,6 +13,9 @@ import {
   FileText,
   Presentation,
   Globe,
+  Monitor,
+  Newspaper,
+  BarChart3,
   Upload
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -75,12 +78,14 @@ export function DeployStage({
     }
   }
 
+  const HTML_DOC_TYPES = new Set(['landing', 'ppt', 'leaflet', 'infographic'])
+
   const handleDownloadAll = () => {
     documents.forEach(doc => {
       if (!doc.content) return
 
-      if (doc.type === 'landing') {
-        // 랜딩페이지는 HTML로 다운로드
+      if (HTML_DOC_TYPES.has(doc.type)) {
+        // HTML 문서는 HTML 파일로 다운로드
         const blob = new Blob([doc.content], { type: 'text/html' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -133,6 +138,9 @@ export function DeployStage({
     business_plan: FileText,
     pitch: Presentation,
     landing: Globe,
+    ppt: Monitor,
+    leaflet: Newspaper,
+    infographic: BarChart3,
   }
 
   if (!canDeploy) {

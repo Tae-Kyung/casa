@@ -1,6 +1,7 @@
 'use client'
 
 import { marked } from 'marked'
+import PptxGenJS from 'pptxgenjs'
 
 function markdownToStyledHtml(title: string, markdown: string): string {
   const bodyHtml = marked.parse(markdown, { async: false }) as string
@@ -148,6 +149,69 @@ export function exportToPdf(title: string, markdown: string): void {
       printWindow.print()
     }, 300)
   }
+}
+
+export function exportToPptx(title: string, htmlContent: string): void {
+  const pptx = new PptxGenJS()
+  pptx.layout = 'LAYOUT_WIDE' // 16:9
+
+  // Parse <section> slides from HTML
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(htmlContent, 'text/html')
+  const sections = doc.querySelectorAll('section')
+
+  if (sections.length === 0) {
+    // Fallback: single slide with all text
+    const slide = pptx.addSlide()
+    const text = doc.body.textContent?.trim() || title
+    slide.addText(title, { x: 0.5, y: 0.5, w: 12, h: 1, fontSize: 28, bold: true, color: '1e40af' })
+    slide.addText(text.slice(0, 2000), { x: 0.5, y: 1.8, w: 12, h: 5, fontSize: 14, color: '333333', valign: 'top' })
+  } else {
+    sections.forEach((section) => {
+      const slide = pptx.addSlide()
+
+      // Extract heading
+      const heading = section.querySelector('h1, h2, h3')
+      const headingText = heading?.textContent?.trim() || ''
+
+      // Extract body text (everything except the heading)
+      const clone = section.cloneNode(true) as HTMLElement
+      const headingInClone = clone.querySelector('h1, h2, h3')
+      if (headingInClone) headingInClone.remove()
+
+      // Get list items and paragraphs
+      const bodyParts: string[] = []
+      clone.querySelectorAll('p, li, span, div').forEach((el) => {
+        const text = el.textContent?.trim()
+        if (text && !bodyParts.includes(text)) {
+          bodyParts.push(text)
+        }
+      })
+
+      // Fallback to all text content if no structured elements found
+      let bodyText = bodyParts.join('\n')
+      if (!bodyText) {
+        bodyText = clone.textContent?.trim() || ''
+      }
+
+      if (headingText) {
+        slide.addText(headingText, {
+          x: 0.5, y: 0.3, w: 12, h: 1,
+          fontSize: 24, bold: true, color: '1e40af',
+        })
+      }
+
+      if (bodyText) {
+        slide.addText(bodyText.slice(0, 3000), {
+          x: 0.5, y: 1.5, w: 12, h: 5.5,
+          fontSize: 13, color: '333333', valign: 'top',
+          lineSpacingMultiple: 1.3,
+        })
+      }
+    })
+  }
+
+  pptx.writeFile({ fileName: `${title}.pptx` })
 }
 
 export function exportToDocx(title: string, markdown: string): void {

@@ -6,6 +6,9 @@ import {
   FileText,
   Presentation,
   Globe,
+  Monitor,
+  Newspaper,
+  BarChart3,
   Check,
   RefreshCw,
   Download,
@@ -17,7 +20,7 @@ import {
   Undo2
 } from 'lucide-react'
 import { marked } from 'marked'
-import { exportToPdf, exportToDocx } from '@/lib/utils/document-export'
+import { exportToPdf, exportToDocx, exportToPptx } from '@/lib/utils/document-export'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -84,7 +87,11 @@ interface DocumentStageProps {
   onUpdate: () => void
 }
 
-type DocumentTypeKey = 'business_plan' | 'pitch' | 'landing'
+type DocumentTypeKey = 'business_plan' | 'pitch' | 'landing' | 'ppt' | 'leaflet' | 'infographic'
+
+const REQUIRED_DOC_TYPES: DocumentTypeKey[] = ['business_plan', 'pitch', 'landing']
+const OPTIONAL_DOC_TYPES: DocumentTypeKey[] = ['ppt', 'leaflet', 'infographic']
+const HTML_DOC_TYPES = new Set<string>(['landing', 'ppt', 'leaflet', 'infographic'])
 
 export function DocumentStage({
   projectId,
@@ -118,6 +125,24 @@ export function DocumentStage({
       label: t('document.landing'),
       description: t('documentStage.landingDesc'),
       apiPath: 'landing',
+    },
+    ppt: {
+      icon: Monitor,
+      label: t('document.ppt'),
+      description: t('documentStage.pptDesc'),
+      apiPath: 'ppt',
+    },
+    leaflet: {
+      icon: Newspaper,
+      label: t('document.leaflet'),
+      description: t('documentStage.leafletDesc'),
+      apiPath: 'leaflet',
+    },
+    infographic: {
+      icon: BarChart3,
+      label: t('document.infographic'),
+      description: t('documentStage.infographicDesc'),
+      apiPath: 'infographic',
     },
   }
   const [generatingType, setGeneratingType] = useState<DocumentTypeKey | null>(null)
@@ -275,14 +300,14 @@ export function DocumentStage({
   const handleDownloadMd = (doc: DocType) => {
     if (!doc.content) return
 
-    const isLanding = doc.type === 'landing'
+    const isHtmlType = HTML_DOC_TYPES.has(doc.type)
     const blob = new Blob([doc.content], {
-      type: isLanding ? 'text/html' : 'text/markdown'
+      type: isHtmlType ? 'text/html' : 'text/markdown'
     })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = isLanding ? `${doc.title}.html` : `${doc.title}.md`
+    a.download = isHtmlType ? `${doc.title}.html` : `${doc.title}.md`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -300,6 +325,15 @@ export function DocumentStage({
       exportToDocx(doc.title, doc.content)
     } catch {
       toast.error('Word export failed')
+    }
+  }
+
+  const handleDownloadPptx = (doc: DocType) => {
+    if (!doc.content) return
+    try {
+      exportToPptx(doc.title, doc.content)
+    } catch {
+      toast.error('PowerPoint export failed')
     }
   }
 
@@ -426,7 +460,188 @@ export function DocumentStage({
     )
   }
 
-  const confirmedCount = documents.filter(d => d.is_confirmed).length
+  // 필수 문서 3개 기준으로만 카운트
+  const requiredDocs = documents.filter(d => REQUIRED_DOC_TYPES.includes(d.type as DocumentTypeKey))
+  const confirmedCount = requiredDocs.filter(d => d.is_confirmed).length
+
+  const renderDocCard = (type: DocumentTypeKey, config: typeof documentConfig.business_plan) => {
+    const Icon = config.icon
+    const doc = docByType[type]
+    const isGenerating = generatingType === type
+    const isConfirming = confirmingId === doc?.id
+    const isHtmlType = HTML_DOC_TYPES.has(type)
+
+    return (
+      <Card key={type} className={doc?.is_confirmed ? 'border-green-500' : ''}>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Icon className="h-5 w-5" />
+              <CardTitle className="text-base">{config.label}</CardTitle>
+            </div>
+            {doc?.is_confirmed && (
+              <Badge className="bg-green-500">{t('documentStage.confirmed')}</Badge>
+            )}
+          </div>
+          <CardDescription>{config.description}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {isGenerating ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <LoadingSpinner size="sm" />
+                <span className="text-sm">{t('documentStage.generating')}</span>
+                {generatingModel && (
+                  <Badge variant="outline" className="text-xs">
+                    {generatingModel}
+                  </Badge>
+                )}
+              </div>
+              {streamingLength > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {t('documentStage.generatingChars', { count: streamingLength.toLocaleString() })}
+                </p>
+              )}
+              {streamingContent && (
+                <div className="max-h-32 overflow-y-auto rounded bg-muted p-2">
+                  <pre className="whitespace-pre-wrap text-xs">
+                    {streamingContent.slice(-500)}...
+                  </pre>
+                </div>
+              )}
+            </div>
+          ) : doc ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>{t('documentStage.createdAt', { date: new Date(doc.created_at).toLocaleDateString() })}</span>
+                {doc.ai_model_used && (
+                  <Badge variant="outline" className="text-xs">
+                    {doc.ai_model_used}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setPreviewDoc(doc)}
+                >
+                  <Eye className="mr-1 h-4 w-4" />
+                  {t('document.preview')}
+                </Button>
+                {isHtmlType ? (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDownloadMd(doc)}
+                    >
+                      <Download className="mr-1 h-4 w-4" />
+                      {t('document.download')}
+                    </Button>
+                    {type === 'ppt' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDownloadPptx(doc)}
+                      >
+                        <Download className="mr-1 h-4 w-4" />
+                        {t('documentStage.downloadPptx')}
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline">
+                        <Download className="mr-1 h-4 w-4" />
+                        {t('document.downloadAs')}
+                        <ChevronDown className="ml-1 h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onClick={() => handleDownloadMd(doc)}>
+                        {t('document.downloadMd')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownloadPdf(doc)}>
+                        {t('document.downloadPdf')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownloadDocx(doc)}>
+                        {t('document.downloadDoc')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+              {doc.is_confirmed ? (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleUnconfirm(doc.id)}
+                    disabled={unconfirmingId === doc.id}
+                  >
+                    {unconfirmingId === doc.id ? (
+                      <LoadingSpinner size="sm" className="mr-1" />
+                    ) : (
+                      <Undo2 className="mr-1 h-4 w-4" />
+                    )}
+                    {t('documentStage.unconfirm')}
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setReviseDoc(doc)
+                      setReviseSection('')
+                      setReviseInstruction('')
+                    }}
+                    disabled={!!generatingType || isHtmlType}
+                    title={isHtmlType ? t('documentStage.htmlNoRevise') : ''}
+                  >
+                    <Edit3 className="mr-1 h-4 w-4" />
+                    {t('documentStage.sectionRevise')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleGenerate(type)}
+                    disabled={!!generatingType}
+                  >
+                    <RefreshCw className="mr-1 h-4 w-4" />
+                    {t('documentStage.regenerate')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleConfirm(doc.id)}
+                    disabled={isConfirming}
+                  >
+                    {isConfirming ? (
+                      <LoadingSpinner size="sm" className="mr-1" />
+                    ) : (
+                      <Check className="mr-1 h-4 w-4" />
+                    )}
+                    {t('common.confirm')}
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Button
+              className="w-full"
+              onClick={() => handleGenerate(type)}
+              disabled={!!generatingType}
+            >
+              {t('documentStage.generate', { label: config.label })}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -478,173 +693,24 @@ export function DocumentStage({
         </Card>
       )}
 
-      {/* 문서 카드 목록 */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {(Object.entries(documentConfig) as [DocumentTypeKey, typeof documentConfig.business_plan][]).map(([type, config]) => {
-          const Icon = config.icon
-          const doc = docByType[type]
-          const isGenerating = generatingType === type
-          const isConfirming = confirmingId === doc?.id
+      {/* 필수 문서 (Gate 3) */}
+      <div>
+        <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
+          {t('documentStage.requiredDocs')}
+        </h3>
+        <div className="grid gap-4 md:grid-cols-3">
+          {REQUIRED_DOC_TYPES.map(type => renderDocCard(type, documentConfig[type]))}
+        </div>
+      </div>
 
-          return (
-            <Card key={type} className={doc?.is_confirmed ? 'border-green-500' : ''}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-5 w-5" />
-                    <CardTitle className="text-base">{config.label}</CardTitle>
-                  </div>
-                  {doc?.is_confirmed && (
-                    <Badge className="bg-green-500">{t('documentStage.confirmed')}</Badge>
-                  )}
-                </div>
-                <CardDescription>{config.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {isGenerating ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <LoadingSpinner size="sm" />
-                      <span className="text-sm">{t('documentStage.generating')}</span>
-                      {generatingModel && (
-                        <Badge variant="outline" className="text-xs">
-                          {generatingModel}
-                        </Badge>
-                      )}
-                    </div>
-                    {streamingLength > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        {t('documentStage.generatingChars', { count: streamingLength.toLocaleString() })}
-                      </p>
-                    )}
-                    {streamingContent && (
-                      <div className="max-h-32 overflow-y-auto rounded bg-muted p-2">
-                        <pre className="whitespace-pre-wrap text-xs">
-                          {streamingContent.slice(-500)}...
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                ) : doc ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>{t('documentStage.createdAt', { date: new Date(doc.created_at).toLocaleDateString() })}</span>
-                      {doc.ai_model_used && (
-                        <Badge variant="outline" className="text-xs">
-                          {doc.ai_model_used}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setPreviewDoc(doc)}
-                      >
-                        <Eye className="mr-1 h-4 w-4" />
-                        {t('document.preview')}
-                      </Button>
-                      {doc.type === 'landing' ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDownloadMd(doc)}
-                        >
-                          <Download className="mr-1 h-4 w-4" />
-                          {t('document.download')}
-                        </Button>
-                      ) : (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="outline">
-                              <Download className="mr-1 h-4 w-4" />
-                              {t('document.downloadAs')}
-                              <ChevronDown className="ml-1 h-3 w-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start">
-                            <DropdownMenuItem onClick={() => handleDownloadMd(doc)}>
-                              {t('document.downloadMd')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDownloadPdf(doc)}>
-                              {t('document.downloadPdf')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDownloadDocx(doc)}>
-                              {t('document.downloadDoc')}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    </div>
-                    {doc.is_confirmed ? (
-                      <div className="flex flex-wrap gap-2 pt-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleUnconfirm(doc.id)}
-                          disabled={unconfirmingId === doc.id}
-                        >
-                          {unconfirmingId === doc.id ? (
-                            <LoadingSpinner size="sm" className="mr-1" />
-                          ) : (
-                            <Undo2 className="mr-1 h-4 w-4" />
-                          )}
-                          {t('documentStage.unconfirm')}
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2 pt-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setReviseDoc(doc)
-                            setReviseSection('')
-                            setReviseInstruction('')
-                          }}
-                          disabled={!!generatingType || doc.type === 'landing'}
-                          title={doc.type === 'landing' ? t('documentStage.landingNoRevise') : ''}
-                        >
-                          <Edit3 className="mr-1 h-4 w-4" />
-                          {t('documentStage.sectionRevise')}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleGenerate(type)}
-                          disabled={!!generatingType}
-                        >
-                          <RefreshCw className="mr-1 h-4 w-4" />
-                          {t('documentStage.regenerate')}
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleConfirm(doc.id)}
-                          disabled={isConfirming}
-                        >
-                          {isConfirming ? (
-                            <LoadingSpinner size="sm" className="mr-1" />
-                          ) : (
-                            <Check className="mr-1 h-4 w-4" />
-                          )}
-                          {t('common.confirm')}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <Button
-                    className="w-full"
-                    onClick={() => handleGenerate(type)}
-                    disabled={!!generatingType}
-                  >
-                    {t('documentStage.generate', { label: config.label })}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          )
-        })}
+      {/* 추가 문서 (선택) */}
+      <div>
+        <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
+          {t('documentStage.optionalDocs')}
+        </h3>
+        <div className="grid gap-4 md:grid-cols-3">
+          {OPTIONAL_DOC_TYPES.map(type => renderDocCard(type, documentConfig[type]))}
+        </div>
       </div>
 
       {/* Gate 3 통과 메시지 */}
@@ -673,11 +739,11 @@ export function DocumentStage({
             <DialogTitle>{previewDoc?.title}</DialogTitle>
           </DialogHeader>
           <div className="max-h-[70vh] overflow-y-auto">
-            {previewDoc?.type === 'landing' ? (
+            {previewDoc && HTML_DOC_TYPES.has(previewDoc.type) ? (
               <iframe
                 srcDoc={previewDoc.content || ''}
                 className="h-[60vh] w-full rounded border"
-                title="Landing Page Preview"
+                title={`${previewDoc.title} Preview`}
               />
             ) : (
               <div
