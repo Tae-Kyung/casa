@@ -45,7 +45,19 @@ export async function callGemini(
   const combinedPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}`
   const result = await geminiModel.generateContent(combinedPrompt)
   const response = result.response
-  const content = response.text()
+  // Gemini 2.5 thinking 모드에서 text()가 에러를 던질 수 있으므로 parts에서 직접 추출
+  let content = ''
+  try {
+    content = response.text()
+  } catch {
+    const parts = response.candidates?.[0]?.content?.parts
+    if (parts) {
+      content = parts
+        .filter((p: { text?: string }) => typeof p.text === 'string')
+        .map((p: { text?: string }) => p.text)
+        .join('')
+    }
+  }
 
   // Gemini의 usage metadata
   const usageMetadata = response.usageMetadata
@@ -88,9 +100,13 @@ export async function* streamGemini(
   const result = await geminiModel.generateContentStream(combinedPrompt)
 
   for await (const chunk of result.stream) {
-    const text = chunk.text()
-    if (text) {
-      yield { type: 'text', data: text }
+    try {
+      const text = chunk.text()
+      if (text) {
+        yield { type: 'text', data: text }
+      }
+    } catch {
+      // Gemini 2.5 thinking 청크는 text()가 에러를 던지므로 무시
     }
   }
 

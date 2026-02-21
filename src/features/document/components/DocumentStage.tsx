@@ -235,6 +235,9 @@ export function DocumentStage({
             } else if (eventType === 'complete') {
               toast.success(t('documentStage.generateComplete', { label: documentConfig[type].label }))
               onUpdate()
+            } else if (eventType === 'error') {
+              const errorMsg = typeof parsed === 'string' ? parsed : String(parsed)
+              throw new Error(errorMsg)
             }
           } catch {
             // 파싱 오류 무시
