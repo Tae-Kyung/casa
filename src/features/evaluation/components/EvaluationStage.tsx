@@ -9,7 +9,8 @@ import {
   Check,
   RefreshCw,
   AlertTriangle,
-  MessageSquare
+  MessageSquare,
+  Megaphone
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -36,12 +37,22 @@ interface EvaluationStageProps {
   onUpdate: () => void
 }
 
+interface MarketStory {
+  customerPersona?: string
+  painNarrative?: string
+  solutionExperience?: string
+  elevatorPitch?: string
+  storytellingScore?: number
+  storytellingFeedback?: string
+}
+
 interface PersonaResult {
   score: number
   feedback: string
   strengths?: string[]
   weaknesses?: string[]
   recommendations?: string[]
+  marketStory?: MarketStory
   provider?: string
   model?: string
 }
@@ -88,6 +99,7 @@ export function EvaluationStage({
           strengths: parsed.strengths,
           weaknesses: parsed.weaknesses,
           recommendations: parsed.recommendations,
+          marketStory: parsed.marketStory,
         }
       }
     } catch {
@@ -540,6 +552,83 @@ export function EvaluationStage({
                   </ul>
                 </div>
               </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 시장 스토리 & 엘리베이터 피치 카드 (F6) */}
+      {hasResults && !isEvaluating && personaResults.market?.marketStory && (
+        <Card className="border-purple-200 dark:border-purple-800">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Megaphone className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              <CardTitle className="text-base text-purple-700 dark:text-purple-300">
+                {t('evaluationStage.marketStoryTitle')}
+              </CardTitle>
+              {personaResults.market.marketStory.storytellingScore !== undefined && (
+                <Badge variant={getScoreBadgeVariant(personaResults.market.marketStory.storytellingScore)}>
+                  {t('evaluationStage.storytellingScore', { score: personaResults.market.marketStory.storytellingScore })}
+                </Badge>
+              )}
+            </div>
+            <CardDescription>{t('evaluationStage.marketStoryDesc')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* 고객 페르소나 */}
+            {personaResults.market.marketStory.customerPersona && (
+              <div className="rounded-lg bg-purple-50 dark:bg-purple-950/50 p-4">
+                <h4 className="mb-1 text-sm font-semibold text-purple-700 dark:text-purple-300">
+                  {t('evaluationStage.customerPersona')}
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  {personaResults.market.marketStory.customerPersona}
+                </p>
+              </div>
+            )}
+
+            {/* Pain → 해결 경험 흐름 */}
+            <div className="grid gap-3 md:grid-cols-2">
+              {personaResults.market.marketStory.painNarrative && (
+                <div className="rounded-lg border border-red-200 dark:border-red-800 p-4">
+                  <h4 className="mb-1 text-sm font-semibold text-red-600 dark:text-red-400">
+                    {t('evaluationStage.painNarrative')}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    {personaResults.market.marketStory.painNarrative}
+                  </p>
+                </div>
+              )}
+              {personaResults.market.marketStory.solutionExperience && (
+                <div className="rounded-lg border border-green-200 dark:border-green-800 p-4">
+                  <h4 className="mb-1 text-sm font-semibold text-green-600 dark:text-green-400">
+                    {t('evaluationStage.solutionExperience')}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    {personaResults.market.marketStory.solutionExperience}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* 30초 엘리베이터 피치 */}
+            {personaResults.market.marketStory.elevatorPitch && (
+              <div className="rounded-lg border-2 border-purple-300 dark:border-purple-700 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/50 dark:to-blue-950/50 p-4">
+                <h4 className="mb-2 text-sm font-semibold text-purple-700 dark:text-purple-300">
+                  {t('evaluationStage.elevatorPitch')}
+                </h4>
+                <blockquote className="border-l-4 border-purple-400 pl-4 text-sm italic text-foreground leading-relaxed">
+                  &ldquo;{personaResults.market.marketStory.elevatorPitch}&rdquo;
+                </blockquote>
+              </div>
+            )}
+
+            {/* 스토리텔링 피드백 */}
+            {personaResults.market.marketStory.storytellingFeedback && (
+              <div className="text-sm text-muted-foreground">
+                <span className="font-medium">{t('evaluationStage.storytellingFeedback')}: </span>
+                {personaResults.market.marketStory.storytellingFeedback}
+              </div>
             )}
           </CardContent>
         </Card>

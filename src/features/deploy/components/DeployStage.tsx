@@ -16,7 +16,10 @@ import {
   Monitor,
   Newspaper,
   BarChart3,
-  Upload
+  Upload,
+  Eye,
+  EyeOff,
+  Award,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -48,6 +51,10 @@ export function DeployStage({
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [isDeploying, setIsDeploying] = useState(false)
   const [landingUrl, setLandingUrl] = useState<string | null>(null)
+  const [visibility, setVisibility] = useState<string>(
+    project.visibility || 'private'
+  )
+  const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false)
 
   const handleComplete = async () => {
     setIsCompleting(true)
@@ -131,6 +138,29 @@ export function DeployStage({
       toast.error(t('deploy.deployFailed'))
     } finally {
       setIsDeploying(false)
+    }
+  }
+
+  const handleVisibilityChange = async (newVisibility: string) => {
+    setIsUpdatingVisibility(true)
+    try {
+      const response = await fetch(`/api/projects/${project.id}/visibility`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visibility: newVisibility }),
+      })
+      const result = await response.json()
+      if (result.success) {
+        setVisibility(newVisibility)
+        toast.success(t('deploy.visibilityUpdated'))
+        onUpdate()
+      } else {
+        toast.error(result.error || t('deploy.visibilityFailed'))
+      }
+    } catch {
+      toast.error(t('deploy.visibilityFailed'))
+    } finally {
+      setIsUpdatingVisibility(false)
     }
   }
 
@@ -262,6 +292,64 @@ export function DeployStage({
           </CardContent>
         </Card>
       )}
+
+      {/* 쇼케이스 공개 설정 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Award className="h-5 w-5" />
+            {t('deploy.visibility')}
+          </CardTitle>
+          <CardDescription>{t('deploy.visibilityDesc')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {([
+              {
+                value: 'public',
+                label: t('deploy.visibilityPublic'),
+                desc: t('deploy.visibilityPublicDesc'),
+                icon: Eye,
+                disabled: !isCompleted,
+              },
+              {
+                value: 'summary',
+                label: t('deploy.visibilitySummary'),
+                desc: t('deploy.visibilitySummaryDesc'),
+                icon: Eye,
+                disabled: false,
+              },
+              {
+                value: 'private',
+                label: t('deploy.visibilityPrivate'),
+                desc: t('deploy.visibilityPrivateDesc'),
+                icon: EyeOff,
+                disabled: false,
+              },
+            ] as const).map((option) => (
+              <button
+                key={option.value}
+                onClick={() => handleVisibilityChange(option.value)}
+                disabled={isUpdatingVisibility || option.disabled}
+                className={`rounded-lg border-2 p-4 text-left transition-all ${
+                  visibility === option.value
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-muted-foreground/50'
+                } ${option.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+              >
+                <div className="flex items-center gap-2">
+                  <option.icon className="h-4 w-4" />
+                  <span className="font-medium text-sm">{option.label}</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{option.desc}</p>
+                {option.value === 'public' && !isCompleted && (
+                  <p className="mt-1 text-xs text-orange-500">{t('deploy.visibilityGate4Required')}</p>
+                )}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* 배포/공유 옵션 */}
       <div className="grid gap-4 md:grid-cols-3">

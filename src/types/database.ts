@@ -12,7 +12,7 @@ export type Theme = 'light' | 'dark' | 'system'
 export type ProjectStatus = 'draft' | 'in_progress' | 'completed' | 'archived'
 export type ProjectStage = 'idea' | 'evaluation' | 'document' | 'deploy' | 'done'
 export type GateStatus = 'gate_1' | 'gate_2' | 'gate_3' | 'gate_4' | 'completed'
-export type DocumentType = 'business_plan' | 'pitch' | 'landing' | 'ppt' | 'leaflet' | 'infographic'
+export type DocumentType = 'business_plan' | 'pitch' | 'landing' | 'ppt' | 'leaflet' | 'infographic' | 'gtm_checklist'
 export type FeedbackType = 'comment' | 'approval' | 'rejection' | 'revision_request'
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'revision_requested'
 export type PromptCategory = 'ideation' | 'evaluation' | 'document' | 'marketing'
@@ -67,6 +67,8 @@ export interface Database {
           gate_4_passed_at: string | null
           mentor_approval_required: boolean
           assigned_mentor_id: string | null
+          visibility: 'public' | 'summary' | 'private'
+          industry_tags: string[] | null
           created_at: string
           updated_at: string
         }
@@ -83,6 +85,8 @@ export interface Database {
           gate_4_passed_at?: string | null
           mentor_approval_required?: boolean
           assigned_mentor_id?: string | null
+          visibility?: 'public' | 'summary' | 'private'
+          industry_tags?: string[] | null
           created_at?: string
           updated_at?: string
         }
@@ -99,6 +103,8 @@ export interface Database {
           gate_4_passed_at?: string | null
           mentor_approval_required?: boolean
           assigned_mentor_id?: string | null
+          visibility?: 'public' | 'summary' | 'private'
+          industry_tags?: string[] | null
           created_at?: string
           updated_at?: string
         }

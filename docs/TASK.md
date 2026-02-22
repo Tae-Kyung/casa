@@ -76,6 +76,7 @@ PRD.md에 정의된 CASA MVP를 **견고하고 즉시 사용 가능한 수준**�
 | 7 | 대시보드 + Gate 4 | 대시보드, 멘토 피드백, 최종 승인 | 2일 |
 | 8 | 통합 QA | E2E 테스트, 버그 수정, 성능 최적화 | 2일 |
 | 9 | 배포 & 런칭 | Vercel 배포, 베타 테스트 준비 | 1일 |
+| 10 | 모두의 창업 연계 | 시장 피칭 코치, GTM, 공개 프로필, 멘토 매칭 | 3일 |
 
 ---
 
@@ -1142,6 +1143,111 @@ PRD.md에 정의된 CASA MVP를 **견고하고 즉시 사용 가능한 수준**�
 
 ---
 
+## 12.5 Phase 10: 모두의 창업 연계 개선
+
+> **목표:** 중기부 '모두의 창업' 정책 방향에 맞춰 시장 중심 스토리텔링, GTM 지원, 투명성, 생태계 매칭 기능 추가
+> **의존성:** Phase 6, 7 완료 (기존 문서 생성 + 대시보드 기능 필요)
+> **산출물:** 시장 중심 피칭 코치, GTM 체크리스트, 공개 프로필, 멘토 매칭
+
+### 태스크 목록
+
+#### T10.1: 시장 중심 피칭 코치 (F6)
+
+- [ ] **T10.1.1** evaluation_market 프롬프트 강화
+  - 시장 스토리텔링 평가 항목 추가 (30초 설명, 고객 페르소나 구체성, Pain→해결 흐름)
+  - bi_prompts 테이블의 evaluation_market 프롬프트 업데이트
+  - **완료 조건:** 평가 결과에 시장 스토리 관련 피드백 포함
+
+- [ ] **T10.1.2** pitch_summary 프롬프트를 고객 중심 구조로 전환
+  - 구조: 고객 페르소나 → Pain Point → 해결 경험 → 시장 검증 → 기술(부록)
+  - bi_prompts 테이블의 pitch_summary 프롬프트 업데이트
+  - **완료 조건:** 피치 문서가 고객 중심 구조로 생성됨
+
+- [ ] **T10.1.3** 평가 결과에 "30초 엘리베이터 피치" 카드 추가
+  - bi_evaluations의 recommendations JSONB에 elevator_pitch 필드 추가
+  - 평가 API에서 엘리베이터 피치 자동 생성
+  - 평가 결과 UI에 엘리베이터 피치 카드 표시
+  - **완료 조건:** 평가 완료 시 30초 피치가 생성되고 UI에 표시됨
+
+#### T10.2: GTM 체크리스트 (F7)
+
+- [ ] **T10.2.1** GTM 체크리스트 프롬프트 작성
+  - bi_prompts에 'gtm_checklist' 키로 새 프롬프트 삽입
+  - 타겟 고객 확보, 가격 전략, 판매 채널, KPI, 30/60/90일 플랜 포함
+  - **완료 조건:** 프롬프트 DB에 삽입 및 테스트 완료
+
+- [ ] **T10.2.2** GTM 체크리스트 생성 API
+  - `POST /api/projects/{id}/documents/gtm-checklist` (SSE)
+  - Gate 2 통과 확인
+  - bi_documents에 type='gtm_checklist'로 저장
+  - **완료 조건:** API 호출 시 GTM 체크리스트 생성 및 저장
+
+- [ ] **T10.2.3** 문서 관리 UI에 GTM 체크리스트 추가
+  - DocumentStage에 GTM 체크리스트 생성 버튼 추가
+  - 미리보기/수정요청/다운로드 지원
+  - **완료 조건:** UI에서 GTM 체크리스트 생성 및 관리 가능
+
+#### T10.3: 공개 프로젝트 프로필 (F8)
+
+- [ ] **T10.3.1** bi_projects에 visibility 컬럼 추가
+  - `ALTER TABLE bi_projects ADD COLUMN visibility TEXT DEFAULT 'private' CHECK (visibility IN ('public', 'summary', 'private'));`
+  - RLS 정책: visibility가 'public' 또는 'summary'인 프로젝트는 비인증 조회 허용
+  - **완료 조건:** 마이그레이션 적용, RLS 테스트
+
+- [ ] **T10.3.2** 공개 프로필 API
+  - `PATCH /api/projects/{id}/visibility` — 공개 범위 설정 (소유자만)
+  - `GET /api/projects/{id}/public-profile` — 비인증 조회
+  - `GET /api/showcase` — 공개 프로젝트 목록 (비인증)
+  - **완료 조건:** 3개 API 동작
+
+- [ ] **T10.3.3** 공개 프로필 페이지 UI
+  - `app/[locale]/showcase/page.tsx` — 공개 프로젝트 갤러리
+  - `app/[locale]/showcase/[id]/page.tsx` — 개별 프로젝트 공개 프로필
+  - 아이디어 요약, 평가 점수, 멘토 피드백 요약, 엘리베이터 피치 표시
+  - **완료 조건:** 비인증 사용자도 공개 프로필 조회 가능
+
+- [ ] **T10.3.4** 프로젝트 설정에서 공개 범위 토글
+  - DeployStage 또는 프로젝트 설정에 visibility 선택 UI 추가
+  - **완료 조건:** 사용자가 공개/요약/비공개 전환 가능
+
+#### T10.4: 멘토·전문가 매칭 기초 (F9)
+
+- [ ] **T10.4.1** bi_users에 멘토 프로필 컬럼 추가
+  - `ALTER TABLE bi_users ADD COLUMN expertise_tags JSONB DEFAULT '[]'::jsonb;`
+  - `ALTER TABLE bi_users ADD COLUMN industry_tags JSONB DEFAULT '[]'::jsonb;`
+  - `ALTER TABLE bi_users ADD COLUMN bio TEXT;`
+  - **완료 조건:** 마이그레이션 적용
+
+- [ ] **T10.4.2** 멘토 프로필 API
+  - `PATCH /api/users/profile` — 태그/bio 수정
+  - `GET /api/mentors` — 멘토 디렉토리 (태그 필터)
+  - **완료 조건:** API 동작
+
+- [ ] **T10.4.3** 프로젝트 기반 멘토 추천 API
+  - `GET /api/projects/{id}/recommended-mentors` — 산업 태그 기반 매칭
+  - `POST /api/projects/{id}/mentor-request` — 멘토링 요청
+  - **완료 조건:** 태그 기반 매칭 및 요청 동작
+
+- [ ] **T10.4.4** 멘토 디렉토리 UI
+  - `app/[locale]/dashboard/mentors/page.tsx` — 멘토 목록/검색
+  - 멘토 프로필 카드 (전문분야, 산업, bio)
+  - **완료 조건:** 멘토 디렉토리 페이지 동작
+
+- [ ] **T10.4.5** 멘토 프로필 편집 UI
+  - 태그 선택(multi-select), bio 입력
+  - **완료 조건:** 멘토가 자신의 프로필 수정 가능
+
+### Phase 10 완료 체크리스트
+- [ ] 평가 결과에 시장 스토리텔링 피드백 및 엘리베이터 피치 포함
+- [ ] 피치 문서가 고객 중심 구조로 생성
+- [ ] GTM 체크리스트 생성/조회/다운로드 동작
+- [ ] 공개 프로필 페이지 비인증 접근 가능
+- [ ] 공개/비공개 토글 동작
+- [ ] 멘토 디렉토리 조회 및 태그 기반 추천 동작
+- [ ] 멘토링 요청 플로우 동작
+
+---
+
 ## 13. 의존성 다이어그램
 
 ```
@@ -1172,6 +1278,9 @@ T1 (DB & Auth)            T2 (공통 UI)
                │
                ▼
            T9 (배포 & 런칭)
+               │
+               ▼
+          T10 (모두의 창업 연계)
 ```
 
 ---
@@ -1204,10 +1313,11 @@ T1 (DB & Auth)            T2 (공통 UI)
 | Phase 7 | ✅ | 13 | 13 | 100% |
 | Phase 8 | 🔄 | 11 | 16 | 69% |
 | Phase 9 | 🔄 | 4 | 14 | 29% |
-| **전체** | **🔄** | **137** | **154** | **89%** |
+| Phase 10 | 📋 | 0 | 15 | 0% |
+| **전체** | **🔄** | **137** | **169** | **81%** |
 
 ---
 
 *문서 작성: Claude Opus 4.5*
-*작성일: 2026-02-15*
-*기준 문서: PRD.md v1.3*
+*최종 수정: 2026-02-22*
+*기준 문서: PRD.md v1.5*

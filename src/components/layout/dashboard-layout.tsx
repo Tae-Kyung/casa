@@ -15,6 +15,7 @@ import {
   MessageSquare,
   CheckCircle,
   Users,
+  Award,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -83,6 +84,11 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
       label: t('admin'),
       icon: <Shield className="h-5 w-5" />,
       roles: ['admin'],
+    },
+    {
+      href: '/showcase',
+      label: t('showcase'),
+      icon: <Award className="h-5 w-5" />,
     },
     {
       href: '/settings',

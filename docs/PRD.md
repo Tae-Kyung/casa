@@ -1,7 +1,7 @@
 # PRD: CASA (CBNU AI-Agentic Startup Accelerator) MVP
 
-> **문서 버전:** 1.4
-> **작성일:** 2026-02-16
+> **문서 버전:** 1.5
+> **작성일:** 2026-02-22
 > **대상 스택:** Next.js 15 (App Router) + Supabase + Tailwind CSS + Vercel
 
 ---
@@ -585,6 +585,106 @@ POST /api/projects/{id}/deploy-landing         # 랜딩페이지 배포
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+#### F6: 시장 중심 피칭 코치 (모두의 창업 연계)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 기술 설명 중심 → 시장·고객 중심 스토리텔링으로 전환 |
+| **배경** | 중기부 '모두의 창업' 정책 방향: "오디션 형식을 통해 시장 중심으로 스토리텔링을 바꿀 수밖에 없다" |
+| **적용 범위** | 평가(F2) 프롬프트 강화 + 피치 문서(F3) 구조 전환 |
+
+**개선 내용:**
+
+1. **평가 단계 강화**: 기존 투자/시장/기술 3축 평가에 "시장 스토리텔링" 항목 추가
+   - "이 아이디어를 고객에게 30초에 설명한다면?" 평가
+   - 고객 페르소나 구체성 평가
+   - 고객의 Pain Point → 해결 경험 흐름 평가
+2. **피치 문서 구조 전환**: 기술 중심 → 고객 중심 구조
+   - 고객 페르소나 → 고객의 Pain → 해결 경험 → 시장 검증 → 기술(부록)
+3. **시장 스토리 요약 카드**: 평가 결과에 "30초 엘리베이터 피치" 자동 생성
+
+**구현 방식:** `bi_prompts` 테이블의 기존 프롬프트 수정 (evaluation_market, pitch_summary)
+
+#### F7: GTM 체크리스트 (모두의 창업 연계)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | Day 1부터 실질적 Go-to-Market 실행 지원 |
+| **배경** | 중기부 정책 방향: "Day 1부터 실질적 세일즈, 마케팅 등 Go-to-Market을 할 수 있도록" |
+| **입력** | 확정된 아이디어 + 승인된 평가 결과 (Gate 2 통과) |
+| **출력** | 프로젝트 맞춤형 GTM 실행 체크리스트 (Markdown) |
+
+**GTM 체크리스트 구성:**
+- 타겟 고객 첫 10명 확보 방법
+- 가격 책정 전략
+- 초기 판매 채널 (온라인/오프라인)
+- 핵심 지표(KPI) 3개
+- 30일/60일/90일 실행 플랜
+
+**API 엔드포인트:**
+```
+POST /api/projects/{id}/documents/gtm-checklist  # GTM 체크리스트 생성 (SSE)
+```
+
+**구현 방식:** 기존 문서 생성 파이프라인(F3) 재활용, `bi_documents.type`에 `'gtm_checklist'` 추가
+
+#### F8: 공개 프로젝트 프로필 (모두의 창업 연계)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 창업 생태계 투명성 확보 — 평가 기준·결과 공개 |
+| **배경** | 중기부 정책 방향: "어떤 기준으로 선정했는지 다 공표해야 한다. 플랫폼에 공개되니까 의미 있다" |
+| **입력** | Gate 4 통과 프로젝트 (사용자가 공개 범위 선택) |
+| **출력** | 외부 접근 가능한 공개 프로필 페이지 |
+
+**공개 프로필 구성:**
+- 아이디어 요약 (문제/솔루션/타겟/차별점)
+- 평가 점수 (투자/시장/기술/종합) + 평가 기준 설명
+- 멘토 피드백 요약 (멘토 동의 시)
+- 생성 문서 목록 (공개 선택 시)
+- 30초 엘리베이터 피치 (F6에서 생성)
+
+**공개 범위 옵션:**
+| 옵션 | 공개 내용 |
+|------|-----------|
+| **전체 공개** | 아이디어 요약 + 평가 점수 + 멘토 피드백 + 문서 |
+| **요약 공개** | 아이디어 요약 + 평가 점수만 |
+| **비공개** | 외부 접근 불가 (기본값) |
+
+**API 엔드포인트:**
+```
+PATCH /api/projects/{id}/visibility        # 공개 범위 설정
+GET   /api/projects/{id}/public-profile    # 공개 프로필 조회 (비인증)
+GET   /api/showcase                        # 공개 프로젝트 목록 (비인증)
+```
+
+**데이터 모델 변경:** `bi_projects`에 `visibility` 컬럼 추가
+
+#### F9: 멘토·전문가 매칭 기초 (모두의 창업 연계)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 창업 생태계 참여자 연결 — 프로젝트와 멘토 매칭 |
+| **배경** | 중기부 정책 방향: "AC, VC, 멘토, 법률, 미디어 등 창업 생태계 전반을 플랫폼에 참여시켜 매칭" |
+| **구현 범위** | MVP 수준 — 태그 기반 단순 매칭 (AI 매칭은 향후) |
+
+**멘토 프로필 확장:**
+- 전문 분야 태그 (예: 마케팅, 투자, 법률, 기술)
+- 산업 태그 (예: 헬스케어, 핀테크, 에듀테크)
+- 경력 요약
+
+**매칭 로직:** 프로젝트의 산업 분류 + 현재 단계 → 관련 태그를 가진 멘토 추천 목록
+
+**API 엔드포인트:**
+```
+PATCH /api/users/profile                   # 멘토 프로필(태그) 수정
+GET   /api/mentors                         # 멘토 디렉토리
+GET   /api/projects/{id}/recommended-mentors  # 프로젝트 기반 멘토 추천
+POST  /api/projects/{id}/mentor-request    # 멘토링 요청
+```
+
+**데이터 모델 변경:** `bi_users`에 `expertise_tags`, `industry_tags`, `bio` 컬럼 추가
+
 ---
 
 ## 3. 데이터 모델
@@ -654,6 +754,10 @@ CREATE TABLE bi_users (
   role TEXT DEFAULT 'user' CHECK (role IN ('user', 'mentor', 'admin')),
   locale TEXT DEFAULT 'ko' CHECK (locale IN ('ko', 'en', 'ja', 'zh')),
   theme TEXT DEFAULT 'system' CHECK (theme IN ('light', 'dark', 'system')),
+  -- 멘토 프로필 확장 (F9)
+  expertise_tags JSONB DEFAULT '[]'::jsonb,  -- 전문 분야 태그
+  industry_tags JSONB DEFAULT '[]'::jsonb,   -- 산업 태그
+  bio TEXT,                                   -- 경력 요약
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -674,6 +778,9 @@ CREATE TABLE bi_projects (
   -- 멘토 승인 설정
   mentor_approval_required BOOLEAN DEFAULT false,
   assigned_mentor_id UUID REFERENCES bi_users(id),
+  -- 공개 프로필 (F8)
+  visibility TEXT DEFAULT 'private' CHECK (visibility IN ('public', 'summary', 'private')),
+  industry_tags JSONB DEFAULT '[]'::jsonb,  -- 산업 분류 태그
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -733,7 +840,7 @@ CREATE TABLE bi_evaluations (
 CREATE TABLE bi_documents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES bi_projects(id) ON DELETE CASCADE,
-  type TEXT NOT NULL CHECK (type IN ('business_plan', 'pitch', 'landing')),
+  type TEXT NOT NULL CHECK (type IN ('business_plan', 'pitch', 'landing', 'gtm_checklist', 'ppt', 'leaflet', 'infographic')),
   title TEXT NOT NULL,
   content TEXT,
   storage_path TEXT,
@@ -2857,6 +2964,29 @@ export const maxDuration = 120;
 
 ---
 
+### Phase 6: 모두의 창업 연계 개선
+
+- [ ] **F6: 시장 중심 피칭 코치**
+  - [ ] evaluation_market 프롬프트에 시장 스토리텔링 평가 항목 추가
+  - [ ] pitch_summary 프롬프트를 고객 중심 구조로 전환
+  - [ ] 평가 결과에 "30초 엘리베이터 피치" 자동 생성 추가
+- [ ] **F7: GTM 체크리스트**
+  - [ ] gtm_checklist 프롬프트 작성
+  - [ ] 문서 생성 API에 GTM 체크리스트 타입 추가
+  - [ ] 문서 관리 UI에 GTM 체크리스트 표시
+- [ ] **F8: 공개 프로젝트 프로필**
+  - [ ] bi_projects에 visibility 컬럼 추가
+  - [ ] 공개 프로필 페이지 구현
+  - [ ] 쇼케이스(공개 프로젝트 목록) 페이지 구현
+  - [ ] 프로젝트 설정에서 공개 범위 토글 UI
+- [ ] **F9: 멘토·전문가 매칭 기초**
+  - [ ] bi_users에 expertise_tags, industry_tags, bio 컬럼 추가
+  - [ ] 멘토 디렉토리 페이지
+  - [ ] 프로젝트 기반 멘토 추천
+  - [ ] 멘토링 요청 플로우
+
+---
+
 ## 15. 향후 확장 계획 (Post-MVP)
 
 ### Phase 2: 멀티 AI 통합 (섹션 2.3 전략 기반)
@@ -2905,3 +3035,4 @@ export const maxDuration = 120;
 | 1.2 | 2026-02-15 | Human-in-the-Loop 승인 워크플로우 추가 (4단계 Gate), Multi-AI 오케스트레이션 전략 추가, bi_approvals 테이블 및 RLS 정책, 승인 관련 API 엔드포인트 |
 | 1.3 | 2026-02-15 | **프롬프트 관리 시스템 추가**: bi_prompts/bi_prompt_versions/bi_prompt_variables 테이블, PromptEngine 클래스, Redis 캐싱, 관리자 UI, 버전 관리/롤백, 시드 데이터, 관리자 API 엔드포인트 |
 | 1.4 | 2026-02-16 | **랜딩(홍보) 페이지 전면 개편**: 6개→14개 섹션 확장, features/landing/ 컴포넌트 14개 신규, 스크롤 애니메이션(IntersectionObserver + CSS keyframes), 카운트업 훅, shadcn/ui Accordion 추가, landing 다국어 ~250키 확장(ko/en), 폴더 구조·UI/UX 가이드라인·마일스톤 섹션 PRD 반영 |
+| 1.5 | 2026-02-22 | **모두의 창업 연계 기능 추가**: F6(시장 중심 피칭 코치), F7(GTM 체크리스트), F8(공개 프로젝트 프로필), F9(멘토·전문가 매칭 기초) 4개 기능 정의, 데이터 모델 확장(bi_projects.visibility, bi_users.expertise_tags/industry_tags/bio, bi_documents.type 확장), Phase 6 마일스톤 추가 |

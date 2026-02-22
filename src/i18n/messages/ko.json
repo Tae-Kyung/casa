@@ -54,7 +54,8 @@
     "admin": "관리자",
     "prompts": "프롬프트 관리",
     "approvals": "승인 관리",
-    "users": "가입자 관리"
+    "users": "가입자 관리",
+    "showcase": "쇼케이스"
   },
   "dashboard": {
     "title": "대시보드",
@@ -153,13 +154,22 @@
     "detailFeedback": "종합 의견",
     "detailStrengths": "강점",
     "detailWeaknesses": "약점",
-    "detailRecommendations": "개선 제안"
+    "detailRecommendations": "개선 제안",
+    "marketStoryTitle": "시장 스토리 & 엘리베이터 피치",
+    "marketStoryDesc": "고객 관점에서 본 아이디어의 스토리텔링 역량 평가",
+    "customerPersona": "이상적인 첫 번째 고객",
+    "painNarrative": "고객의 Pain",
+    "solutionExperience": "해결 경험",
+    "elevatorPitch": "30초 엘리베이터 피치",
+    "storytellingScore": "스토리텔링 {score}점",
+    "storytellingFeedback": "피드백"
   },
   "document": {
     "title": "문서 생성",
     "businessPlan": "사업계획서",
     "pitch": "요약 피치",
     "landing": "랜딩페이지",
+    "gtmChecklist": "GTM 실행 체크리스트",
     "ppt": "서비스 소개 PPT",
     "leaflet": "홍보 리플렛",
     "infographic": "인포그래픽",
@@ -250,7 +260,18 @@
     "projectComplete": "프로젝트 완료!",
     "projectCompleteDesc": "축하합니다! 모든 단계가 완료되었습니다. 생성된 문서를 다운로드하고 공유해보세요.",
     "completeFailed": "완료 처리에 실패했습니다.",
-    "deployFailed": "랜딩페이지 배포에 실패했습니다."
+    "deployFailed": "랜딩페이지 배포에 실패했습니다.",
+    "visibility": "쇼케이스 공개 설정",
+    "visibilityDesc": "프로젝트를 쇼케이스에 공개하여 다른 예비창업자에게 영감을 줄 수 있습니다.",
+    "visibilityPublic": "전체 공개",
+    "visibilityPublicDesc": "아이디어 요약, 점수, 문서 목록 모두 공개",
+    "visibilitySummary": "요약 공개",
+    "visibilitySummaryDesc": "아이디어 요약과 점수만 공개",
+    "visibilityPrivate": "비공개",
+    "visibilityPrivateDesc": "쇼케이스에 표시하지 않음",
+    "visibilityUpdated": "공개 설정이 변경되었습니다.",
+    "visibilityFailed": "공개 설정 변경에 실패했습니다.",
+    "visibilityGate4Required": "Gate 4 완료 후 전체 공개가 가능합니다."
   },
   "gate": {
     "gate1": "아이디어 확정",
@@ -725,6 +746,31 @@
       "copyright": "© 2026 CASA - CBNU AI-Agentic Startup Accelerator. All rights reserved.",
       "poweredBy": "Powered by Anthropic Claude, Supabase, Vercel"
     }
+  },
+  "showcase": {
+    "title": "프로젝트 쇼케이스",
+    "description": "CASA에서 검증된 창업 프로젝트들을 만나보세요",
+    "totalProjects": "{count}개 프로젝트",
+    "searchPlaceholder": "프로젝트명, 문제, 솔루션으로 검색...",
+    "empty": "아직 공개된 프로젝트가 없습니다",
+    "emptyDesc": "프로젝트가 완료되면 여기에 공개됩니다.",
+    "viewDetail": "상세 보기",
+    "backToList": "목록으로 돌아가기",
+    "notFound": "프로젝트를 찾을 수 없습니다",
+    "notFoundDesc": "비공개이거나 존재하지 않는 프로젝트입니다.",
+    "elevatorPitch": "30초 엘리베이터 피치",
+    "problem": "해결하려는 문제",
+    "solution": "제안 솔루션",
+    "targetCustomer": "목표 고객",
+    "differentiation": "차별화 포인트",
+    "evaluationScores": "AI 다면 평가 점수",
+    "totalScore": "종합 점수",
+    "documents": "확정 문서",
+    "visibility": "공개 범위",
+    "visibilityPublic": "전체 공개",
+    "visibilitySummary": "요약 공개",
+    "visibilityPrivate": "비공개",
+    "visibilityChanged": "공개 범위가 변경되었습니다."
   },
   "error": {
     "notFound": "페이지를 찾을 수 없습니다",

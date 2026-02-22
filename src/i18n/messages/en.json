@@ -54,7 +54,8 @@
     "admin": "Admin",
     "prompts": "Prompt Management",
     "approvals": "Approvals",
-    "users": "User Management"
+    "users": "User Management",
+    "showcase": "Showcase"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -153,13 +154,22 @@
     "detailFeedback": "Overall Feedback",
     "detailStrengths": "Strengths",
     "detailWeaknesses": "Weaknesses",
-    "detailRecommendations": "Recommendations"
+    "detailRecommendations": "Recommendations",
+    "marketStoryTitle": "Market Story & Elevator Pitch",
+    "marketStoryDesc": "Storytelling capability assessment from a customer perspective",
+    "customerPersona": "Ideal First Customer",
+    "painNarrative": "Customer Pain",
+    "solutionExperience": "Solution Experience",
+    "elevatorPitch": "30-Second Elevator Pitch",
+    "storytellingScore": "Storytelling {score}pts",
+    "storytellingFeedback": "Feedback"
   },
   "document": {
     "title": "Document Generation",
     "businessPlan": "Business Plan",
     "pitch": "Pitch Summary",
     "landing": "Landing Page",
+    "gtmChecklist": "GTM Checklist",
     "ppt": "Service Introduction PPT",
     "leaflet": "Promotional Leaflet",
     "infographic": "Infographic",
@@ -250,7 +260,18 @@
     "projectComplete": "Project Complete!",
     "projectCompleteDesc": "Congratulations! All stages are complete. Download and share your documents.",
     "completeFailed": "Failed to complete project.",
-    "deployFailed": "Failed to deploy landing page."
+    "deployFailed": "Failed to deploy landing page.",
+    "visibility": "Showcase Visibility",
+    "visibilityDesc": "Share your project on the showcase to inspire other aspiring entrepreneurs.",
+    "visibilityPublic": "Public",
+    "visibilityPublicDesc": "Idea summary, scores, and document list all visible",
+    "visibilitySummary": "Summary Only",
+    "visibilitySummaryDesc": "Only idea summary and scores visible",
+    "visibilityPrivate": "Private",
+    "visibilityPrivateDesc": "Not shown on showcase",
+    "visibilityUpdated": "Visibility setting updated.",
+    "visibilityFailed": "Failed to update visibility setting.",
+    "visibilityGate4Required": "Full public visibility requires Gate 4 completion."
   },
   "gate": {
     "gate1": "Idea Confirmation",
@@ -725,6 +746,31 @@
       "copyright": "© 2026 CASA - CBNU AI-Agentic Startup Accelerator. All rights reserved.",
       "poweredBy": "Powered by Anthropic Claude, Supabase, Vercel"
     }
+  },
+  "showcase": {
+    "title": "Project Showcase",
+    "description": "Discover startup projects validated by CASA",
+    "totalProjects": "{count} projects",
+    "searchPlaceholder": "Search by project name, problem, or solution...",
+    "empty": "No public projects yet",
+    "emptyDesc": "Projects will appear here once completed and published.",
+    "viewDetail": "View details",
+    "backToList": "Back to list",
+    "notFound": "Project not found",
+    "notFoundDesc": "This project is private or does not exist.",
+    "elevatorPitch": "30-Second Elevator Pitch",
+    "problem": "Problem",
+    "solution": "Solution",
+    "targetCustomer": "Target Customer",
+    "differentiation": "Differentiation",
+    "evaluationScores": "AI Multi-Perspective Scores",
+    "totalScore": "Total Score",
+    "documents": "Confirmed Documents",
+    "visibility": "Visibility",
+    "visibilityPublic": "Public",
+    "visibilitySummary": "Summary Only",
+    "visibilityPrivate": "Private",
+    "visibilityChanged": "Visibility has been updated."
   },
   "error": {
     "notFound": "Page not found",

@@ -4,7 +4,7 @@ import createMiddleware from 'next-intl/middleware'
 import { routing } from './i18n/routing'
 
 // 인증이 필요 없는 경로
-const publicPaths = ['/login', '/signup', '/auth/callback', '/forgot-password']
+const publicPaths = ['/login', '/signup', '/auth/callback', '/forgot-password', '/showcase']
 
 // 관리자만 접근 가능한 경로
 const adminPaths = ['/admin']
@@ -65,8 +65,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 인증된 사용자가 로그인/회원가입 페이지 접근 시
-  if (user && isPublicPath) {
+  // 인증된 사용자가 로그인/회원가입 페이지 접근 시 (showcase는 제외)
+  const isAuthOnlyPath = ['/login', '/signup'].some((p) => pathWithoutLocale.startsWith(p))
+  if (user && isAuthOnlyPath) {
     const locale = pathname.split('/')[1] || 'ko'
     const url = request.nextUrl.clone()
     url.pathname = `/${locale}/dashboard`
