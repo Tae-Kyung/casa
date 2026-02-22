@@ -471,7 +471,8 @@
     "nav": {
       "features": "기능 소개",
       "process": "이용 방법",
-      "faq": "FAQ"
+      "faq": "FAQ",
+      "showcase": "쇼케이스"
     },
     "hero": {
       "badge": "충북대학교 창업지원단 공식 AI 플랫폼",

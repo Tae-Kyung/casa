@@ -471,7 +471,8 @@
     "nav": {
       "features": "Features",
       "process": "How It Works",
-      "faq": "FAQ"
+      "faq": "FAQ",
+      "showcase": "Showcase"
     },
     "hero": {
       "badge": "Official AI Platform of CBNU Startup Support Center",
