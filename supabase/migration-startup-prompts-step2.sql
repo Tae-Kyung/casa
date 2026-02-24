@@ -1,15 +1,9 @@
--- 창업자 트랙 프롬프트 카테고리 추가 & 초기 프롬프트 데이터 시드
--- 실행 순서: Supabase SQL Editor에서 실행
-
--- 1. prompt_category enum에 'startup' 값 추가
-ALTER TYPE prompt_category ADD VALUE IF NOT EXISTS 'startup';
-
--- 2. 창업자 트랙 4개 프롬프트 시드 데이터
--- 키: startup_review_analysis, startup_diagnosis, startup_strategy, startup_report
-
 -- ============================================================
+-- STEP 2: 창업자 트랙 4개 프롬프트 시드 데이터
+-- STEP 1 실행 후 (커밋된 후) 이 쿼리를 실행하세요.
+-- ============================================================
+
 -- 2-1. 사업계획 검토 (Review Analysis)
--- ============================================================
 INSERT INTO bi_prompts (key, name, description, category, system_prompt, user_prompt_template, model, temperature, max_tokens, version, is_active)
 VALUES (
   'startup_review_analysis',
@@ -87,9 +81,7 @@ VALUES (
 )
 ON CONFLICT (key) DO NOTHING;
 
--- ============================================================
 -- 2-2. 비즈니스 진단 (Diagnosis)
--- ============================================================
 INSERT INTO bi_prompts (key, name, description, category, system_prompt, user_prompt_template, model, temperature, max_tokens, version, is_active)
 VALUES (
   'startup_diagnosis',
@@ -183,9 +175,7 @@ VALUES (
 )
 ON CONFLICT (key) DO NOTHING;
 
--- ============================================================
 -- 2-3. 성장 전략 (Strategy)
--- ============================================================
 INSERT INTO bi_prompts (key, name, description, category, system_prompt, user_prompt_template, model, temperature, max_tokens, version, is_active)
 VALUES (
   'startup_strategy',
@@ -294,9 +284,7 @@ VALUES (
 )
 ON CONFLICT (key) DO NOTHING;
 
--- ============================================================
 -- 2-4. 종합 보고서 (Report)
--- ============================================================
 INSERT INTO bi_prompts (key, name, description, category, system_prompt, user_prompt_template, model, temperature, max_tokens, version, is_active)
 VALUES (
   'startup_report',
