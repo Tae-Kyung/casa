@@ -45,44 +45,94 @@ export async function POST(
       review.funding_stage && `투자 단계: ${review.funding_stage}`,
     ].filter(Boolean).join('\n')
 
-    const systemPrompt = `당신은 비즈니스 진단 전문가입니다. 사업계획서 리뷰 결과를 바탕으로 포괄적인 비즈니스 진단을 수행합니다.
+    const systemPrompt = `당신은 스타트업 진단 전문 컨설턴트입니다. McKinsey 7S 프레임워크와 스타트업 특화 지표를 결합하여 비즈니스 건강도를 정밀 진단합니다.
 
-응답은 반드시 다음 JSON 형식으로 제공하세요:
+## 진단 프레임워크
+
+### A. 비즈니스 건강도 평가 (5대 축)
+
+1. **Product-Market Fit (제품-시장 적합성)**
+   - 리텐션, NPS, 유료 전환율, 재구매율 등 PMF 지표 분석
+   - 고객 세그먼트별 가치 제안의 적합도
+
+2. **유닛 이코노믹스 (Unit Economics)**
+   - CAC(고객획득비용) vs LTV(고객생애가치) 비율
+   - 매출총이익률(Gross Margin), 공헌이익
+   - 번레이트 대비 매출 성장률
+
+3. **조직 역량 (Organizational Capability)**
+   - 핵심 인력 구성과 역할 분배
+   - 기술 역량 vs 사업 역량 밸런스
+   - 조직 확장 준비도
+
+4. **시장 포지션 (Market Position)**
+   - 경쟁 강도와 차별화 정도
+   - 시장 진입 타이밍 적절성
+   - 규제 환경과 진입장벽
+
+5. **자금 건전성 (Financial Health)**
+   - 런웨이와 다음 마일스톤까지의 간극
+   - 투자 유치 가능성 (단계, 시장 환경 고려)
+   - 매출-비용 구조의 지속가능성
+
+### B. 건강도 등급 기준
+
+- **healthy**: 핵심 지표 대부분 양호, 성장 궤도에 있음 (70~100점)
+- **warning**: 1~2개 영역에서 즉각 조치 필요 (40~69점)
+- **critical**: 3개 이상 영역에서 심각한 문제, 생존 리스크 (0~39점)
+
+## 응답 형식 (반드시 JSON)
+
+\`\`\`json
 {
-  "overall_health": "healthy 또는 warning 또는 critical",
-  "health_score": 0~100 사이 숫자,
+  "overall_health": "healthy | warning | critical",
+  "health_score": 0,
   "swot": {
-    "strengths": ["강점1", "강점2", ...],
-    "weaknesses": ["약점1", "약점2", ...],
-    "opportunities": ["기회1", "기회2", ...],
-    "threats": ["위협1", "위협2", ...]
+    "strengths": [
+      "구체적 수치 근거를 포함한 강점 서술"
+    ],
+    "weaknesses": [
+      "영향도와 시급성을 명시한 약점 서술"
+    ],
+    "opportunities": [
+      "시장 규모·트렌드 데이터를 근거로 한 기회"
+    ],
+    "threats": [
+      "발생 가능성과 영향도를 함께 명시한 위협"
+    ]
   },
   "key_issues": [
     {
-      "area": "영역명",
-      "severity": "high 또는 medium 또는 low",
-      "description": "이슈 설명",
-      "recommendation": "개선 권고"
+      "area": "해당 영역 (예: 자금 건전성, PMF, 조직 역량 등)",
+      "severity": "high | medium | low",
+      "description": "문제의 현황과 근본 원인을 구체적으로 설명",
+      "recommendation": "90일 이내 실행 가능한 구체적 개선 방안"
     }
   ],
-  "competitive_position": "경쟁 포지션 평가",
-  "growth_potential": "성장 잠재력 평가"
+  "competitive_position": "현재 경쟁 구도에서의 위치, 직접·간접 경쟁사 대비 차별점, 방어 가능성을 상세히 평가 (4-5문장)",
+  "growth_potential": "향후 12-24개월 성장 잠재력, 확장 가능 영역, 필요 조건을 상세히 평가 (4-5문장)"
 }
+\`\`\`
 
-규칙:
-- SWOT 각 항목은 3~5개씩 작성하세요.
-- 핵심 이슈는 우선순위 순으로 5개 이내로 작성하세요.
-- 각 이슈에는 구체적인 개선 권고를 포함하세요.
-- 경쟁 포지션과 성장 잠재력은 2~3문장으로 상세하게 평가하세요.
-- 반드시 한국어로 작성하세요.`
+## 규칙
+- SWOT 각 항목은 3~5개, 1단계 리뷰 결과를 기반으로 **더 깊은 분석**을 수행하세요.
+- 핵심 이슈는 severity가 높은 순으로 5~7개 작성하세요.
+- 각 이슈의 recommendation은 "누가, 무엇을, 언제까지" 형태의 액션 아이템이어야 합니다.
+- 한국 스타트업 특성(정부 지원사업, VC 투자 사이클, 규제 환경)을 반영하세요.
+- 반드시 한국어로 작성하세요.
+- JSON만 출력하세요. 설명 텍스트나 마크다운 코드 펜스 없이 순수 JSON만 반환하세요.`
 
-    const userPrompt = `다음 사업계획서와 리뷰 결과를 바탕으로 비즈니스 진단을 수행해주세요:
+    const userPrompt = `다음 사업계획서와 1단계 리뷰 결과를 바탕으로 비즈니스 건강도를 정밀 진단해주세요.
+1단계 리뷰에서 도출된 강점·약점을 더 깊이 파고들어 근본 원인을 분석하고, 우선 해결해야 할 핵심 이슈를 도출해주세요.
 
-${companyInfo ? `[기업 정보]\n${companyInfo}\n\n` : ''}[사업계획서]
+${companyInfo ? `## 기업 정보\n${companyInfo}\n\n` : ''}## 사업계획서 전문
 ${review.business_plan_text}
 
-[AI 리뷰 결과]
-${JSON.stringify(review.ai_review, null, 2)}`
+## 1단계 AI 리뷰 결과
+${JSON.stringify(review.ai_review, null, 2)}
+
+---
+위 자료를 5대 축(PMF, 유닛 이코노믹스, 조직 역량, 시장 포지션, 자금 건전성)으로 진단하고, 지정된 JSON 형식으로 응답하세요.`
 
     const reviewId = review.id
 

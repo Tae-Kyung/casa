@@ -56,46 +56,88 @@ export async function POST(
       review.funding_stage && `투자 단계: ${review.funding_stage}`,
     ].filter(Boolean).join('\n')
 
-    const systemPrompt = `당신은 비즈니스 보고서 전문가입니다. 모든 분석 결과를 종합하여 포괄적인 경영 보고서를 작성합니다.
+    const systemPrompt = `당신은 글로벌 컨설팅펌 출신의 비즈니스 보고서 전문가입니다. 스타트업 경영진과 투자자에게 제출할 수준의 종합 경영 보고서를 작성합니다.
 
-보고서는 마크다운 형식으로 작성하세요. 다음 섹션을 반드시 포함해야 합니다:
+## 보고서 구조 (마크다운 형식)
 
-1. **Executive Summary (경영진 요약)** - 핵심 내용 2~3문단
-2. **Business Overview (사업 개요)** - 기업 및 사업 소개
-3. **Review Findings (리뷰 분석 결과)** - AI 리뷰의 주요 발견사항
-4. **SWOT Analysis (SWOT 분석)** - 강점, 약점, 기회, 위협
-5. **Diagnosis Results (진단 결과)** - 비즈니스 건강도 및 핵심 이슈
-6. **Strategic Recommendations (전략 권고)** - 성장 전략 요약
-7. **Action Plan (실행 계획)** - 우선순위별 실행 항목
-8. **Financial Outlook (재무 전망)** - 재무 목표 및 전망
-9. **Conclusion (결론)** - 종합 평가 및 향후 방향
+아래 구조를 반드시 따르되, 각 섹션은 이전 3단계(검토→진단→전략)의 결과를 **재가공·통합**하여 일관된 서사(narrative)를 만들어야 합니다. 단순 복붙이 아닌, 경영 보고서다운 분석적 문체로 재구성하세요.
 
-규칙:
-- 전문적이고 격식 있는 문체를 사용하세요.
-- 각 섹션은 충분히 상세하게 작성하세요.
-- 데이터와 근거를 기반으로 작성하세요.
-- 실행 가능한 인사이트를 제공하세요.
-- 반드시 한국어로 작성하세요.`
+### 1. Executive Summary (경영진 요약)
+- 3~4문단으로 사업의 핵심 가치, 현재 상태, 주요 과제, 권고 방향을 요약
+- 바쁜 경영진/투자자가 이 섹션만 읽어도 전체 상황을 파악할 수 있도록
+- **핵심 수치**: 점수, 건강도, 주요 KPI를 볼드체로 강조
 
-    const userPrompt = `다음 정보를 종합하여 경영 보고서를 작성해주세요:
+### 2. Company Profile (기업 개요)
+- 기업 기본 정보, 설립 배경, 미션
+- 주요 제품/서비스와 비즈니스 모델
+- 현재 팀 구성과 핵심 역량
 
-[프로젝트명]
+### 3. Market Analysis (시장 분석)
+- TAM/SAM/SOM 분석 결과
+- 시장 트렌드와 성장 동인
+- 경쟁 구도 (직접/간접 경쟁사 비교표 포함)
+
+### 4. Business Health Assessment (비즈니스 건강도 평가)
+- 종합 건강도 등급과 점수
+- 5대 축(PMF, 유닛 이코노믹스, 조직, 시장 포지션, 자금) 평가 요약
+- SWOT 분석 매트릭스 (표 형식)
+
+### 5. Key Issues & Risk Analysis (핵심 이슈 & 리스크)
+- 심각도순 핵심 이슈 목록 (표 형식: 영역 | 심각도 | 설명 | 권고)
+- 리스크 매트릭스 (발생 확률 × 영향도)
+
+### 6. Growth Strategy (성장 전략)
+- 비전 선언문
+- 단기/중기/장기 전략 목표와 KPI
+- Go-to-Market 전략 핵심 요약
+
+### 7. Action Plan (실행 로드맵)
+- 분기별 핵심 마일스톤 (타임라인 표 형식)
+- 우선순위별 실행 항목 (표 형식: 우선순위 | 액션 | 담당 | 기한 | 기대 효과)
+
+### 8. Financial Outlook (재무 전망)
+- 현재 재무 상태 요약
+- 분기별 매출/비용 전망
+- 손익분기 예상 시점
+- 투자 유치 계획 및 자금 활용 방안
+
+### 9. Conclusion & Next Steps (결론 및 다음 단계)
+- 종합 평가 (강점을 살리고 약점을 보완하는 방향)
+- 즉시 실행해야 할 Top 3 액션
+- 다음 분기 핵심 마일스톤
+
+---
+
+## 작성 규칙
+- **문체**: 전문적이고 격식 있는 보고서 문체. 경어체 사용.
+- **데이터 기반**: 모든 주장에는 앞선 분석의 수치나 근거를 인용하세요.
+- **시각적 정리**: 가능한 곳에 표(table), 목록(list), 볼드체를 활용하여 가독성을 높이세요.
+- **분량**: 전체 약 2,000~3,000자 수준 (A4 5~7페이지 분량)
+- **일관성**: 이전 단계에서 도출된 점수, 등급, 이슈가 보고서 전체에서 일관되게 인용되어야 합니다.
+- 반드시 한국어로 작성하세요.
+- 마크다운 형식으로만 출력하세요.`
+
+    const userPrompt = `다음 3단계 분석 결과를 종합하여, 경영진과 투자자에게 제출할 수 있는 수준의 종합 경영 보고서를 작성해주세요.
+단순 결과 나열이 아니라, 일관된 서사(narrative)로 재구성해주세요.
+
+## 프로젝트명
 ${project.name}
 
-${companyInfo ? `[기업 정보]\n${companyInfo}\n\n` : ''}[사업계획서]
+${companyInfo ? `## 기업 정보\n${companyInfo}\n\n` : ''}## 사업계획서 전문
 ${review.business_plan_text}
 
-[AI 리뷰 결과]
+## 1단계: 사업계획 리뷰 결과 (점수: ${review.review_score || 'N/A'}/100)
 ${JSON.stringify(review.ai_review, null, 2)}
 
-[SWOT 분석]
-${review.swot_analysis ? JSON.stringify(review.swot_analysis, null, 2) : 'N/A'}
-
-[비즈니스 진단 결과]
+## 2단계: 비즈니스 진단 결과
+${review.swot_analysis ? `### SWOT 분석\n${JSON.stringify(review.swot_analysis, null, 2)}\n\n` : ''}### 종합 진단
 ${JSON.stringify(review.diagnosis_result, null, 2)}
 
-[성장 전략]
-${JSON.stringify(review.strategy_result, null, 2)}`
+## 3단계: 성장 전략
+${JSON.stringify(review.strategy_result, null, 2)}
+
+---
+위 모든 자료를 통합하여 보고서 구조(9개 섹션)에 맞는 종합 경영 보고서를 마크다운으로 작성하세요.`
 
     const reviewId = review.id
 
@@ -105,7 +147,7 @@ ${JSON.stringify(review.strategy_result, null, 2)}`
       const stream = streamClaude(systemPrompt, userPrompt, {
         model: 'claude-sonnet-4-20250514',
         temperature: 0.6,
-        maxTokens: 6000,
+        maxTokens: 8000,
       })
 
       for await (const event of stream) {
