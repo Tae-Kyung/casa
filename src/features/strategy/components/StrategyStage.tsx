@@ -56,13 +56,25 @@ interface RiskItem {
   likelihood?: 'high' | 'medium' | 'low'
 }
 
+interface ResourceRequirements {
+  team?: string
+  budget?: string
+  technology?: string
+}
+
+interface FinancialProjections {
+  break_even?: string
+  revenue_target?: string
+  cost_optimization?: string
+}
+
 interface StrategyResult {
   vision?: string
   strategic_goals?: StrategicGoal[]
   action_plan?: ActionPlanItem[]
-  resource_requirements?: string
+  resource_requirements?: string | ResourceRequirements
   risk_mitigation?: RiskItem[]
-  financial_projections?: string
+  financial_projections?: string | FinancialProjections
 }
 
 export function StrategyStage({
@@ -512,7 +524,30 @@ function StrategyResultDisplay({
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{result.resource_requirements}</p>
+            {typeof result.resource_requirements === 'string' ? (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{result.resource_requirements}</p>
+            ) : (
+              <div className="space-y-3">
+                {result.resource_requirements.team && (
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">{t('strategy.team')}</p>
+                    <p className="text-sm">{result.resource_requirements.team}</p>
+                  </div>
+                )}
+                {result.resource_requirements.budget && (
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">{t('strategy.budget')}</p>
+                    <p className="text-sm">{result.resource_requirements.budget}</p>
+                  </div>
+                )}
+                {result.resource_requirements.technology && (
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">{t('strategy.technology')}</p>
+                    <p className="text-sm">{result.resource_requirements.technology}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -560,7 +595,30 @@ function StrategyResultDisplay({
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{result.financial_projections}</p>
+            {typeof result.financial_projections === 'string' ? (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{result.financial_projections}</p>
+            ) : (
+              <div className="space-y-3">
+                {result.financial_projections.revenue_target && (
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">{t('strategy.revenueTarget')}</p>
+                    <p className="text-sm">{result.financial_projections.revenue_target}</p>
+                  </div>
+                )}
+                {result.financial_projections.break_even && (
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">{t('strategy.breakEven')}</p>
+                    <p className="text-sm">{result.financial_projections.break_even}</p>
+                  </div>
+                )}
+                {result.financial_projections.cost_optimization && (
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">{t('strategy.costOptimization')}</p>
+                    <p className="text-sm">{result.financial_projections.cost_optimization}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
