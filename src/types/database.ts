@@ -16,7 +16,7 @@ export type GateStatus = 'gate_1' | 'gate_2' | 'gate_3' | 'gate_4' | 'completed'
 export type DocumentType = 'business_plan' | 'pitch' | 'landing' | 'ppt' | 'leaflet' | 'infographic' | 'gtm_checklist'
 export type FeedbackType = 'comment' | 'approval' | 'rejection' | 'revision_request'
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'revision_requested'
-export type PromptCategory = 'ideation' | 'evaluation' | 'document' | 'marketing'
+export type PromptCategory = 'ideation' | 'evaluation' | 'document' | 'marketing' | 'startup'
 
 export interface Database {
   public: {

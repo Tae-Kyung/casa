@@ -3,49 +3,13 @@ import { requireProjectOwner } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { streamClaude, createSSEResponse } from '@/lib/ai/claude'
+import { preparePrompt } from '@/lib/prompts'
 
 interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-// POST: AI 성장 전략 생성 (SSE 스트리밍)
-export async function POST(
-  request: NextRequest,
-  context: RouteContext
-) {
-  try {
-    const { id } = await context.params
-    await requireProjectOwner(id)
-
-    const supabase = await createClient()
-
-    // 사업 리뷰 조회
-    const { data: review, error: reviewError } = await supabase
-      .from('bi_business_reviews')
-      .select('*')
-      .eq('project_id', id)
-      .limit(1)
-      .single()
-
-    if (reviewError || !review) {
-      return errorResponse('사업 리뷰를 먼저 작성해주세요.', 400)
-    }
-
-    if (!review.diagnosis_result) {
-      return errorResponse('비즈니스 진단을 먼저 완료해주세요.', 400)
-    }
-
-    // 기업 정보 구성
-    const companyInfo = [
-      review.company_name && `회사명: ${review.company_name}`,
-      review.industry && `산업: ${review.industry}`,
-      review.founded_year && `설립연도: ${review.founded_year}`,
-      review.employee_count && `직원 수: ${review.employee_count}명`,
-      review.annual_revenue && `연 매출: ${review.annual_revenue}`,
-      review.funding_stage && `투자 단계: ${review.funding_stage}`,
-    ].filter(Boolean).join('\n')
-
-    const systemPrompt = `당신은 한국 스타트업 전문 전략 컨설턴트입니다. 맥킨지·베인 수준의 전략 프레임워크를 스타트업 맥락에 맞게 적용하여, 실행 가능하고 투자자에게 설득력 있는 성장 전략을 수립합니다.
+const FALLBACK_SYSTEM_PROMPT = `당신은 한국 스타트업 전문 전략 컨설턴트입니다. 맥킨지·베인 수준의 전략 프레임워크를 스타트업 맥락에 맞게 적용하여, 실행 가능하고 투자자에게 설득력 있는 성장 전략을 수립합니다.
 
 ## 전략 수립 프레임워크
 
@@ -126,20 +90,79 @@ export async function POST(
 - 반드시 한국어로 작성하세요.
 - JSON만 출력하세요. 설명 텍스트나 마크다운 코드 펜스 없이 순수 JSON만 반환하세요.`
 
-    const userPrompt = `다음 사업계획서, 리뷰, 진단 결과를 종합하여 실행 가능한 성장 전략을 수립해주세요.
+const FALLBACK_USER_PROMPT = `다음 사업계획서, 리뷰, 진단 결과를 종합하여 실행 가능한 성장 전략을 수립해주세요.
 특히 진단에서 도출된 핵심 이슈(key_issues)를 해결하는 방향으로 전략을 설계해주세요.
 
-${companyInfo ? `## 기업 정보\n${companyInfo}\n\n` : ''}## 사업계획서 전문
-${review.business_plan_text}
+{{company_info}}## 사업계획서 전문
+{{business_plan}}
 
 ## 1단계: AI 리뷰 결과
-${JSON.stringify(review.ai_review, null, 2)}
+{{ai_review}}
 
 ## 2단계: 비즈니스 진단 결과
-${JSON.stringify(review.diagnosis_result, null, 2)}
+{{diagnosis_result}}
 
 ---
 위 자료를 종합하여 비전, 전략 목표(OKR), 실행 계획, 자원 계획, 리스크 대응, 재무 전망을 포함한 성장 전략을 지정된 JSON 형식으로 응답하세요.`
+
+// POST: AI 성장 전략 생성 (SSE 스트리밍)
+export async function POST(
+  request: NextRequest,
+  context: RouteContext
+) {
+  try {
+    const { id } = await context.params
+    await requireProjectOwner(id)
+
+    const supabase = await createClient()
+
+    // 사업 리뷰 조회
+    const { data: review, error: reviewError } = await supabase
+      .from('bi_business_reviews')
+      .select('*')
+      .eq('project_id', id)
+      .limit(1)
+      .single()
+
+    if (reviewError || !review) {
+      return errorResponse('사업 리뷰를 먼저 작성해주세요.', 400)
+    }
+
+    if (!review.diagnosis_result) {
+      return errorResponse('비즈니스 진단을 먼저 완료해주세요.', 400)
+    }
+
+    // 기업 정보 구성
+    const companyInfo = [
+      review.company_name && `회사명: ${review.company_name}`,
+      review.industry && `산업: ${review.industry}`,
+      review.founded_year && `설립연도: ${review.founded_year}`,
+      review.employee_count && `직원 수: ${review.employee_count}명`,
+      review.annual_revenue && `연 매출: ${review.annual_revenue}`,
+      review.funding_stage && `투자 단계: ${review.funding_stage}`,
+    ].filter(Boolean).join('\n')
+
+    const companyInfoBlock = companyInfo ? `## 기업 정보\n${companyInfo}\n\n` : ''
+    const aiReviewJson = JSON.stringify(review.ai_review, null, 2)
+    const diagnosisJson = JSON.stringify(review.diagnosis_result, null, 2)
+
+    // DB 프롬프트 조회 (관리자가 수정 가능) → 없으면 폴백
+    const prepared = await preparePrompt('startup_strategy', {
+      company_info: companyInfoBlock,
+      business_plan: review.business_plan_text || '',
+      ai_review: aiReviewJson,
+      diagnosis_result: diagnosisJson,
+    })
+
+    const systemPrompt = prepared?.systemPrompt ?? FALLBACK_SYSTEM_PROMPT
+    const userPrompt = prepared?.userPrompt ?? FALLBACK_USER_PROMPT
+      .replace('{{company_info}}', companyInfoBlock)
+      .replace('{{business_plan}}', review.business_plan_text || '')
+      .replace('{{ai_review}}', aiReviewJson)
+      .replace('{{diagnosis_result}}', diagnosisJson)
+    const model = prepared?.model ?? 'claude-sonnet-4-20250514'
+    const temperature = prepared?.temperature ?? 0.6
+    const maxTokens = prepared?.maxTokens ?? 5000
 
     const reviewId = review.id
 
@@ -147,9 +170,9 @@ ${JSON.stringify(review.diagnosis_result, null, 2)}
       let fullContent = ''
 
       const stream = streamClaude(systemPrompt, userPrompt, {
-        model: 'claude-sonnet-4-20250514',
-        temperature: 0.6,
-        maxTokens: 5000,
+        model,
+        temperature,
+        maxTokens,
       })
 
       for await (const event of stream) {

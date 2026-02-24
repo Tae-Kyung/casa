@@ -3,49 +3,13 @@ import { requireProjectOwner } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { streamClaude, createSSEResponse } from '@/lib/ai/claude'
+import { preparePrompt } from '@/lib/prompts'
 
 interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-// POST: AI 비즈니스 진단 (SSE 스트리밍)
-export async function POST(
-  request: NextRequest,
-  context: RouteContext
-) {
-  try {
-    const { id } = await context.params
-    await requireProjectOwner(id)
-
-    const supabase = await createClient()
-
-    // 사업 리뷰 조회
-    const { data: review, error: reviewError } = await supabase
-      .from('bi_business_reviews')
-      .select('*')
-      .eq('project_id', id)
-      .limit(1)
-      .single()
-
-    if (reviewError || !review) {
-      return errorResponse('사업 리뷰를 먼저 작성해주세요.', 400)
-    }
-
-    if (!review.ai_review) {
-      return errorResponse('AI 리뷰를 먼저 완료해주세요.', 400)
-    }
-
-    // 기업 정보 구성
-    const companyInfo = [
-      review.company_name && `회사명: ${review.company_name}`,
-      review.industry && `산업: ${review.industry}`,
-      review.founded_year && `설립연도: ${review.founded_year}`,
-      review.employee_count && `직원 수: ${review.employee_count}명`,
-      review.annual_revenue && `연 매출: ${review.annual_revenue}`,
-      review.funding_stage && `투자 단계: ${review.funding_stage}`,
-    ].filter(Boolean).join('\n')
-
-    const systemPrompt = `당신은 스타트업 진단 전문 컨설턴트입니다. McKinsey 7S 프레임워크와 스타트업 특화 지표를 결합하여 비즈니스 건강도를 정밀 진단합니다.
+const FALLBACK_SYSTEM_PROMPT = `당신은 스타트업 진단 전문 컨설턴트입니다. McKinsey 7S 프레임워크와 스타트업 특화 지표를 결합하여 비즈니스 건강도를 정밀 진단합니다.
 
 ## 진단 프레임워크
 
@@ -122,17 +86,73 @@ export async function POST(
 - 반드시 한국어로 작성하세요.
 - JSON만 출력하세요. 설명 텍스트나 마크다운 코드 펜스 없이 순수 JSON만 반환하세요.`
 
-    const userPrompt = `다음 사업계획서와 1단계 리뷰 결과를 바탕으로 비즈니스 건강도를 정밀 진단해주세요.
+const FALLBACK_USER_PROMPT = `다음 사업계획서와 1단계 리뷰 결과를 바탕으로 비즈니스 건강도를 정밀 진단해주세요.
 1단계 리뷰에서 도출된 강점·약점을 더 깊이 파고들어 근본 원인을 분석하고, 우선 해결해야 할 핵심 이슈를 도출해주세요.
 
-${companyInfo ? `## 기업 정보\n${companyInfo}\n\n` : ''}## 사업계획서 전문
-${review.business_plan_text}
+{{company_info}}## 사업계획서 전문
+{{business_plan}}
 
 ## 1단계 AI 리뷰 결과
-${JSON.stringify(review.ai_review, null, 2)}
+{{ai_review}}
 
 ---
 위 자료를 5대 축(PMF, 유닛 이코노믹스, 조직 역량, 시장 포지션, 자금 건전성)으로 진단하고, 지정된 JSON 형식으로 응답하세요.`
+
+// POST: AI 비즈니스 진단 (SSE 스트리밍)
+export async function POST(
+  request: NextRequest,
+  context: RouteContext
+) {
+  try {
+    const { id } = await context.params
+    await requireProjectOwner(id)
+
+    const supabase = await createClient()
+
+    // 사업 리뷰 조회
+    const { data: review, error: reviewError } = await supabase
+      .from('bi_business_reviews')
+      .select('*')
+      .eq('project_id', id)
+      .limit(1)
+      .single()
+
+    if (reviewError || !review) {
+      return errorResponse('사업 리뷰를 먼저 작성해주세요.', 400)
+    }
+
+    if (!review.ai_review) {
+      return errorResponse('AI 리뷰를 먼저 완료해주세요.', 400)
+    }
+
+    // 기업 정보 구성
+    const companyInfo = [
+      review.company_name && `회사명: ${review.company_name}`,
+      review.industry && `산업: ${review.industry}`,
+      review.founded_year && `설립연도: ${review.founded_year}`,
+      review.employee_count && `직원 수: ${review.employee_count}명`,
+      review.annual_revenue && `연 매출: ${review.annual_revenue}`,
+      review.funding_stage && `투자 단계: ${review.funding_stage}`,
+    ].filter(Boolean).join('\n')
+
+    const companyInfoBlock = companyInfo ? `## 기업 정보\n${companyInfo}\n\n` : ''
+    const aiReviewJson = JSON.stringify(review.ai_review, null, 2)
+
+    // DB 프롬프트 조회 (관리자가 수정 가능) → 없으면 폴백
+    const prepared = await preparePrompt('startup_diagnosis', {
+      company_info: companyInfoBlock,
+      business_plan: review.business_plan_text || '',
+      ai_review: aiReviewJson,
+    })
+
+    const systemPrompt = prepared?.systemPrompt ?? FALLBACK_SYSTEM_PROMPT
+    const userPrompt = prepared?.userPrompt ?? FALLBACK_USER_PROMPT
+      .replace('{{company_info}}', companyInfoBlock)
+      .replace('{{business_plan}}', review.business_plan_text || '')
+      .replace('{{ai_review}}', aiReviewJson)
+    const model = prepared?.model ?? 'claude-sonnet-4-20250514'
+    const temperature = prepared?.temperature ?? 0.5
+    const maxTokens = prepared?.maxTokens ?? 4000
 
     const reviewId = review.id
 
@@ -140,9 +160,9 @@ ${JSON.stringify(review.ai_review, null, 2)}
       let fullContent = ''
 
       const stream = streamClaude(systemPrompt, userPrompt, {
-        model: 'claude-sonnet-4-20250514',
-        temperature: 0.5,
-        maxTokens: 4000,
+        model,
+        temperature,
+        maxTokens,
       })
 
       for await (const event of stream) {

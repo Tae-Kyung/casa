@@ -414,6 +414,7 @@ export default function PromptEditPage({ params }: PageProps) {
                   <SelectItem value="evaluation">{t('admin.prompts.categoryEvaluation')}</SelectItem>
                   <SelectItem value="document">{t('admin.prompts.categoryDocument')}</SelectItem>
                   <SelectItem value="marketing">{t('admin.prompts.categoryMarketing')}</SelectItem>
+                  <SelectItem value="startup">{t('admin.prompts.categoryStartup')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

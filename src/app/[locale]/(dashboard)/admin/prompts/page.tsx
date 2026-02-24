@@ -26,6 +26,7 @@ const categoryColors: Record<PromptCategory, string> = {
   evaluation: 'bg-green-500',
   document: 'bg-purple-500',
   marketing: 'bg-orange-500',
+  startup: 'bg-emerald-500',
 }
 
 export default function PromptsPage() {
@@ -36,6 +37,7 @@ export default function PromptsPage() {
     evaluation: t('admin.prompts.categoryEvaluation'),
     document: t('admin.prompts.categoryDocument'),
     marketing: t('admin.prompts.categoryMarketing'),
+    startup: t('admin.prompts.categoryStartup'),
   }
   const [prompts, setPrompts] = useState<Prompt[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -144,6 +146,7 @@ export default function PromptsPage() {
             <SelectItem value="evaluation">{t('admin.prompts.categoryEvaluation')}</SelectItem>
             <SelectItem value="document">{t('admin.prompts.categoryDocument')}</SelectItem>
             <SelectItem value="marketing">{t('admin.prompts.categoryMarketing')}</SelectItem>
+            <SelectItem value="startup">{t('admin.prompts.categoryStartup')}</SelectItem>
           </SelectContent>
         </Select>
       </div>

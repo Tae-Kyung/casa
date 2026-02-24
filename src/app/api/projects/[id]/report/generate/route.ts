@@ -3,60 +3,13 @@ import { requireProjectOwner } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { streamClaude, createSSEResponse } from '@/lib/ai/claude'
+import { preparePrompt } from '@/lib/prompts'
 
 interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-// POST: AI 종합 보고서 생성 (SSE 스트리밍)
-export async function POST(
-  request: NextRequest,
-  context: RouteContext
-) {
-  try {
-    const { id } = await context.params
-    await requireProjectOwner(id)
-
-    const supabase = await createClient()
-
-    // 사업 리뷰 조회
-    const { data: review, error: reviewError } = await supabase
-      .from('bi_business_reviews')
-      .select('*')
-      .eq('project_id', id)
-      .limit(1)
-      .single()
-
-    if (reviewError || !review) {
-      return errorResponse('사업 리뷰를 먼저 작성해주세요.', 400)
-    }
-
-    if (!review.strategy_result) {
-      return errorResponse('성장 전략을 먼저 완료해주세요.', 400)
-    }
-
-    // 프로젝트 정보 조회
-    const { data: project, error: projectError } = await supabase
-      .from('bi_projects')
-      .select('name')
-      .eq('id', id)
-      .single()
-
-    if (projectError || !project) {
-      return errorResponse('프로젝트를 찾을 수 없습니다.', 404)
-    }
-
-    // 기업 정보 구성
-    const companyInfo = [
-      review.company_name && `회사명: ${review.company_name}`,
-      review.industry && `산업: ${review.industry}`,
-      review.founded_year && `설립연도: ${review.founded_year}`,
-      review.employee_count && `직원 수: ${review.employee_count}명`,
-      review.annual_revenue && `연 매출: ${review.annual_revenue}`,
-      review.funding_stage && `투자 단계: ${review.funding_stage}`,
-    ].filter(Boolean).join('\n')
-
-    const systemPrompt = `당신은 글로벌 컨설팅펌 출신의 비즈니스 보고서 전문가입니다. 스타트업 경영진과 투자자에게 제출할 수준의 종합 경영 보고서를 작성합니다.
+const FALLBACK_SYSTEM_PROMPT = `당신은 글로벌 컨설팅펌 출신의 비즈니스 보고서 전문가입니다. 스타트업 경영진과 투자자에게 제출할 수준의 종합 경영 보고서를 작성합니다.
 
 ## 보고서 구조 (마크다운 형식)
 
@@ -117,27 +70,110 @@ export async function POST(
 - 반드시 한국어로 작성하세요.
 - 마크다운 형식으로만 출력하세요.`
 
-    const userPrompt = `다음 3단계 분석 결과를 종합하여, 경영진과 투자자에게 제출할 수 있는 수준의 종합 경영 보고서를 작성해주세요.
+const FALLBACK_USER_PROMPT = `다음 3단계 분석 결과를 종합하여, 경영진과 투자자에게 제출할 수 있는 수준의 종합 경영 보고서를 작성해주세요.
 단순 결과 나열이 아니라, 일관된 서사(narrative)로 재구성해주세요.
 
 ## 프로젝트명
-${project.name}
+{{project_name}}
 
-${companyInfo ? `## 기업 정보\n${companyInfo}\n\n` : ''}## 사업계획서 전문
-${review.business_plan_text}
+{{company_info}}## 사업계획서 전문
+{{business_plan}}
 
-## 1단계: 사업계획 리뷰 결과 (점수: ${review.review_score || 'N/A'}/100)
-${JSON.stringify(review.ai_review, null, 2)}
+## 1단계: 사업계획 리뷰 결과 (점수: {{review_score}}/100)
+{{ai_review}}
 
 ## 2단계: 비즈니스 진단 결과
-${review.swot_analysis ? `### SWOT 분석\n${JSON.stringify(review.swot_analysis, null, 2)}\n\n` : ''}### 종합 진단
-${JSON.stringify(review.diagnosis_result, null, 2)}
+{{swot_analysis}}### 종합 진단
+{{diagnosis_result}}
 
 ## 3단계: 성장 전략
-${JSON.stringify(review.strategy_result, null, 2)}
+{{strategy_result}}
 
 ---
 위 모든 자료를 통합하여 보고서 구조(9개 섹션)에 맞는 종합 경영 보고서를 마크다운으로 작성하세요.`
+
+// POST: AI 종합 보고서 생성 (SSE 스트리밍)
+export async function POST(
+  request: NextRequest,
+  context: RouteContext
+) {
+  try {
+    const { id } = await context.params
+    await requireProjectOwner(id)
+
+    const supabase = await createClient()
+
+    // 사업 리뷰 조회
+    const { data: review, error: reviewError } = await supabase
+      .from('bi_business_reviews')
+      .select('*')
+      .eq('project_id', id)
+      .limit(1)
+      .single()
+
+    if (reviewError || !review) {
+      return errorResponse('사업 리뷰를 먼저 작성해주세요.', 400)
+    }
+
+    if (!review.strategy_result) {
+      return errorResponse('성장 전략을 먼저 완료해주세요.', 400)
+    }
+
+    // 프로젝트 정보 조회
+    const { data: project, error: projectError } = await supabase
+      .from('bi_projects')
+      .select('name')
+      .eq('id', id)
+      .single()
+
+    if (projectError || !project) {
+      return errorResponse('프로젝트를 찾을 수 없습니다.', 404)
+    }
+
+    // 기업 정보 구성
+    const companyInfo = [
+      review.company_name && `회사명: ${review.company_name}`,
+      review.industry && `산업: ${review.industry}`,
+      review.founded_year && `설립연도: ${review.founded_year}`,
+      review.employee_count && `직원 수: ${review.employee_count}명`,
+      review.annual_revenue && `연 매출: ${review.annual_revenue}`,
+      review.funding_stage && `투자 단계: ${review.funding_stage}`,
+    ].filter(Boolean).join('\n')
+
+    const companyInfoBlock = companyInfo ? `## 기업 정보\n${companyInfo}\n\n` : ''
+    const aiReviewJson = JSON.stringify(review.ai_review, null, 2)
+    const swotBlock = review.swot_analysis
+      ? `### SWOT 분석\n${JSON.stringify(review.swot_analysis, null, 2)}\n\n`
+      : ''
+    const diagnosisJson = JSON.stringify(review.diagnosis_result, null, 2)
+    const strategyJson = JSON.stringify(review.strategy_result, null, 2)
+    const reviewScore = String(review.review_score || 'N/A')
+
+    // DB 프롬프트 조회 (관리자가 수정 가능) → 없으면 폴백
+    const prepared = await preparePrompt('startup_report', {
+      project_name: project.name,
+      company_info: companyInfoBlock,
+      business_plan: review.business_plan_text || '',
+      review_score: reviewScore,
+      ai_review: aiReviewJson,
+      swot_analysis: swotBlock,
+      diagnosis_result: diagnosisJson,
+      strategy_result: strategyJson,
+    })
+
+    const systemPrompt = prepared?.systemPrompt ?? FALLBACK_SYSTEM_PROMPT
+    const userPrompt = prepared?.userPrompt ?? FALLBACK_USER_PROMPT
+      .replace('{{project_name}}', project.name)
+      .replace('{{company_info}}', companyInfoBlock)
+      .replace('{{business_plan}}', review.business_plan_text || '')
+      .replace('{{review_score}}', reviewScore)
+      .replace('{{ai_review}}', aiReviewJson)
+      .replace('{{swot_analysis}}', swotBlock)
+      .replace('{{diagnosis_result}}', diagnosisJson)
+      .replace('{{strategy_result}}', strategyJson)
+    const model = prepared?.model ?? 'claude-sonnet-4-20250514'
+    const temperature = prepared?.temperature ?? 0.6
+    const maxTokens = prepared?.maxTokens ?? 8000
 
     const reviewId = review.id
 
@@ -145,9 +181,9 @@ ${JSON.stringify(review.strategy_result, null, 2)}
       let fullContent = ''
 
       const stream = streamClaude(systemPrompt, userPrompt, {
-        model: 'claude-sonnet-4-20250514',
-        temperature: 0.6,
-        maxTokens: 8000,
+        model,
+        temperature,
+        maxTokens,
       })
 
       for await (const event of stream) {
