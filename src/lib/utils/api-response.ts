@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, PaginatedData } from '@/types/api'
 import { AuthError } from '@/lib/auth/guards'
+import { InsufficientCreditsError } from '@/lib/credits'
 
 export function successResponse<T>(data: T, status = 200): NextResponse<ApiResponse<T>> {
   return NextResponse.json({ success: true, data }, { status })
@@ -38,6 +39,10 @@ export function handleApiError(error: unknown): NextResponse<ApiResponse<never>>
 
   if (error instanceof AuthError) {
     return errorResponse(error.message, error.statusCode, 'AUTH_ERROR')
+  }
+
+  if (error instanceof InsufficientCreditsError) {
+    return errorResponse(error.message, 402, 'INSUFFICIENT_CREDITS')
   }
 
   if (error instanceof Error) {

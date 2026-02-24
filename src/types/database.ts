@@ -29,6 +29,7 @@ export interface Database {
           role: UserRole
           locale: Locale
           theme: Theme
+          ai_credits: number
           created_at: string
           updated_at: string
         }
@@ -39,6 +40,7 @@ export interface Database {
           role?: UserRole
           locale?: Locale
           theme?: Theme
+          ai_credits?: number
           created_at?: string
           updated_at?: string
         }
@@ -49,8 +51,42 @@ export interface Database {
           role?: UserRole
           locale?: Locale
           theme?: Theme
+          ai_credits?: number
           created_at?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      bi_credit_logs: {
+        Row: {
+          id: string
+          user_id: string
+          amount: number
+          balance_after: number
+          reason: string
+          project_id: string | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          amount: number
+          balance_after: number
+          reason: string
+          project_id?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          amount?: number
+          balance_after?: number
+          reason?: string
+          project_id?: string | null
+          created_by?: string | null
+          created_at?: string
         }
         Relationships: []
       }
@@ -650,3 +686,4 @@ export type Prompt = Database['public']['Tables']['bi_prompts']['Row']
 export type PromptVersion = Database['public']['Tables']['bi_prompt_versions']['Row']
 export type PromptVariable = Database['public']['Tables']['bi_prompt_variables']['Row']
 export type BusinessReview = Database['public']['Tables']['bi_business_reviews']['Row']
+export type CreditLog = Database['public']['Tables']['bi_credit_logs']['Row']

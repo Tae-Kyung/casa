@@ -55,7 +55,8 @@
     "prompts": "Prompt Management",
     "approvals": "Approvals",
     "users": "User Management",
-    "showcase": "Showcase"
+    "showcase": "Showcase",
+    "credits": "Credit Management"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -429,6 +430,26 @@
       "commentRequired": "(Required)",
       "commentPlaceholder": "Enter your feedback...",
       "reviewer": "Reviewed by: {name}"
+    },
+    "credits": {
+      "title": "Credit Management",
+      "description": "Manage AI credits per user.",
+      "fetchFailed": "Failed to load credit information.",
+      "searchPlaceholder": "Search by name or email...",
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "roleLabel": "Role",
+      "creditsLabel": "Credits",
+      "actionLabel": "Actions",
+      "recharge": "Recharge",
+      "rechargeTitle": "Recharge Credits",
+      "currentCredits": "Current Credits",
+      "rechargeAmount": "Recharge Amount",
+      "invalidAmount": "Please enter a valid amount.",
+      "rechargeSuccess": "{amount} credits have been added to {name}.",
+      "rechargeFailed": "Failed to recharge credits.",
+      "rechargeConfirm": "Recharge",
+      "noUsers": "No users found."
     },
     "prompts": {
       "syncCache": "Sync Cache",
@@ -959,6 +980,10 @@
     "completeFailed": "Failed to complete project.",
     "gate4Passed": "Project Complete!",
     "gate4PassedDesc": "All stages are complete. Download the report for your use."
+  },
+  "credits": {
+    "remaining": "AI Credits",
+    "insufficientCredits": "Insufficient credits. Please ask an administrator to recharge."
   },
   "error": {
     "notFound": "Page not found",

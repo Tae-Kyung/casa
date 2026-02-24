@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireProjectOwner } from '@/lib/auth/guards'
+import { deductCredit } from '@/lib/credits'
 import { createClient } from '@/lib/supabase/server'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 
@@ -14,7 +15,8 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params
-    await requireProjectOwner(id)
+    const user = await requireProjectOwner(id)
+    await deductCredit(user.id, 'ai_evaluation_retry', id)
 
     const supabase = await createClient()
 

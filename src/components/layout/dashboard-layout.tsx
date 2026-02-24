@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -16,6 +16,7 @@ import {
   CheckCircle,
   Users,
   Award,
+  Coins,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -41,9 +42,22 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children, userRole = 'user' }: DashboardLayoutProps) {
   const t = useTranslations('nav')
   const tAuth = useTranslations('auth')
+  const tCredits = useTranslations('credits')
   const pathname = usePathname()
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [credits, setCredits] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch('/api/credits')
+      .then(res => res.json())
+      .then(result => {
+        if (result.success) {
+          setCredits(result.data.credits)
+        }
+      })
+      .catch(() => {})
+  }, [pathname])
 
   const navItems: NavItem[] = [
     {
@@ -71,6 +85,12 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
       href: '/admin/prompts',
       label: t('prompts'),
       icon: <MessageSquare className="h-5 w-5" />,
+      roles: ['admin'],
+    },
+    {
+      href: '/admin/credits',
+      label: t('credits'),
+      icon: <Coins className="h-5 w-5" />,
       roles: ['admin'],
     },
     {
@@ -150,6 +170,15 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
         </div>
 
         <div className="mt-auto space-y-4">
+          {credits !== null && (
+            <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
+              <Coins className="h-4 w-4 text-amber-500" />
+              <span className="text-sm font-medium">{tCredits('remaining')}</span>
+              <span className={`ml-auto text-sm font-bold ${credits <= 0 ? 'text-red-500' : credits <= 5 ? 'text-amber-500' : ''}`}>
+                {credits}
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-center gap-2">
             <ThemeToggle />
             <LocaleSelector />
@@ -176,6 +205,15 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
             <NavContent />
           </div>
           <div className="mt-auto space-y-4">
+            {credits !== null && (
+              <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
+                <Coins className="h-4 w-4 text-amber-500" />
+                <span className="text-sm font-medium">{tCredits('remaining')}</span>
+                <span className={`ml-auto text-sm font-bold ${credits <= 0 ? 'text-red-500' : credits <= 5 ? 'text-amber-500' : ''}`}>
+                  {credits}
+                </span>
+              </div>
+            )}
             <div className="flex items-center justify-center gap-2">
               <ThemeToggle />
               <LocaleSelector />

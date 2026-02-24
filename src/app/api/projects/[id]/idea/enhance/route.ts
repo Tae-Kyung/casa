@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireProjectOwner } from '@/lib/auth/guards'
+import { deductCredit } from '@/lib/credits'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { preparePrompt } from '@/lib/prompts'
 import { streamClaude, createSSEResponse } from '@/lib/ai/claude'
@@ -32,7 +33,8 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params
-    await requireProjectOwner(id)
+    const user = await requireProjectOwner(id)
+    await deductCredit(user.id, 'ai_idea_enhance', id)
 
     const body = await request.json()
     const rawInput = body.raw_input
