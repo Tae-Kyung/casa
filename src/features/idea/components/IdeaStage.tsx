@@ -158,8 +158,13 @@ export function IdeaStage({
     return { problem: '', solution: '', target: '', differentiation: '', uvp: '', channels: '', revenue_streams: '', cost_structure: '', key_metrics: '' }
   })
 
-  // 유사 기업 상태
-  const [similarCompanies, setSimilarCompanies] = useState<SimilarCompany[]>([])
+  // 유사 기업 상태 (DB에서 복원)
+  const [similarCompanies, setSimilarCompanies] = useState<SimilarCompany[]>(() => {
+    if (ideaCard?.similar_companies && Array.isArray(ideaCard.similar_companies)) {
+      return ideaCard.similar_companies as unknown as SimilarCompany[]
+    }
+    return []
+  })
   const [isExportingPdf, setIsExportingPdf] = useState(false)
 
   const { data: streamData, isLoading: isExpanding, start: startExpand } = useSSE({

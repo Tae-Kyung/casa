@@ -124,6 +124,7 @@ export interface Database {
           revenue_streams: string | null
           cost_structure: string | null
           key_metrics: string | null
+          similar_companies: Json | null
           ai_expanded: Json | null
           ai_model_used: string
           is_confirmed: boolean
@@ -145,6 +146,7 @@ export interface Database {
           revenue_streams?: string | null
           cost_structure?: string | null
           key_metrics?: string | null
+          similar_companies?: Json | null
           ai_expanded?: Json | null
           ai_model_used?: string
           is_confirmed?: boolean
@@ -166,6 +168,7 @@ export interface Database {
           revenue_streams?: string | null
           cost_structure?: string | null
           key_metrics?: string | null
+          similar_companies?: Json | null
           ai_expanded?: Json | null
           ai_model_used?: string
           is_confirmed?: boolean

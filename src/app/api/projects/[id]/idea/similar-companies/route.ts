@@ -2,14 +2,13 @@ import { NextRequest } from 'next/server'
 import { requireProjectOwner } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
-import { preparePrompt } from '@/lib/prompts'
 import { streamClaude, createSSEResponse } from '@/lib/ai/claude'
 
 interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-// POST: 유사 기업 탐색 (SSE 스트리밍)
+// POST: 유사 기업 탐색 (SSE 스트리밍 + DB 저장)
 export async function POST(
   request: NextRequest,
   context: RouteContext
@@ -68,7 +67,11 @@ ${canvasSummary}
 원본 아이디어:
 ${ideaCard.raw_input}`
 
-    async function* generate() {
+    const ideaCardId = ideaCard.id
+
+    async function* generateWithSave() {
+      let fullContent = ''
+
       const stream = streamClaude(systemPrompt, userPrompt, {
         model: 'claude-sonnet-4-20250514',
         temperature: 0.5,
@@ -76,11 +79,33 @@ ${ideaCard.raw_input}`
       })
 
       for await (const event of stream) {
+        if (event.type === 'text') {
+          fullContent += event.data
+        }
         yield event
+      }
+
+      // 스트리밍 완료 후 DB 저장
+      try {
+        let cleanContent = fullContent.trim()
+        const fenceMatch = cleanContent.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/)
+        if (fenceMatch) {
+          cleanContent = fenceMatch[1].trim()
+        }
+        const parsed = JSON.parse(cleanContent)
+
+        await supabase
+          .from('bi_idea_cards')
+          .update({
+            similar_companies: parsed.companies || parsed,
+          })
+          .eq('id', ideaCardId)
+      } catch {
+        // 파싱 실패 시 무시
       }
     }
 
-    return createSSEResponse(generate())
+    return createSSEResponse(generateWithSave())
   } catch (error) {
     return handleApiError(error)
   }

@@ -77,6 +77,7 @@ CREATE TABLE bi_idea_cards (
   revenue_streams TEXT,
   cost_structure TEXT,
   key_metrics TEXT,
+  similar_companies JSONB,
   ai_expanded JSONB,
   ai_model_used TEXT NOT NULL DEFAULT 'claude-sonnet-4-20250514',
   is_confirmed BOOLEAN NOT NULL DEFAULT false,

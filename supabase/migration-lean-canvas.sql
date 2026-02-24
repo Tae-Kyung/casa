@@ -7,6 +7,7 @@ ALTER TABLE bi_idea_cards ADD COLUMN IF NOT EXISTS channels TEXT;
 ALTER TABLE bi_idea_cards ADD COLUMN IF NOT EXISTS revenue_streams TEXT;
 ALTER TABLE bi_idea_cards ADD COLUMN IF NOT EXISTS cost_structure TEXT;
 ALTER TABLE bi_idea_cards ADD COLUMN IF NOT EXISTS key_metrics TEXT;
+ALTER TABLE bi_idea_cards ADD COLUMN IF NOT EXISTS similar_companies JSONB;
 
 -- 아이디어 확장 프롬프트를 린 캔버스 9-Block으로 업데이트
 UPDATE bi_prompts
