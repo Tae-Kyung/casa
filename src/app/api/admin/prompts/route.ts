@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category') as PromptCategory | null
+    const track = searchParams.get('track') // 'pre_startup' | 'startup'
     const search = searchParams.get('search')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
@@ -32,17 +33,27 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient()
 
+    // 트랙/카테고리 필터 적용 헬퍼
+    function applyFilters(query: typeof countQuery) {
+      if (category) {
+        query = query.eq('category', category)
+      } else if (track === 'startup') {
+        query = query.eq('category', 'startup')
+      } else if (track === 'pre_startup') {
+        query = query.neq('category', 'startup')
+      }
+      if (search) {
+        query = query.or(`name.ilike.%${search}%,key.ilike.%${search}%`)
+      }
+      return query
+    }
+
     // 전체 카운트 쿼리
     let countQuery = supabase
       .from('bi_prompts')
       .select('*', { count: 'exact', head: true })
 
-    if (category) {
-      countQuery = countQuery.eq('category', category)
-    }
-    if (search) {
-      countQuery = countQuery.or(`name.ilike.%${search}%,key.ilike.%${search}%`)
-    }
+    countQuery = applyFilters(countQuery)
 
     const { count } = await countQuery
 
@@ -54,12 +65,7 @@ export async function GET(request: NextRequest) {
       .order('name')
       .range(offset, offset + limit - 1)
 
-    if (category) {
-      dataQuery = dataQuery.eq('category', category)
-    }
-    if (search) {
-      dataQuery = dataQuery.or(`name.ilike.%${search}%,key.ilike.%${search}%`)
-    }
+    dataQuery = applyFilters(dataQuery)
 
     const { data, error } = await dataQuery
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Plus, Search, RefreshCw, Settings2 } from 'lucide-react'
+import { Plus, Search, RefreshCw, Settings2, Lightbulb, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -29,6 +29,8 @@ const categoryColors: Record<PromptCategory, string> = {
   startup: 'bg-emerald-500',
 }
 
+type Track = 'all' | 'pre_startup' | 'startup'
+
 export default function PromptsPage() {
   const t = useTranslations()
 
@@ -39,9 +41,11 @@ export default function PromptsPage() {
     marketing: t('admin.prompts.categoryMarketing'),
     startup: t('admin.prompts.categoryStartup'),
   }
+
   const [prompts, setPrompts] = useState<Prompt[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [track, setTrack] = useState<Track>('all')
   const [category, setCategory] = useState<string>('all')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -55,6 +59,8 @@ export default function PromptsPage() {
       })
       if (category !== 'all') {
         params.set('category', category)
+      } else if (track !== 'all') {
+        params.set('track', track)
       }
       if (search) {
         params.set('search', search)
@@ -76,7 +82,13 @@ export default function PromptsPage() {
 
   useEffect(() => {
     fetchPrompts()
-  }, [page, category])
+  }, [page, track, category])
+
+  const handleTrackChange = (newTrack: Track) => {
+    setTrack(newTrack)
+    setCategory('all')
+    setPage(1)
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -101,6 +113,15 @@ export default function PromptsPage() {
     }
   }
 
+  // 트랙에 따른 카테고리 옵션
+  const preStartupCategories: PromptCategory[] = ['ideation', 'evaluation', 'document', 'marketing']
+  const startupCategories: PromptCategory[] = ['startup']
+
+  const visibleCategories =
+    track === 'pre_startup' ? preStartupCategories :
+    track === 'startup' ? startupCategories :
+    [...preStartupCategories, ...startupCategories]
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -119,7 +140,36 @@ export default function PromptsPage() {
         </div>
       </div>
 
-      {/* 필터 및 검색 */}
+      {/* 트랙 필터 탭 */}
+      <div className="flex gap-2">
+        <Button
+          variant={track === 'all' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleTrackChange('all')}
+        >
+          {t('common.all')}
+        </Button>
+        <Button
+          variant={track === 'pre_startup' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleTrackChange('pre_startup')}
+          className={track === 'pre_startup' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+        >
+          <Lightbulb className="mr-1.5 h-4 w-4" />
+          {t('project.preStartup')}
+        </Button>
+        <Button
+          variant={track === 'startup' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleTrackChange('startup')}
+          className={track === 'startup' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+        >
+          <Building2 className="mr-1.5 h-4 w-4" />
+          {t('project.startup')}
+        </Button>
+      </div>
+
+      {/* 검색 + 카테고리 필터 */}
       <div className="flex flex-col gap-4 md:flex-row">
         <form onSubmit={handleSearch} className="flex flex-1 gap-2">
           <Input
@@ -133,22 +183,24 @@ export default function PromptsPage() {
           </Button>
         </form>
 
-        <Select value={category} onValueChange={(value) => {
-          setCategory(value)
-          setPage(1)
-        }}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder={t('admin.prompts.category')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('common.all')}</SelectItem>
-            <SelectItem value="ideation">{t('admin.prompts.categoryIdeation')}</SelectItem>
-            <SelectItem value="evaluation">{t('admin.prompts.categoryEvaluation')}</SelectItem>
-            <SelectItem value="document">{t('admin.prompts.categoryDocument')}</SelectItem>
-            <SelectItem value="marketing">{t('admin.prompts.categoryMarketing')}</SelectItem>
-            <SelectItem value="startup">{t('admin.prompts.categoryStartup')}</SelectItem>
-          </SelectContent>
-        </Select>
+        {visibleCategories.length > 1 && (
+          <Select value={category} onValueChange={(value) => {
+            setCategory(value)
+            setPage(1)
+          }}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder={t('admin.prompts.category')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('common.all')}</SelectItem>
+              {visibleCategories.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {categoryLabels[cat]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* 프롬프트 목록 */}
