@@ -62,6 +62,47 @@ interface SimilarCompany {
   similarPoints: string
 }
 
+// 캔버스 블록 렌더링 컴포넌트 (리렌더 시 언마운트 방지를 위해 외부 정의)
+function CanvasBlock({
+  label,
+  field,
+  value,
+  onChange,
+  className = '',
+  rows = 4,
+  isLoading = false,
+  disabled = false,
+}: {
+  label: string
+  field: string
+  value: string
+  onChange: (field: keyof CanvasData, value: string) => void
+  className?: string
+  rows?: number
+  isLoading?: boolean
+  disabled?: boolean
+}) {
+  return (
+    <div className={`border border-border p-3 ${className}`}>
+      <h3 className="mb-1.5 text-xs font-bold text-foreground/80">{label}</h3>
+      {isLoading ? (
+        <div className="flex h-16 items-center justify-center">
+          <LoadingSpinner size="sm" />
+        </div>
+      ) : (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(field as keyof CanvasData, e.target.value)}
+          className="w-full resize-none border-0 bg-transparent p-0 text-sm leading-relaxed text-muted-foreground outline-none focus:text-foreground"
+          rows={rows}
+          disabled={disabled}
+          placeholder="-"
+        />
+      )}
+    </div>
+  )
+}
+
 function normalizeCanvas(idea: ExpandedIdea | IdeaCard): CanvasData {
   const get = (val: unknown) => (typeof val === 'string' ? val : '')
   if ('raw_input' in idea) {
@@ -305,37 +346,6 @@ export function IdeaStage({
 
   const hasCanvasData = canvasData.problem || canvasData.solution || canvasData.target
 
-  // 캔버스 블록 렌더링 헬퍼
-  const CanvasBlock = ({
-    label,
-    field,
-    className = '',
-    rows = 4,
-  }: {
-    label: string
-    field: keyof CanvasData
-    className?: string
-    rows?: number
-  }) => (
-    <div className={`border border-border p-3 ${className}`}>
-      <h3 className="mb-1.5 text-xs font-bold text-foreground/80">{label}</h3>
-      {isExpanding && !canvasData[field] ? (
-        <div className="flex h-16 items-center justify-center">
-          <LoadingSpinner size="sm" />
-        </div>
-      ) : (
-        <textarea
-          value={canvasData[field]}
-          onChange={(e) => handleCanvasChange(field, e.target.value)}
-          className="w-full resize-none border-0 bg-transparent p-0 text-sm leading-relaxed text-muted-foreground outline-none focus:text-foreground"
-          rows={rows}
-          disabled={isConfirmed}
-          placeholder="-"
-        />
-      )}
-    </div>
-  )
-
   return (
     <div className="space-y-6">
       {/* 아이디어 입력/표시 */}
@@ -516,6 +526,10 @@ export function IdeaStage({
                   <CanvasBlock
                     label={t('idea.problem')}
                     field="problem"
+                    value={canvasData.problem}
+                    onChange={handleCanvasChange}
+                    isLoading={isExpanding && !canvasData.problem}
+                    disabled={isConfirmed}
                     className="h-full bg-red-50/50 dark:bg-red-950/20"
                     rows={8}
                   />
@@ -525,6 +539,10 @@ export function IdeaStage({
                 <CanvasBlock
                   label={t('idea.solution')}
                   field="solution"
+                  value={canvasData.solution}
+                  onChange={handleCanvasChange}
+                  isLoading={isExpanding && !canvasData.solution}
+                  disabled={isConfirmed}
                   className="bg-green-50/50 dark:bg-green-950/20"
                   rows={4}
                 />
@@ -534,6 +552,10 @@ export function IdeaStage({
                   <CanvasBlock
                     label={t('idea.uvp')}
                     field="uvp"
+                    value={canvasData.uvp}
+                    onChange={handleCanvasChange}
+                    isLoading={isExpanding && !canvasData.uvp}
+                    disabled={isConfirmed}
                     className="h-full bg-amber-50/50 dark:bg-amber-950/20"
                     rows={8}
                   />
@@ -543,6 +565,10 @@ export function IdeaStage({
                 <CanvasBlock
                   label={t('idea.differentiation')}
                   field="differentiation"
+                  value={canvasData.differentiation}
+                  onChange={handleCanvasChange}
+                  isLoading={isExpanding && !canvasData.differentiation}
+                  disabled={isConfirmed}
                   className="bg-purple-50/50 dark:bg-purple-950/20"
                   rows={4}
                 />
@@ -552,6 +578,10 @@ export function IdeaStage({
                   <CanvasBlock
                     label={t('idea.target')}
                     field="target"
+                    value={canvasData.target}
+                    onChange={handleCanvasChange}
+                    isLoading={isExpanding && !canvasData.target}
+                    disabled={isConfirmed}
                     className="h-full bg-rose-50/50 dark:bg-rose-950/20"
                     rows={8}
                   />
@@ -561,6 +591,10 @@ export function IdeaStage({
                 <CanvasBlock
                   label={t('idea.keyMetrics')}
                   field="key_metrics"
+                  value={canvasData.key_metrics}
+                  onChange={handleCanvasChange}
+                  isLoading={isExpanding && !canvasData.key_metrics}
+                  disabled={isConfirmed}
                   className="bg-blue-50/50 dark:bg-blue-950/20"
                   rows={4}
                 />
@@ -569,6 +603,10 @@ export function IdeaStage({
                 <CanvasBlock
                   label={t('idea.channels')}
                   field="channels"
+                  value={canvasData.channels}
+                  onChange={handleCanvasChange}
+                  isLoading={isExpanding && !canvasData.channels}
+                  disabled={isConfirmed}
                   className="bg-cyan-50/50 dark:bg-cyan-950/20"
                   rows={4}
                 />
@@ -579,12 +617,20 @@ export function IdeaStage({
                 <CanvasBlock
                   label={t('idea.costStructure')}
                   field="cost_structure"
+                  value={canvasData.cost_structure}
+                  onChange={handleCanvasChange}
+                  isLoading={isExpanding && !canvasData.cost_structure}
+                  disabled={isConfirmed}
                   className="bg-slate-50/50 dark:bg-slate-950/20"
                   rows={3}
                 />
                 <CanvasBlock
                   label={t('idea.revenueStreams')}
                   field="revenue_streams"
+                  value={canvasData.revenue_streams}
+                  onChange={handleCanvasChange}
+                  isLoading={isExpanding && !canvasData.revenue_streams}
+                  disabled={isConfirmed}
                   className="bg-slate-50/50 dark:bg-slate-950/20"
                   rows={3}
                 />
