@@ -135,7 +135,10 @@
     "searchSimilar": "Find Similar Companies",
     "searchingSimilar": "Searching similar companies...",
     "similarity": "BM Match",
-    "noSimilarCompanies": "No similar company analysis yet."
+    "noSimilarCompanies": "No similar company analysis yet.",
+    "cancelConfirm": "Cancel Confirmation",
+    "cancelConfirmSuccess": "Idea confirmation has been cancelled.",
+    "cancelConfirmFailed": "Failed to cancel confirmation."
   },
   "ideaStage": {
     "writeMore": "Please write more details. (minimum 50 characters)",

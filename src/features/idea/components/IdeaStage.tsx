@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Sparkles, Edit2, Check, Wand2, Save, Download,
-  Search, Building2, TrendingUp,
+  Search, Building2, TrendingUp, Undo2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -19,6 +19,7 @@ interface IdeaStageProps {
   projectId: string
   ideaCard: IdeaCard | null
   isConfirmed: boolean
+  canCancelConfirm?: boolean
   onUpdate: () => void
 }
 
@@ -139,6 +140,7 @@ export function IdeaStage({
   projectId,
   ideaCard,
   isConfirmed,
+  canCancelConfirm = false,
   onUpdate,
 }: IdeaStageProps) {
   const t = useTranslations()
@@ -146,6 +148,7 @@ export function IdeaStage({
   const [isEditing, setIsEditing] = useState(!ideaCard)
   const [isSaving, setIsSaving] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
+  const [isCancellingConfirm, setIsCancellingConfirm] = useState(false)
   const [isSavingCanvas, setIsSavingCanvas] = useState(false)
   const [expandedIdea, setExpandedIdea] = useState<ExpandedIdea | null>(
     ideaCard?.ai_expanded as ExpandedIdea || null
@@ -346,6 +349,28 @@ export function IdeaStage({
       toast.error(t('toast.confirmFailed'))
     } finally {
       setIsConfirming(false)
+    }
+  }
+
+  const handleCancelConfirm = async () => {
+    setIsCancellingConfirm(true)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/idea/cancel-confirm`, {
+        method: 'POST',
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast.success(t('idea.cancelConfirmSuccess'))
+        onUpdate()
+      } else {
+        toast.error(result.error || t('idea.cancelConfirmFailed'))
+      }
+    } catch {
+      toast.error(t('idea.cancelConfirmFailed'))
+    } finally {
+      setIsCancellingConfirm(false)
     }
   }
 
@@ -766,18 +791,35 @@ export function IdeaStage({
       {/* 확정 완료 메시지 */}
       {isConfirmed && (
         <Card className="border-green-500 bg-green-50 dark:bg-green-950">
-          <CardContent className="flex items-center gap-4 py-6">
-            <div className="rounded-full bg-green-500 p-2">
-              <Check className="h-6 w-6 text-white" />
+          <CardContent className="flex items-center justify-between py-6">
+            <div className="flex items-center gap-4">
+              <div className="rounded-full bg-green-500 p-2">
+                <Check className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-green-700 dark:text-green-300">
+                  {t('gate.gate1')} {t('gate.passed')}
+                </h3>
+                <p className="text-sm text-green-600 dark:text-green-400">
+                  {t('ideaStage.confirmedMessage')}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-green-700 dark:text-green-300">
-                {t('gate.gate1')} {t('gate.passed')}
-              </h3>
-              <p className="text-sm text-green-600 dark:text-green-400">
-                {t('ideaStage.confirmedMessage')}
-              </p>
-            </div>
+            {canCancelConfirm && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelConfirm}
+                disabled={isCancellingConfirm}
+              >
+                {isCancellingConfirm ? (
+                  <LoadingSpinner size="sm" className="mr-2" />
+                ) : (
+                  <Undo2 className="mr-2 h-4 w-4" />
+                )}
+                {t('idea.cancelConfirm')}
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

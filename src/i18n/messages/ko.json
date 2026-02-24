@@ -135,7 +135,10 @@
     "searchSimilar": "유사 기업 탐색",
     "searchingSimilar": "유사 기업 탐색 중...",
     "similarity": "BM 매칭률",
-    "noSimilarCompanies": "아직 유사 기업 분석이 없습니다."
+    "noSimilarCompanies": "아직 유사 기업 분석이 없습니다.",
+    "cancelConfirm": "확정 취소",
+    "cancelConfirmSuccess": "아이디어 확정이 취소되었습니다.",
+    "cancelConfirmFailed": "확정 취소에 실패했습니다."
   },
   "ideaStage": {
     "writeMore": "아이디어를 더 자세히 작성해주세요. (최소 50자)",

@@ -326,6 +326,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 projectId={id}
                 ideaCard={project.ideaCard}
                 isConfirmed={project.ideaCard?.is_confirmed || false}
+                canCancelConfirm={!!project.gate_1_passed_at && !project.gate_2_passed_at}
                 onUpdate={handleProjectUpdate}
               />
             </TabsContent>
