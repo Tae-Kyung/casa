@@ -498,6 +498,90 @@ export interface Database {
         }
         Relationships: []
       }
+      bi_business_reviews: {
+        Row: {
+          id: string
+          project_id: string
+          business_plan_text: string | null
+          company_name: string | null
+          industry: string | null
+          founded_year: number | null
+          employee_count: number | null
+          annual_revenue: string | null
+          funding_stage: string | null
+          ai_review: Json | null
+          review_score: number | null
+          swot_analysis: Json | null
+          diagnosis_result: Json | null
+          strategy_result: Json | null
+          action_items: Json | null
+          report_content: string | null
+          executive_summary: string | null
+          is_review_confirmed: boolean
+          review_confirmed_at: string | null
+          is_diagnosis_confirmed: boolean
+          diagnosis_confirmed_at: string | null
+          is_strategy_confirmed: boolean
+          strategy_confirmed_at: string | null
+          ai_model_used: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          business_plan_text?: string | null
+          company_name?: string | null
+          industry?: string | null
+          founded_year?: number | null
+          employee_count?: number | null
+          annual_revenue?: string | null
+          funding_stage?: string | null
+          ai_review?: Json | null
+          review_score?: number | null
+          swot_analysis?: Json | null
+          diagnosis_result?: Json | null
+          strategy_result?: Json | null
+          action_items?: Json | null
+          report_content?: string | null
+          executive_summary?: string | null
+          is_review_confirmed?: boolean
+          review_confirmed_at?: string | null
+          is_diagnosis_confirmed?: boolean
+          diagnosis_confirmed_at?: string | null
+          is_strategy_confirmed?: boolean
+          strategy_confirmed_at?: string | null
+          ai_model_used?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          business_plan_text?: string | null
+          company_name?: string | null
+          industry?: string | null
+          founded_year?: number | null
+          employee_count?: number | null
+          annual_revenue?: string | null
+          funding_stage?: string | null
+          ai_review?: Json | null
+          review_score?: number | null
+          swot_analysis?: Json | null
+          diagnosis_result?: Json | null
+          strategy_result?: Json | null
+          action_items?: Json | null
+          report_content?: string | null
+          executive_summary?: string | null
+          is_review_confirmed?: boolean
+          review_confirmed_at?: string | null
+          is_diagnosis_confirmed?: boolean
+          diagnosis_confirmed_at?: string | null
+          is_strategy_confirmed?: boolean
+          strategy_confirmed_at?: string | null
+          ai_model_used?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       bi_prompt_variables: {
         Row: {
           id: string
@@ -565,3 +649,4 @@ export type Approval = Database['public']['Tables']['bi_approvals']['Row']
 export type Prompt = Database['public']['Tables']['bi_prompts']['Row']
 export type PromptVersion = Database['public']['Tables']['bi_prompt_versions']['Row']
 export type PromptVariable = Database['public']['Tables']['bi_prompt_variables']['Row']
+export type BusinessReview = Database['public']['Tables']['bi_business_reviews']['Row']

@@ -1,0 +1,444 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
+import {
+  FileText,
+  Check,
+  AlertTriangle,
+  Lock,
+  Download,
+  ClipboardCheck,
+  Activity,
+  Target,
+  Flag,
+  Printer,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { LoadingSpinner } from '@/components/common/loading-spinner'
+import { useSSE } from '@/hooks/useSSE'
+import { toast } from 'sonner'
+import type { BusinessReview } from '@/types/database'
+import type { Json } from '@/types/database'
+
+interface ReportStageProps {
+  projectId: string
+  review: BusinessReview | null
+  canGenerate: boolean
+  onUpdate: () => void
+}
+
+interface StrategyResult {
+  strategic_goals?: { goal: string }[]
+}
+
+interface DiagnosisResult {
+  health_score?: number
+}
+
+export function ReportStage({
+  projectId,
+  review,
+  canGenerate,
+  onUpdate,
+}: ReportStageProps) {
+  const t = useTranslations()
+
+  const [isCompleting, setIsCompleting] = useState(false)
+  const [isFetching, setIsFetching] = useState(false)
+  const [localReview, setLocalReview] = useState<BusinessReview | null>(review)
+  const [isCompleted, setIsCompleted] = useState(false)
+
+  const sse = useSSE({
+    onDone: () => {
+      toast.success(t('report.generateComplete'))
+      onUpdate()
+    },
+    onError: (error) => {
+      toast.error(error)
+    },
+  })
+
+  useEffect(() => {
+    if (review) {
+      setLocalReview(review)
+    }
+  }, [review])
+
+  useEffect(() => {
+    if (!review && canGenerate && !isFetching) {
+      fetchReview()
+    }
+  }, [canGenerate]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchReview = async () => {
+    setIsFetching(true)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/review`)
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data) {
+          setLocalReview(result.data)
+        }
+      }
+    } catch {
+      // silent
+    } finally {
+      setIsFetching(false)
+    }
+  }
+
+  const handleGenerate = useCallback(() => {
+    sse.start(`/api/projects/${projectId}/report/generate`)
+  }, [projectId, sse])
+
+  const handleComplete = useCallback(async () => {
+    setIsCompleting(true)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/complete`, {
+        method: 'POST',
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast.success(t('report.completeSuccess'))
+        setIsCompleted(true)
+        onUpdate()
+      } else {
+        toast.error(result.error || t('report.completeFailed'))
+      }
+    } catch {
+      toast.error(t('report.completeFailed'))
+    } finally {
+      setIsCompleting(false)
+    }
+  }, [projectId, onUpdate, t])
+
+  const handleDownload = useCallback(() => {
+    const reportContent = localReview?.report_content || ''
+    const executiveSummary = localReview?.executive_summary || ''
+    const companyName = localReview?.company_name || t('report.defaultCompanyName')
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${companyName} - ${t('report.reportTitle')}</title>
+  <style>
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      color: #1a1a1a;
+      line-height: 1.8;
+    }
+    h1 { font-size: 28px; border-bottom: 3px solid #2563eb; padding-bottom: 12px; margin-bottom: 24px; }
+    h2 { font-size: 22px; color: #2563eb; margin-top: 32px; }
+    h3 { font-size: 18px; margin-top: 24px; }
+    .executive-summary {
+      background: #f0f4ff;
+      border-left: 4px solid #2563eb;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 0 8px 8px 0;
+    }
+    .executive-summary h2 { margin-top: 0; }
+    pre { white-space: pre-wrap; word-wrap: break-word; }
+    @media print {
+      body { padding: 20px; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <h1>${companyName} - ${t('report.reportTitle')}</h1>
+  ${executiveSummary ? `<div class="executive-summary"><h2>${t('report.executiveSummary')}</h2><p>${executiveSummary}</p></div>` : ''}
+  <div class="report-content">
+    <pre>${reportContent}</pre>
+  </div>
+  <div class="no-print" style="margin-top: 40px; text-align: center;">
+    <button onclick="window.print()" style="padding: 12px 24px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">
+      ${t('report.print')}
+    </button>
+  </div>
+</body>
+</html>`
+
+    const newWindow = window.open('', '_blank')
+    if (newWindow) {
+      newWindow.document.write(htmlContent)
+      newWindow.document.close()
+    }
+  }, [localReview, t])
+
+  const parseJsonField = <T,>(data: Json | null): T | null => {
+    if (!data) return null
+    try {
+      if (typeof data === 'string') {
+        return JSON.parse(data) as T
+      }
+      return data as unknown as T
+    } catch {
+      return null
+    }
+  }
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-600 dark:text-green-400'
+    if (score >= 60) return 'text-yellow-600 dark:text-yellow-400'
+    return 'text-red-600 dark:text-red-400'
+  }
+
+  const getScoreBg = (score: number) => {
+    if (score >= 80) return 'bg-green-100 dark:bg-green-900/50'
+    if (score >= 60) return 'bg-yellow-100 dark:bg-yellow-900/50'
+    return 'bg-red-100 dark:bg-red-900/50'
+  }
+
+  // Locked state
+  if (!canGenerate) {
+    return (
+      <Card className="border-orange-500 bg-orange-50 dark:bg-orange-950">
+        <CardContent className="flex items-center gap-4 py-6">
+          <div className="rounded-full bg-orange-500 p-2">
+            <Lock className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-orange-700 dark:text-orange-300">
+              {t('report.locked')}
+            </h3>
+            <p className="text-sm text-orange-600 dark:text-orange-400">
+              {t('report.lockedDesc')}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (isFetching) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <LoadingSpinner size="lg" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const reviewScore = localReview?.review_score
+  const diagnosisResult = parseJsonField<DiagnosisResult>(localReview?.diagnosis_result ?? null)
+  const strategyResult = parseJsonField<StrategyResult>(localReview?.strategy_result ?? null)
+  const hasReport = !!localReview?.report_content
+
+  return (
+    <div className="space-y-6">
+      {/* Project Summary */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ClipboardCheck className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">{t('report.projectSummary')}</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            {/* Review Score */}
+            <div className="flex items-center gap-3 rounded-lg border p-4">
+              <div className={`flex h-12 w-12 items-center justify-center rounded-full ${reviewScore ? getScoreBg(reviewScore) : 'bg-muted'}`}>
+                {reviewScore ? (
+                  <span className={`text-lg font-bold ${getScoreColor(reviewScore)}`}>{reviewScore}</span>
+                ) : (
+                  <span className="text-sm text-muted-foreground">-</span>
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-medium">{t('report.reviewScore')}</p>
+                <p className="text-xs text-muted-foreground">{t('report.gate1')}</p>
+              </div>
+            </div>
+
+            {/* Diagnosis Health Score */}
+            <div className="flex items-center gap-3 rounded-lg border p-4">
+              <div className={`flex h-12 w-12 items-center justify-center rounded-full ${diagnosisResult?.health_score ? getScoreBg(diagnosisResult.health_score) : 'bg-muted'}`}>
+                {diagnosisResult?.health_score ? (
+                  <span className={`text-lg font-bold ${getScoreColor(diagnosisResult.health_score)}`}>
+                    {diagnosisResult.health_score}
+                  </span>
+                ) : (
+                  <Activity className="h-5 w-5 text-muted-foreground" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-medium">{t('report.diagnosisScore')}</p>
+                <p className="text-xs text-muted-foreground">{t('report.gate2')}</p>
+              </div>
+            </div>
+
+            {/* Strategy Goals Count */}
+            <div className="flex items-center gap-3 rounded-lg border p-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50">
+                {strategyResult?.strategic_goals ? (
+                  <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                    {strategyResult.strategic_goals.length}
+                  </span>
+                ) : (
+                  <Flag className="h-5 w-5 text-muted-foreground" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-medium">{t('report.strategyGoals')}</p>
+                <p className="text-xs text-muted-foreground">{t('report.gate3')}</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Generate Report Button */}
+      {!hasReport && !sse.isLoading && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center gap-4 py-12">
+            <div className="rounded-full bg-muted p-4">
+              <FileText className="h-8 w-8 text-primary" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold">{t('report.generateTitle')}</h3>
+              <p className="text-sm text-muted-foreground">
+                {t('report.generateDesc')}
+              </p>
+            </div>
+            <Button size="lg" onClick={handleGenerate}>
+              <FileText className="mr-2 h-4 w-4" />
+              {t('report.generateButton')}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* SSE Streaming */}
+      {sse.isLoading && (
+        <Card>
+          <CardContent className="py-6">
+            <div className="flex items-center gap-3 mb-4">
+              <LoadingSpinner size="md" />
+              <span className="font-medium">{t('report.generating')}</span>
+            </div>
+            {sse.data && (
+              <div className="rounded-lg bg-muted/50 p-4 max-h-[400px] overflow-y-auto">
+                <pre className="whitespace-pre-wrap text-sm text-muted-foreground font-mono">
+                  {sse.data}
+                </pre>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* SSE Error */}
+      {sse.error && (
+        <Card className="border-red-500">
+          <CardContent className="flex items-center gap-4 py-4">
+            <AlertTriangle className="h-5 w-5 text-red-500" />
+            <p className="text-sm text-red-600 dark:text-red-400">{sse.error}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Report Content */}
+      {hasReport && !sse.isLoading && (
+        <div className="space-y-4">
+          {/* Executive Summary */}
+          {localReview?.executive_summary && (
+            <Card className="border-2 border-primary/30 bg-primary/5">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-base">{t('report.executiveSummary')}</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {localReview.executive_summary}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Full Report */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle className="text-base">{t('report.fullReport')}</CardTitle>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleDownload}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  {t('report.download')}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-lg bg-muted/30 p-6 max-h-[600px] overflow-y-auto">
+                <pre className="whitespace-pre-wrap text-sm text-foreground font-mono leading-relaxed">
+                  {localReview?.report_content}
+                </pre>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Complete Project Button (Gate 4) */}
+      {hasReport && !isCompleted && !sse.isLoading && (
+        <Card>
+          <CardContent className="flex items-center justify-end gap-4 py-4">
+            <Button
+              size="lg"
+              onClick={handleComplete}
+              disabled={isCompleting}
+            >
+              {isCompleting ? (
+                <>
+                  <LoadingSpinner size="sm" className="mr-2" />
+                  {t('common.processing')}
+                </>
+              ) : (
+                <>
+                  <Check className="mr-2 h-5 w-5" />
+                  {t('report.completeGate4')}
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Completed State */}
+      {isCompleted && (
+        <Card className="border-green-500 bg-green-50 dark:bg-green-950">
+          <CardContent className="flex items-center gap-4 py-6">
+            <div className="rounded-full bg-green-500 p-2">
+              <Check className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-green-700 dark:text-green-300">
+                {t('report.gate4Passed')}
+              </h3>
+              <p className="text-sm text-green-600 dark:text-green-400">
+                {t('report.gate4PassedDesc')}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}

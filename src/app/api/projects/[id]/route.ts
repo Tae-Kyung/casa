@@ -61,11 +61,24 @@ export async function GET(
       .eq('project_id', id)
       .order('created_at', { ascending: false })
 
+    // 창업자 트랙: 비즈니스 리뷰 조회
+    let businessReview = null
+    if (project.project_type === 'startup') {
+      const { data: review } = await supabase
+        .from('bi_business_reviews')
+        .select('*')
+        .eq('project_id', id)
+        .limit(1)
+        .single()
+      businessReview = review || null
+    }
+
     return successResponse({
       ...project,
       ideaCard: ideaCard || null,
       evaluation: evaluation || null,
       documents: documents || [],
+      businessReview,
     })
   } catch (error) {
     return handleApiError(error)

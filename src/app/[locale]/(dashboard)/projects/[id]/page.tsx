@@ -15,8 +15,12 @@ import { IdeaStage } from '@/features/idea/components/IdeaStage'
 import { EvaluationStage } from '@/features/evaluation'
 import { DocumentStage } from '@/features/document'
 import { DeployStage } from '@/features/deploy'
+import { ReviewStage } from '@/features/review'
+import { DiagnosisStage } from '@/features/diagnosis'
+import { StrategyStage } from '@/features/strategy'
+import { ReportStage } from '@/features/report'
 import { toast } from 'sonner'
-import type { Project, IdeaCard, Evaluation, Document as DocType, ProjectType } from '@/types/database'
+import type { Project, IdeaCard, Evaluation, Document as DocType, ProjectType, BusinessReview } from '@/types/database'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -26,6 +30,7 @@ interface ProjectWithRelations extends Project {
   ideaCard: IdeaCard | null
   evaluation: Evaluation | null
   documents: DocType[]
+  businessReview: BusinessReview | null
 }
 
 const stageToTab: Record<string, string> = {
@@ -93,6 +98,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const projectType: ProjectType = project?.project_type || 'pre_startup'
+  const isStartup = projectType === 'startup'
   const stageLabels = getStageLabels(t, projectType)
   const tabLabels = getTabLabels(t, projectType)
 
@@ -168,14 +174,12 @@ export default function ProjectDetailPage({ params }: PageProps) {
               <Badge
                 variant="outline"
                 className={
-                  projectType === 'startup'
+                  isStartup
                     ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
                     : 'border-blue-500 text-blue-600 dark:text-blue-400'
                 }
               >
-                {projectType === 'startup'
-                  ? t('project.startup')
-                  : t('project.preStartup')}
+                {isStartup ? t('project.startup') : t('project.preStartup')}
               </Badge>
             </div>
             <p className="text-muted-foreground">
@@ -261,56 +265,111 @@ export default function ProjectDetailPage({ params }: PageProps) {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="idea" className="mt-6">
-          <IdeaStage
-            projectId={id}
-            ideaCard={project.ideaCard}
-            isConfirmed={project.ideaCard?.is_confirmed || false}
-            onUpdate={handleProjectUpdate}
-          />
-        </TabsContent>
+        {isStartup ? (
+          <>
+            {/* 창업자 트랙 */}
+            <TabsContent value="idea" className="mt-6">
+              <ReviewStage
+                projectId={id}
+                review={project.businessReview}
+                isConfirmed={project.businessReview?.is_review_confirmed || false}
+                onUpdate={handleProjectUpdate}
+              />
+            </TabsContent>
 
-        <TabsContent value="evaluation" className="mt-6">
-          <EvaluationStage
-            projectId={id}
-            evaluation={project.evaluation}
-            isConfirmed={project.evaluation?.is_confirmed || false}
-            canEvaluate={!!project.gate_1_passed_at}
-            onUpdate={handleProjectUpdate}
-          />
-        </TabsContent>
+            <TabsContent value="evaluation" className="mt-6">
+              <DiagnosisStage
+                projectId={id}
+                review={project.businessReview}
+                isConfirmed={project.businessReview?.is_diagnosis_confirmed || false}
+                canDiagnose={!!project.gate_1_passed_at}
+                onUpdate={handleProjectUpdate}
+              />
+            </TabsContent>
 
-        <TabsContent value="document" className="mt-6">
-          <DocumentStage
-            projectId={id}
-            documents={project.documents}
-            isGate3Passed={!!project.gate_3_passed_at}
-            canGenerate={!!project.gate_2_passed_at}
-            onUpdate={handleProjectUpdate}
-          />
-        </TabsContent>
+            <TabsContent value="document" className="mt-6">
+              <StrategyStage
+                projectId={id}
+                review={project.businessReview}
+                isConfirmed={project.businessReview?.is_strategy_confirmed || false}
+                canGenerate={!!project.gate_2_passed_at}
+                onUpdate={handleProjectUpdate}
+              />
+            </TabsContent>
 
-        <TabsContent value="deploy" className="mt-6">
-          <DeployStage
-            project={project}
-            ideaCard={project.ideaCard}
-            evaluation={project.evaluation}
-            documents={project.documents}
-            canDeploy={!!project.gate_3_passed_at}
-            onUpdate={handleProjectUpdate}
-          />
-        </TabsContent>
+            <TabsContent value="deploy" className="mt-6">
+              <ReportStage
+                projectId={id}
+                review={project.businessReview}
+                canGenerate={!!project.gate_3_passed_at}
+                onUpdate={handleProjectUpdate}
+              />
+            </TabsContent>
 
-        <TabsContent value="done" className="mt-6">
-          <DeployStage
-            project={project}
-            ideaCard={project.ideaCard}
-            evaluation={project.evaluation}
-            documents={project.documents}
-            canDeploy={!!project.gate_3_passed_at}
-            onUpdate={handleProjectUpdate}
-          />
-        </TabsContent>
+            <TabsContent value="done" className="mt-6">
+              <ReportStage
+                projectId={id}
+                review={project.businessReview}
+                canGenerate={!!project.gate_3_passed_at}
+                onUpdate={handleProjectUpdate}
+              />
+            </TabsContent>
+          </>
+        ) : (
+          <>
+            {/* 예비창업자 트랙 */}
+            <TabsContent value="idea" className="mt-6">
+              <IdeaStage
+                projectId={id}
+                ideaCard={project.ideaCard}
+                isConfirmed={project.ideaCard?.is_confirmed || false}
+                onUpdate={handleProjectUpdate}
+              />
+            </TabsContent>
+
+            <TabsContent value="evaluation" className="mt-6">
+              <EvaluationStage
+                projectId={id}
+                evaluation={project.evaluation}
+                isConfirmed={project.evaluation?.is_confirmed || false}
+                canEvaluate={!!project.gate_1_passed_at}
+                onUpdate={handleProjectUpdate}
+              />
+            </TabsContent>
+
+            <TabsContent value="document" className="mt-6">
+              <DocumentStage
+                projectId={id}
+                documents={project.documents}
+                isGate3Passed={!!project.gate_3_passed_at}
+                canGenerate={!!project.gate_2_passed_at}
+                onUpdate={handleProjectUpdate}
+              />
+            </TabsContent>
+
+            <TabsContent value="deploy" className="mt-6">
+              <DeployStage
+                project={project}
+                ideaCard={project.ideaCard}
+                evaluation={project.evaluation}
+                documents={project.documents}
+                canDeploy={!!project.gate_3_passed_at}
+                onUpdate={handleProjectUpdate}
+              />
+            </TabsContent>
+
+            <TabsContent value="done" className="mt-6">
+              <DeployStage
+                project={project}
+                ideaCard={project.ideaCard}
+                evaluation={project.evaluation}
+                documents={project.documents}
+                canDeploy={!!project.gate_3_passed_at}
+                onUpdate={handleProjectUpdate}
+              />
+            </TabsContent>
+          </>
+        )}
       </Tabs>
 
       {/* 삭제 확인 모달 */}
