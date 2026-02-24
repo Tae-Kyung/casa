@@ -11,9 +11,6 @@ import {
   Cpu,
   Megaphone,
   FileText,
-  Target,
-  Lightbulb,
-  Shield,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -30,6 +27,11 @@ interface PublicProfile {
     solution: string
     target: string
     differentiation: string
+    uvp?: string
+    channels?: string
+    revenueStreams?: string
+    costStructure?: string
+    keyMetrics?: string
   } | null
   scores: {
     investor: number | null
@@ -122,6 +124,9 @@ export default function ShowcaseDetailPage() {
     )
   }
 
+  const idea = profile.ideaSummary
+  const hasLeanCanvas = idea && (idea.uvp || idea.channels || idea.revenueStreams || idea.costStructure || idea.keyMetrics)
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       {/* 네비게이션 */}
@@ -172,54 +177,97 @@ export default function ShowcaseDetailPage() {
           </Card>
         )}
 
-        {/* 아이디어 요약 */}
-        {profile.ideaSummary && (
-          <div className="grid gap-4 sm:grid-cols-2">
+        {/* 린 캔버스 or 기존 4-card 레이아웃 */}
+        {idea && (
+          hasLeanCanvas ? (
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Target className="h-4 w-4 text-red-500" />
-                  {t('showcase.problem')}
-                </CardTitle>
+              <CardHeader>
+                <CardTitle className="text-base">{t('idea.leanCanvas')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">{profile.ideaSummary.problem}</p>
+                <div className="overflow-hidden rounded-lg border border-border">
+                  {/* Top Row */}
+                  <div className="grid grid-cols-1 lg:grid-cols-5">
+                    <div className="lg:row-span-2 border border-border p-3 bg-red-50/50 dark:bg-red-950/20">
+                      <h3 className="mb-1 text-xs font-bold text-foreground/80">{t('idea.problem')}</h3>
+                      <p className="whitespace-pre-wrap text-sm text-muted-foreground">{idea.problem || '-'}</p>
+                    </div>
+                    <div className="border border-border p-3 bg-green-50/50 dark:bg-green-950/20">
+                      <h3 className="mb-1 text-xs font-bold text-foreground/80">{t('idea.solution')}</h3>
+                      <p className="whitespace-pre-wrap text-sm text-muted-foreground">{idea.solution || '-'}</p>
+                    </div>
+                    <div className="lg:row-span-2 border border-border p-3 bg-amber-50/50 dark:bg-amber-950/20">
+                      <h3 className="mb-1 text-xs font-bold text-foreground/80">{t('idea.uvp')}</h3>
+                      <p className="whitespace-pre-wrap text-sm text-muted-foreground">{idea.uvp || '-'}</p>
+                    </div>
+                    <div className="border border-border p-3 bg-purple-50/50 dark:bg-purple-950/20">
+                      <h3 className="mb-1 text-xs font-bold text-foreground/80">{t('idea.differentiation')}</h3>
+                      <p className="whitespace-pre-wrap text-sm text-muted-foreground">{idea.differentiation || '-'}</p>
+                    </div>
+                    <div className="lg:row-span-2 border border-border p-3 bg-rose-50/50 dark:bg-rose-950/20">
+                      <h3 className="mb-1 text-xs font-bold text-foreground/80">{t('idea.target')}</h3>
+                      <p className="whitespace-pre-wrap text-sm text-muted-foreground">{idea.target || '-'}</p>
+                    </div>
+                    <div className="border border-border p-3 bg-blue-50/50 dark:bg-blue-950/20">
+                      <h3 className="mb-1 text-xs font-bold text-foreground/80">{t('idea.keyMetrics')}</h3>
+                      <p className="whitespace-pre-wrap text-sm text-muted-foreground">{idea.keyMetrics || '-'}</p>
+                    </div>
+                    <div className="border border-border p-3 bg-cyan-50/50 dark:bg-cyan-950/20">
+                      <h3 className="mb-1 text-xs font-bold text-foreground/80">{t('idea.channels')}</h3>
+                      <p className="whitespace-pre-wrap text-sm text-muted-foreground">{idea.channels || '-'}</p>
+                    </div>
+                  </div>
+                  {/* Bottom Row */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2">
+                    <div className="border border-border p-3 bg-slate-50/50 dark:bg-slate-950/20">
+                      <h3 className="mb-1 text-xs font-bold text-foreground/80">{t('idea.costStructure')}</h3>
+                      <p className="whitespace-pre-wrap text-sm text-muted-foreground">{idea.costStructure || '-'}</p>
+                    </div>
+                    <div className="border border-border p-3 bg-slate-50/50 dark:bg-slate-950/20">
+                      <h3 className="mb-1 text-xs font-bold text-foreground/80">{t('idea.revenueStreams')}</h3>
+                      <p className="whitespace-pre-wrap text-sm text-muted-foreground">{idea.revenueStreams || '-'}</p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Lightbulb className="h-4 w-4 text-yellow-500" />
-                  {t('showcase.solution')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{profile.ideaSummary.solution}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Users className="h-4 w-4 text-blue-500" />
-                  {t('showcase.targetCustomer')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{profile.ideaSummary.target}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Shield className="h-4 w-4 text-green-500" />
-                  {t('showcase.differentiation')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{profile.ideaSummary.differentiation}</p>
-              </CardContent>
-            </Card>
-          </div>
+          ) : (
+            /* 기존 4-card 레이아웃 (하위 호환) */
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{t('showcase.problem')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{idea.problem}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{t('showcase.solution')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{idea.solution}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{t('showcase.targetCustomer')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{idea.target}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{t('showcase.differentiation')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{idea.differentiation}</p>
+                </CardContent>
+              </Card>
+            </div>
+          )
         )}
 
         {/* 평가 점수 */}

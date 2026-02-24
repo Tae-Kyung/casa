@@ -119,6 +119,11 @@ export interface Database {
           solution: string | null
           target: string | null
           differentiation: string | null
+          uvp: string | null
+          channels: string | null
+          revenue_streams: string | null
+          cost_structure: string | null
+          key_metrics: string | null
           ai_expanded: Json | null
           ai_model_used: string
           is_confirmed: boolean
@@ -135,6 +140,11 @@ export interface Database {
           solution?: string | null
           target?: string | null
           differentiation?: string | null
+          uvp?: string | null
+          channels?: string | null
+          revenue_streams?: string | null
+          cost_structure?: string | null
+          key_metrics?: string | null
           ai_expanded?: Json | null
           ai_model_used?: string
           is_confirmed?: boolean
@@ -151,6 +161,11 @@ export interface Database {
           solution?: string | null
           target?: string | null
           differentiation?: string | null
+          uvp?: string | null
+          channels?: string | null
+          revenue_streams?: string | null
+          cost_structure?: string | null
+          key_metrics?: string | null
           ai_expanded?: Json | null
           ai_model_used?: string
           is_confirmed?: boolean

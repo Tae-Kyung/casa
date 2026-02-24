@@ -133,11 +133,16 @@ export async function PATCH(
       .update({
         raw_input: validatedData.raw_input,
         revision_count: existingIdea.revision_count + 1,
-        // AI 확장 결과 초기화
+        // AI 확장 결과 초기화 (린 캔버스 9-Block 전체)
         problem: null,
         solution: null,
         target: null,
         differentiation: null,
+        uvp: null,
+        channels: null,
+        revenue_streams: null,
+        cost_structure: null,
+        key_metrics: null,
         ai_expanded: null,
         is_confirmed: false,
         confirmed_at: null,

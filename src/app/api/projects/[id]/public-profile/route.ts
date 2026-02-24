@@ -30,7 +30,7 @@ export async function GET(
     // 아이디어 카드 (요약)
     const { data: ideaCard } = await supabase
       .from('bi_idea_cards')
-      .select('problem, solution, target, differentiation')
+      .select('problem, solution, target, differentiation, uvp, channels, revenue_streams, cost_structure, key_metrics')
       .eq('project_id', id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -66,6 +66,11 @@ export async function GET(
         solution: ideaCard.solution,
         target: ideaCard.target,
         differentiation: ideaCard.differentiation,
+        uvp: ideaCard.uvp,
+        channels: ideaCard.channels,
+        revenueStreams: ideaCard.revenue_streams,
+        costStructure: ideaCard.cost_structure,
+        keyMetrics: ideaCard.key_metrics,
       } : null,
       scores: evaluation ? {
         investor: evaluation.investor_score,

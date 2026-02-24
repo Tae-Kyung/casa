@@ -84,6 +84,11 @@ export async function POST(
             solution: parsed.solution || null,
             target: parsed.target || null,
             differentiation: parsed.differentiation || null,
+            uvp: parsed.uvp || null,
+            channels: parsed.channels || null,
+            revenue_streams: parsed.revenue_streams || parsed.revenueStreams || null,
+            cost_structure: parsed.cost_structure || parsed.costStructure || null,
+            key_metrics: parsed.key_metrics || parsed.keyMetrics || null,
             ai_expanded: parsed,
             ai_model_used: model,
           })

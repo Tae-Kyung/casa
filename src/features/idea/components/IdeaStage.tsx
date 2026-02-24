@@ -1,11 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { Sparkles, Edit2, Check, RefreshCw, Wand2 } from 'lucide-react'
+import {
+  Sparkles, Edit2, Check, Wand2, Save, Download,
+  Search, Building2, TrendingUp,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { useSSE } from '@/hooks/useSSE'
 import { toast } from 'sonner'
@@ -23,10 +27,71 @@ interface ExpandedIdea {
   solution?: string
   target?: string
   differentiation?: string
+  uvp?: string
+  channels?: string
+  revenue_streams?: string
+  revenueStreams?: string
+  cost_structure?: string
+  costStructure?: string
+  key_metrics?: string
+  keyMetrics?: string
   marketSize?: string
   revenueModel?: string
   challenges?: string[]
   raw?: string
+}
+
+interface CanvasData {
+  problem: string
+  solution: string
+  target: string
+  differentiation: string
+  uvp: string
+  channels: string
+  revenue_streams: string
+  cost_structure: string
+  key_metrics: string
+}
+
+interface SimilarCompany {
+  name: string
+  description: string
+  stage: string
+  funding: string
+  similarity: number
+  similarPoints: string
+}
+
+function normalizeCanvas(idea: ExpandedIdea | IdeaCard): CanvasData {
+  const get = (val: unknown) => (typeof val === 'string' ? val : '')
+  if ('raw_input' in idea) {
+    // IdeaCard from DB
+    const card = idea as IdeaCard
+    return {
+      problem: get(card.problem),
+      solution: get(card.solution),
+      target: get(card.target),
+      differentiation: get(card.differentiation),
+      uvp: get(card.uvp),
+      channels: get(card.channels),
+      revenue_streams: get(card.revenue_streams),
+      cost_structure: get(card.cost_structure),
+      key_metrics: get(card.key_metrics),
+    }
+  }
+  // ExpandedIdea from AI
+  const ei = idea as ExpandedIdea
+  return {
+    problem: get(ei.problem),
+    solution: get(ei.solution),
+    target: get(ei.target),
+    differentiation: get(ei.differentiation),
+    uvp: get(ei.uvp),
+    channels: get(ei.channels),
+    revenue_streams: get(ei.revenue_streams || ei.revenueStreams),
+    cost_structure: get(ei.cost_structure || ei.costStructure),
+    key_metrics: get(ei.key_metrics || ei.keyMetrics),
+  }
 }
 
 export function IdeaStage({
@@ -40,11 +105,23 @@ export function IdeaStage({
   const [isEditing, setIsEditing] = useState(!ideaCard)
   const [isSaving, setIsSaving] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
+  const [isSavingCanvas, setIsSavingCanvas] = useState(false)
   const [expandedIdea, setExpandedIdea] = useState<ExpandedIdea | null>(
     ideaCard?.ai_expanded as ExpandedIdea || null
   )
 
-  const { data: streamData, isLoading: isExpanding, start: startExpand, stop: stopExpand } = useSSE({
+  // 린 캔버스 편집 상태
+  const [canvasData, setCanvasData] = useState<CanvasData>(() => {
+    if (ideaCard?.problem) return normalizeCanvas(ideaCard)
+    if (ideaCard?.ai_expanded) return normalizeCanvas(ideaCard.ai_expanded as ExpandedIdea)
+    return { problem: '', solution: '', target: '', differentiation: '', uvp: '', channels: '', revenue_streams: '', cost_structure: '', key_metrics: '' }
+  })
+
+  // 유사 기업 상태
+  const [similarCompanies, setSimilarCompanies] = useState<SimilarCompany[]>([])
+  const [isExportingPdf, setIsExportingPdf] = useState(false)
+
+  const { data: streamData, isLoading: isExpanding, start: startExpand } = useSSE({
     onDone: () => {
       onUpdate()
     },
@@ -63,11 +140,17 @@ export function IdeaStage({
     },
   })
 
+  // 유사 기업 탐색 SSE
+  const { data: similarData, isLoading: isSearchingSimilar, start: startSimilarSearch } = useSSE({
+    onError: (error) => {
+      toast.error(error)
+    },
+  })
+
   // 스트리밍 데이터 파싱
   useEffect(() => {
     if (streamData) {
       try {
-        // markdown 코드 펜스 제거 (```json ... ``` 또는 ``` ... ```)
         let cleanData = streamData.trim()
         const fenceMatch = cleanData.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/)
         if (fenceMatch) {
@@ -75,12 +158,35 @@ export function IdeaStage({
         }
         const parsed = JSON.parse(cleanData)
         setExpandedIdea(parsed)
+        setCanvasData(normalizeCanvas(parsed))
       } catch {
-        // JSON 파싱 실패 시 raw로 저장
         setExpandedIdea({ raw: streamData })
       }
     }
   }, [streamData])
+
+  // 유사 기업 데이터 파싱
+  useEffect(() => {
+    if (similarData) {
+      try {
+        let cleanData = similarData.trim()
+        const fenceMatch = cleanData.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/)
+        if (fenceMatch) {
+          cleanData = fenceMatch[1].trim()
+        }
+        const parsed = JSON.parse(cleanData)
+        if (parsed.companies) {
+          setSimilarCompanies(parsed.companies)
+        }
+      } catch {
+        // 파싱 실패 시 무시
+      }
+    }
+  }, [similarData])
+
+  const handleCanvasChange = useCallback((field: keyof CanvasData, value: string) => {
+    setCanvasData(prev => ({ ...prev, [field]: value }))
+  }, [])
 
   const handleSave = async () => {
     if (rawInput.length < 50) {
@@ -106,7 +212,7 @@ export function IdeaStage({
       } else {
         toast.error(result.error || t('toast.saveFailed'))
       }
-    } catch (error) {
+    } catch {
       toast.error(t('toast.saveFailed'))
     } finally {
       setIsSaving(false)
@@ -125,6 +231,56 @@ export function IdeaStage({
     startExpand(`/api/projects/${projectId}/idea/expand`)
   }
 
+  const handleSaveCanvas = async () => {
+    setIsSavingCanvas(true)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/idea/canvas`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(canvasData),
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('idea.canvasSaved'))
+        onUpdate()
+      } else {
+        toast.error(result.error || t('idea.canvasSaveFailed'))
+      }
+    } catch {
+      toast.error(t('idea.canvasSaveFailed'))
+    } finally {
+      setIsSavingCanvas(false)
+    }
+  }
+
+  const handleExportPdf = async () => {
+    setIsExportingPdf(true)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/idea/canvas-pdf`)
+      if (!response.ok) throw new Error('Failed')
+      const html = await response.text()
+
+      const printWindow = window.open('', '_blank')
+      if (printWindow) {
+        printWindow.document.write(html)
+        printWindow.document.close()
+        printWindow.onload = () => {
+          printWindow.print()
+        }
+        toast.success(t('idea.pdfExported'))
+      }
+    } catch {
+      toast.error(t('idea.pdfExportFailed'))
+    } finally {
+      setIsExportingPdf(false)
+    }
+  }
+
+  const handleSearchSimilar = () => {
+    setSimilarCompanies([])
+    startSimilarSearch(`/api/projects/${projectId}/idea/similar-companies`)
+  }
+
   const handleConfirm = async () => {
     setIsConfirming(true)
     try {
@@ -140,12 +296,45 @@ export function IdeaStage({
       } else {
         toast.error(result.error || t('toast.confirmFailed'))
       }
-    } catch (error) {
+    } catch {
       toast.error(t('toast.confirmFailed'))
     } finally {
       setIsConfirming(false)
     }
   }
+
+  const hasCanvasData = canvasData.problem || canvasData.solution || canvasData.target
+
+  // 캔버스 블록 렌더링 헬퍼
+  const CanvasBlock = ({
+    label,
+    field,
+    className = '',
+    rows = 4,
+  }: {
+    label: string
+    field: keyof CanvasData
+    className?: string
+    rows?: number
+  }) => (
+    <div className={`border border-border p-3 ${className}`}>
+      <h3 className="mb-1.5 text-xs font-bold text-foreground/80">{label}</h3>
+      {isExpanding && !canvasData[field] ? (
+        <div className="flex h-16 items-center justify-center">
+          <LoadingSpinner size="sm" />
+        </div>
+      ) : (
+        <textarea
+          value={canvasData[field]}
+          onChange={(e) => handleCanvasChange(field, e.target.value)}
+          className="w-full resize-none border-0 bg-transparent p-0 text-sm leading-relaxed text-muted-foreground outline-none focus:text-foreground"
+          rows={rows}
+          disabled={isConfirmed}
+          placeholder="-"
+        />
+      )}
+    </div>
+  )
 
   return (
     <div className="space-y-6">
@@ -266,78 +455,234 @@ export function IdeaStage({
         </div>
       )}
 
-      {/* AI 확장 결과 */}
-      {(expandedIdea || isExpanding) && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{t('idea.problem')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isExpanding && !expandedIdea?.problem ? (
-                <LoadingSpinner />
-              ) : (
-                <p>{expandedIdea?.problem || '-'}</p>
-              )}
-            </CardContent>
-          </Card>
+      {/* 린 캔버스 9-Block */}
+      {(hasCanvasData || isExpanding) && (
+        <Card>
+          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle>{t('idea.leanCanvas')}</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">{t('idea.leanCanvasDesc')}</p>
+            </div>
+            {hasCanvasData && !isExpanding && (
+              <div className="flex gap-2">
+                {!isConfirmed && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSaveCanvas}
+                    disabled={isSavingCanvas}
+                  >
+                    {isSavingCanvas ? (
+                      <>
+                        <LoadingSpinner size="sm" className="mr-2" />
+                        {t('idea.savingCanvas')}
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        {t('idea.saveCanvas')}
+                      </>
+                    )}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportPdf}
+                  disabled={isExportingPdf}
+                >
+                  {isExportingPdf ? (
+                    <>
+                      <LoadingSpinner size="sm" className="mr-2" />
+                      {t('idea.exportingPdf')}
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-4 w-4" />
+                      {t('idea.exportPdf')}
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          </CardHeader>
+          <CardContent>
+            {/* 데스크톱: 5-column grid, 모바일: 스택 */}
+            <div className="overflow-hidden rounded-lg border border-border">
+              {/* Top Row: 5 columns */}
+              <div className="grid grid-cols-1 lg:grid-cols-5">
+                {/* Col 1: Problem (tall) */}
+                <div className="lg:row-span-2">
+                  <CanvasBlock
+                    label={t('idea.problem')}
+                    field="problem"
+                    className="h-full bg-red-50/50 dark:bg-red-950/20"
+                    rows={8}
+                  />
+                </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{t('idea.solution')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isExpanding && !expandedIdea?.solution ? (
-                <LoadingSpinner />
-              ) : (
-                <p>{expandedIdea?.solution || '-'}</p>
-              )}
-            </CardContent>
-          </Card>
+                {/* Col 2 Top: Solution */}
+                <CanvasBlock
+                  label={t('idea.solution')}
+                  field="solution"
+                  className="bg-green-50/50 dark:bg-green-950/20"
+                  rows={4}
+                />
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{t('idea.target')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isExpanding && !expandedIdea?.target ? (
-                <LoadingSpinner />
-              ) : (
-                <p>{expandedIdea?.target || '-'}</p>
-              )}
-            </CardContent>
-          </Card>
+                {/* Col 3: UVP (tall) */}
+                <div className="lg:row-span-2">
+                  <CanvasBlock
+                    label={t('idea.uvp')}
+                    field="uvp"
+                    className="h-full bg-amber-50/50 dark:bg-amber-950/20"
+                    rows={8}
+                  />
+                </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{t('idea.differentiation')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isExpanding && !expandedIdea?.differentiation ? (
-                <LoadingSpinner />
-              ) : (
-                <p>{expandedIdea?.differentiation || '-'}</p>
-              )}
-            </CardContent>
-          </Card>
+                {/* Col 4 Top: Unfair Advantage */}
+                <CanvasBlock
+                  label={t('idea.differentiation')}
+                  field="differentiation"
+                  className="bg-purple-50/50 dark:bg-purple-950/20"
+                  rows={4}
+                />
 
-          {expandedIdea?.raw && (
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-lg">{t('ideaStage.aiResponseRaw')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre className="whitespace-pre-wrap text-sm">
+                {/* Col 5: Customer Segments (tall) */}
+                <div className="lg:row-span-2">
+                  <CanvasBlock
+                    label={t('idea.target')}
+                    field="target"
+                    className="h-full bg-rose-50/50 dark:bg-rose-950/20"
+                    rows={8}
+                  />
+                </div>
+
+                {/* Col 2 Bottom: Key Metrics */}
+                <CanvasBlock
+                  label={t('idea.keyMetrics')}
+                  field="key_metrics"
+                  className="bg-blue-50/50 dark:bg-blue-950/20"
+                  rows={4}
+                />
+
+                {/* Col 4 Bottom: Channels */}
+                <CanvasBlock
+                  label={t('idea.channels')}
+                  field="channels"
+                  className="bg-cyan-50/50 dark:bg-cyan-950/20"
+                  rows={4}
+                />
+              </div>
+
+              {/* Bottom Row: Cost + Revenue */}
+              <div className="grid grid-cols-1 lg:grid-cols-2">
+                <CanvasBlock
+                  label={t('idea.costStructure')}
+                  field="cost_structure"
+                  className="bg-slate-50/50 dark:bg-slate-950/20"
+                  rows={3}
+                />
+                <CanvasBlock
+                  label={t('idea.revenueStreams')}
+                  field="revenue_streams"
+                  className="bg-slate-50/50 dark:bg-slate-950/20"
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* Raw fallback */}
+            {expandedIdea?.raw && (
+              <div className="mt-4 rounded-lg border border-border p-4">
+                <h3 className="mb-2 text-sm font-semibold">{t('ideaStage.aiResponseRaw')}</h3>
+                <pre className="whitespace-pre-wrap text-sm text-muted-foreground">
                   {expandedIdea.raw}
                 </pre>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 유사 기업 탐색 */}
+      {hasCanvasData && !isExpanding && (
+        <Card>
+          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                {t('idea.similarCompanies')}
+              </CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">{t('idea.similarCompaniesDesc')}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSearchSimilar}
+              disabled={isSearchingSimilar}
+            >
+              {isSearchingSimilar ? (
+                <>
+                  <LoadingSpinner size="sm" className="mr-2" />
+                  {t('idea.searchingSimilar')}
+                </>
+              ) : (
+                <>
+                  <Search className="mr-2 h-4 w-4" />
+                  {t('idea.searchSimilar')}
+                </>
+              )}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {similarCompanies.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {similarCompanies.map((company, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start justify-between rounded-xl border border-border p-4 transition-colors hover:border-blue-300 dark:hover:border-blue-700"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <h4 className="font-bold text-foreground">{company.name}</h4>
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">{company.description}</p>
+                      {company.similarPoints && (
+                        <p className="mt-1.5 text-xs text-blue-600 dark:text-blue-400">{company.similarPoints}</p>
+                      )}
+                      <div className="mt-2 flex gap-2">
+                        <Badge variant="outline">{company.stage}</Badge>
+                        <Badge variant="secondary" className="flex items-center gap-1">
+                          <TrendingUp className="h-3 w-3" />
+                          {company.funding}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="ml-3 text-right">
+                      <div className="text-2xl font-black text-primary">
+                        {company.similarity}%
+                      </div>
+                      <div className="text-xs text-muted-foreground">{t('idea.similarity')}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : isSearchingSimilar ? (
+              <div className="flex items-center justify-center py-8">
+                <LoadingSpinner />
+              </div>
+            ) : (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                {t('idea.noSimilarCompanies')}
+              </p>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Gate 1 승인 버튼 */}
-      {expandedIdea && !isConfirmed && !isExpanding && expandedIdea.problem && (
+      {hasCanvasData && !isConfirmed && !isExpanding && canvasData.problem && (
         <Card className="border-primary">
           <CardContent className="flex items-center justify-between py-6">
             <div>
