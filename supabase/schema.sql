@@ -9,6 +9,7 @@ CREATE TYPE user_role AS ENUM ('user', 'mentor', 'admin');
 CREATE TYPE locale AS ENUM ('ko', 'en', 'ja', 'zh');
 CREATE TYPE theme AS ENUM ('light', 'dark', 'system');
 CREATE TYPE project_status AS ENUM ('draft', 'in_progress', 'completed', 'archived');
+CREATE TYPE project_type AS ENUM ('pre_startup', 'startup');
 CREATE TYPE project_stage AS ENUM ('idea', 'evaluation', 'document', 'deploy', 'done');
 CREATE TYPE gate_status AS ENUM ('gate_1', 'gate_2', 'gate_3', 'gate_4', 'completed');
 CREATE TYPE document_type AS ENUM ('business_plan', 'pitch', 'landing', 'ppt', 'leaflet', 'infographic');
@@ -42,6 +43,7 @@ CREATE TABLE bi_projects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES bi_users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  project_type project_type NOT NULL DEFAULT 'pre_startup',
   status project_status NOT NULL DEFAULT 'draft',
   current_stage project_stage NOT NULL DEFAULT 'idea',
   current_gate gate_status NOT NULL DEFAULT 'gate_1',

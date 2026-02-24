@@ -16,7 +16,7 @@ import { EvaluationStage } from '@/features/evaluation'
 import { DocumentStage } from '@/features/document'
 import { DeployStage } from '@/features/deploy'
 import { toast } from 'sonner'
-import type { Project, IdeaCard, Evaluation, Document as DocType } from '@/types/database'
+import type { Project, IdeaCard, Evaluation, Document as DocType, ProjectType } from '@/types/database'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -36,6 +36,52 @@ const stageToTab: Record<string, string> = {
   done: 'done',
 }
 
+const stageToIndex: Record<string, number> = {
+  idea: 0,
+  evaluation: 1,
+  document: 2,
+  deploy: 3,
+  done: 4,
+}
+
+function getStageLabels(t: ReturnType<typeof useTranslations>, projectType: ProjectType) {
+  if (projectType === 'startup') {
+    return [
+      t('project.reviewStage'),
+      t('project.diagnosisStage'),
+      t('project.strategyStage'),
+      t('project.reportStage'),
+      t('project.done'),
+    ]
+  }
+  return [
+    t('project.idea'),
+    t('project.evaluation'),
+    t('project.document'),
+    t('project.deploy'),
+    t('project.done'),
+  ]
+}
+
+function getTabLabels(t: ReturnType<typeof useTranslations>, projectType: ProjectType) {
+  if (projectType === 'startup') {
+    return {
+      idea: t('project.reviewStage'),
+      evaluation: t('project.diagnosisStage'),
+      document: t('project.strategyStage'),
+      deploy: t('project.reportStage'),
+      done: t('project.done'),
+    }
+  }
+  return {
+    idea: t('project.idea'),
+    evaluation: t('project.evaluation'),
+    document: t('project.document'),
+    deploy: t('project.deploy'),
+    done: t('project.done'),
+  }
+}
+
 export default function ProjectDetailPage({ params }: PageProps) {
   const { id } = use(params)
   const t = useTranslations()
@@ -46,21 +92,9 @@ export default function ProjectDetailPage({ params }: PageProps) {
   const [activeTab, setActiveTab] = useState('idea')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-  const stageLabels = [
-    t('project.idea'),
-    t('project.evaluation'),
-    t('project.document'),
-    t('project.deploy'),
-    t('project.done'),
-  ]
-
-  const stageToIndex: Record<string, number> = {
-    idea: 0,
-    evaluation: 1,
-    document: 2,
-    deploy: 3,
-    done: 4,
-  }
+  const projectType: ProjectType = project?.project_type || 'pre_startup'
+  const stageLabels = getStageLabels(t, projectType)
+  const tabLabels = getTabLabels(t, projectType)
 
   const fetchProject = async () => {
     try {
@@ -129,7 +163,21 @@ export default function ProjectDetailPage({ params }: PageProps) {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">{project.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold">{project.name}</h1>
+              <Badge
+                variant="outline"
+                className={
+                  projectType === 'startup'
+                    ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                    : 'border-blue-500 text-blue-600 dark:text-blue-400'
+                }
+              >
+                {projectType === 'startup'
+                  ? t('project.startup')
+                  : t('project.preStartup')}
+              </Badge>
+            </div>
             <p className="text-muted-foreground">
               {t('project.createdAt')}: {new Date(project.created_at).toLocaleDateString()}
             </p>
@@ -157,7 +205,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
           />
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Badge variant="outline">
-              {t('project.stage')}: {t(`project.${project.current_stage}`)}
+              {t('project.stage')}: {stageLabels[stageToIndex[project.current_stage] || 0]}
             </Badge>
             {project.gate_1_passed_at && (
               <Badge variant="secondary" className="bg-green-500 text-white">
@@ -186,30 +234,30 @@ export default function ProjectDetailPage({ params }: PageProps) {
       {/* 단계별 탭 */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="idea">{t('project.idea')}</TabsTrigger>
+          <TabsTrigger value="idea">{tabLabels.idea}</TabsTrigger>
           <TabsTrigger
             value="evaluation"
             disabled={stageToIndex[project.current_stage] < 1}
           >
-            {t('project.evaluation')}
+            {tabLabels.evaluation}
           </TabsTrigger>
           <TabsTrigger
             value="document"
             disabled={stageToIndex[project.current_stage] < 2}
           >
-            {t('project.document')}
+            {tabLabels.document}
           </TabsTrigger>
           <TabsTrigger
             value="deploy"
             disabled={stageToIndex[project.current_stage] < 3}
           >
-            {t('project.deploy')}
+            {tabLabels.deploy}
           </TabsTrigger>
           <TabsTrigger
             value="done"
             disabled={stageToIndex[project.current_stage] < 4}
           >
-            {t('project.done')}
+            {tabLabels.done}
           </TabsTrigger>
         </TabsList>
 

@@ -10,6 +10,7 @@ export type UserRole = 'user' | 'mentor' | 'admin'
 export type Locale = 'ko' | 'en' | 'ja' | 'zh'
 export type Theme = 'light' | 'dark' | 'system'
 export type ProjectStatus = 'draft' | 'in_progress' | 'completed' | 'archived'
+export type ProjectType = 'pre_startup' | 'startup'
 export type ProjectStage = 'idea' | 'evaluation' | 'document' | 'deploy' | 'done'
 export type GateStatus = 'gate_1' | 'gate_2' | 'gate_3' | 'gate_4' | 'completed'
 export type DocumentType = 'business_plan' | 'pitch' | 'landing' | 'ppt' | 'leaflet' | 'infographic' | 'gtm_checklist'
@@ -58,6 +59,7 @@ export interface Database {
           id: string
           user_id: string
           name: string
+          project_type: ProjectType
           status: ProjectStatus
           current_stage: ProjectStage
           current_gate: GateStatus
@@ -76,6 +78,7 @@ export interface Database {
           id?: string
           user_id: string
           name: string
+          project_type?: ProjectType
           status?: ProjectStatus
           current_stage?: ProjectStage
           current_gate?: GateStatus
@@ -94,6 +97,7 @@ export interface Database {
           id?: string
           user_id?: string
           name?: string
+          project_type?: ProjectType
           status?: ProjectStatus
           current_stage?: ProjectStage
           current_gate?: GateStatus
@@ -535,6 +539,7 @@ export interface Database {
       user_role: UserRole
       locale: Locale
       theme: Theme
+      project_type: ProjectType
       project_status: ProjectStatus
       project_stage: ProjectStage
       gate_status: GateStatus

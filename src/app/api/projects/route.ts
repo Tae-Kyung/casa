@@ -3,11 +3,12 @@ import { z } from 'zod'
 import { requireAuth } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import { successResponse, errorResponse, handleApiError, paginatedResponse } from '@/lib/utils/api-response'
-import type { ProjectStatus } from '@/types/database'
+import type { ProjectStatus, ProjectType } from '@/types/database'
 
 // 프로젝트 생성 스키마
 const createProjectSchema = z.object({
   name: z.string().min(1).max(200),
+  project_type: z.enum(['pre_startup', 'startup']).default('pre_startup'),
 })
 
 // GET: 프로젝트 목록 조회
@@ -85,6 +86,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: user.id,
         name: validatedData.name,
+        project_type: validatedData.project_type,
         status: 'draft',
         current_stage: 'idea',
         current_gate: 'gate_1',
