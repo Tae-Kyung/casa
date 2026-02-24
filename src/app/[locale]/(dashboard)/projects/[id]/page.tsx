@@ -273,6 +273,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 projectId={id}
                 review={project.businessReview}
                 isConfirmed={project.businessReview?.is_review_confirmed || false}
+                canCancelConfirm={!!project.gate_1_passed_at && !project.gate_2_passed_at}
                 onUpdate={handleProjectUpdate}
               />
             </TabsContent>
@@ -283,6 +284,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 review={project.businessReview}
                 isConfirmed={project.businessReview?.is_diagnosis_confirmed || false}
                 canDiagnose={!!project.gate_1_passed_at}
+                canCancelConfirm={!!project.gate_2_passed_at && !project.gate_3_passed_at}
                 onUpdate={handleProjectUpdate}
               />
             </TabsContent>
@@ -293,6 +295,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 review={project.businessReview}
                 isConfirmed={project.businessReview?.is_strategy_confirmed || false}
                 canGenerate={!!project.gate_2_passed_at}
+                canCancelConfirm={!!project.gate_3_passed_at && !project.gate_4_passed_at}
                 onUpdate={handleProjectUpdate}
               />
             </TabsContent>

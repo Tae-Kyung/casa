@@ -13,6 +13,8 @@ import {
   Lock,
   Activity,
   Zap,
+  RotateCcw,
+  Undo2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,6 +30,7 @@ interface DiagnosisStageProps {
   review: BusinessReview | null
   isConfirmed: boolean
   canDiagnose: boolean
+  canCancelConfirm?: boolean
   onUpdate: () => void
 }
 
@@ -61,11 +64,13 @@ export function DiagnosisStage({
   review,
   isConfirmed,
   canDiagnose,
+  canCancelConfirm = false,
   onUpdate,
 }: DiagnosisStageProps) {
   const t = useTranslations()
 
   const [isConfirming, setIsConfirming] = useState(false)
+  const [isCancellingConfirm, setIsCancellingConfirm] = useState(false)
   const [isFetching, setIsFetching] = useState(false)
   const [localReview, setLocalReview] = useState<BusinessReview | null>(review)
 
@@ -132,6 +137,28 @@ export function DiagnosisStage({
       toast.error(t('diagnosis.confirmFailed'))
     } finally {
       setIsConfirming(false)
+    }
+  }, [projectId, onUpdate, t])
+
+  const handleCancelConfirm = useCallback(async () => {
+    setIsCancellingConfirm(true)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/diagnosis/cancel-confirm`, {
+        method: 'POST',
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast.success(t('diagnosis.cancelConfirmSuccess'))
+        onUpdate()
+      } else {
+        toast.error(result.error || t('diagnosis.cancelConfirmFailed'))
+      }
+    } catch {
+      toast.error(t('diagnosis.cancelConfirmFailed'))
+    } finally {
+      setIsCancellingConfirm(false)
     }
   }, [projectId, onUpdate, t])
 
@@ -240,18 +267,35 @@ export function DiagnosisStage({
     return (
       <div className="space-y-6">
         <Card className="border-green-500 bg-green-50 dark:bg-green-950">
-          <CardContent className="flex items-center gap-4 py-6">
-            <div className="rounded-full bg-green-500 p-2">
-              <Check className="h-6 w-6 text-white" />
+          <CardContent className="flex items-center justify-between py-6">
+            <div className="flex items-center gap-4">
+              <div className="rounded-full bg-green-500 p-2">
+                <Check className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-green-700 dark:text-green-300">
+                  {t('diagnosis.gate2Passed')}
+                </h3>
+                <p className="text-sm text-green-600 dark:text-green-400">
+                  {t('diagnosis.gate2PassedDesc')}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-green-700 dark:text-green-300">
-                {t('diagnosis.gate2Passed')}
-              </h3>
-              <p className="text-sm text-green-600 dark:text-green-400">
-                {t('diagnosis.gate2PassedDesc')}
-              </p>
-            </div>
+            {canCancelConfirm && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelConfirm}
+                disabled={isCancellingConfirm}
+              >
+                {isCancellingConfirm ? (
+                  <LoadingSpinner size="sm" className="mr-2" />
+                ) : (
+                  <Undo2 className="mr-2 h-4 w-4" />
+                )}
+                {t('diagnosis.cancelConfirm')}
+              </Button>
+            )}
           </CardContent>
         </Card>
 
@@ -288,6 +332,21 @@ export function DiagnosisStage({
             <Button size="lg" onClick={handleDiagnose}>
               <Stethoscope className="mr-2 h-4 w-4" />
               {t('diagnosis.startButton')}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Re-diagnose Button (when results exist but not confirmed) */}
+      {diagnosisResult && !isConfirmed && !sse.isLoading && (
+        <Card className="border-dashed">
+          <CardContent className="flex items-center justify-between py-4">
+            <div>
+              <p className="text-sm font-medium">{t('diagnosis.rediagnoseDesc')}</p>
+            </div>
+            <Button variant="outline" onClick={handleDiagnose}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              {t('diagnosis.rediagnoseButton')}
             </Button>
           </CardContent>
         </Card>

@@ -13,6 +13,7 @@ import {
   Target,
   Flag,
   Printer,
+  RotateCcw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -317,6 +318,21 @@ export function ReportStage({
             <Button size="lg" onClick={handleGenerate}>
               <FileText className="mr-2 h-4 w-4" />
               {t('report.generateButton')}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Re-generate Report Button (when report exists but not completed) */}
+      {hasReport && !isCompleted && !sse.isLoading && (
+        <Card className="border-dashed">
+          <CardContent className="flex items-center justify-between py-4">
+            <div>
+              <p className="text-sm font-medium">{t('report.regenerateDesc')}</p>
+            </div>
+            <Button variant="outline" onClick={handleGenerate}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              {t('report.regenerateButton')}
             </Button>
           </CardContent>
         </Card>

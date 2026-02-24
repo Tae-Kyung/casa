@@ -16,6 +16,8 @@ import {
   Lightbulb,
   ChevronDown,
   ChevronUp,
+  RotateCcw,
+  Undo2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -33,6 +35,7 @@ interface ReviewStageProps {
   projectId: string
   review: BusinessReview | null
   isConfirmed: boolean
+  canCancelConfirm?: boolean
   onUpdate: () => void
 }
 
@@ -51,6 +54,7 @@ export function ReviewStage({
   projectId,
   review,
   isConfirmed,
+  canCancelConfirm = false,
   onUpdate,
 }: ReviewStageProps) {
   const t = useTranslations()
@@ -68,6 +72,7 @@ export function ReviewStage({
   // UI state
   const [isSaving, setIsSaving] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
+  const [isCancellingConfirm, setIsCancellingConfirm] = useState(false)
   const [isFetching, setIsFetching] = useState(false)
   const [localReview, setLocalReview] = useState<BusinessReview | null>(review)
 
@@ -193,6 +198,28 @@ export function ReviewStage({
     }
   }, [projectId, onUpdate, t])
 
+  const handleCancelConfirm = useCallback(async () => {
+    setIsCancellingConfirm(true)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/review/cancel-confirm`, {
+        method: 'POST',
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast.success(t('review.cancelConfirmSuccess'))
+        onUpdate()
+      } else {
+        toast.error(result.error || t('review.cancelConfirmFailed'))
+      }
+    } catch {
+      toast.error(t('review.cancelConfirmFailed'))
+    } finally {
+      setIsCancellingConfirm(false)
+    }
+  }, [projectId, onUpdate, t])
+
   const parseAIReview = (data: Json | null): AIReviewResult | null => {
     if (!data) return null
     try {
@@ -234,18 +261,35 @@ export function ReviewStage({
     return (
       <div className="space-y-6">
         <Card className="border-green-500 bg-green-50 dark:bg-green-950">
-          <CardContent className="flex items-center gap-4 py-6">
-            <div className="rounded-full bg-green-500 p-2">
-              <Check className="h-6 w-6 text-white" />
+          <CardContent className="flex items-center justify-between py-6">
+            <div className="flex items-center gap-4">
+              <div className="rounded-full bg-green-500 p-2">
+                <Check className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-green-700 dark:text-green-300">
+                  {t('review.gate1Passed')}
+                </h3>
+                <p className="text-sm text-green-600 dark:text-green-400">
+                  {t('review.gate1PassedDesc')}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-green-700 dark:text-green-300">
-                {t('review.gate1Passed')}
-              </h3>
-              <p className="text-sm text-green-600 dark:text-green-400">
-                {t('review.gate1PassedDesc')}
-              </p>
-            </div>
+            {canCancelConfirm && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelConfirm}
+                disabled={isCancellingConfirm}
+              >
+                {isCancellingConfirm ? (
+                  <LoadingSpinner size="sm" className="mr-2" />
+                ) : (
+                  <Undo2 className="mr-2 h-4 w-4" />
+                )}
+                {t('review.cancelConfirm')}
+              </Button>
+            )}
           </CardContent>
         </Card>
 
@@ -283,7 +327,7 @@ export function ReviewStage({
               placeholder={t('review.businessPlanPlaceholder')}
               rows={12}
               className="min-h-[200px]"
-              disabled={!!aiReview}
+
             />
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>
@@ -319,7 +363,7 @@ export function ReviewStage({
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   placeholder={t('review.companyNamePlaceholder')}
-                  disabled={!!aiReview}
+    
                 />
               </div>
               <div className="space-y-2">
@@ -329,7 +373,7 @@ export function ReviewStage({
                   value={industry}
                   onChange={(e) => setIndustry(e.target.value)}
                   placeholder={t('review.industryPlaceholder')}
-                  disabled={!!aiReview}
+    
                 />
               </div>
               <div className="space-y-2">
@@ -340,7 +384,7 @@ export function ReviewStage({
                   value={foundedYear}
                   onChange={(e) => setFoundedYear(e.target.value)}
                   placeholder={t('review.foundedYearPlaceholder')}
-                  disabled={!!aiReview}
+    
                 />
               </div>
               <div className="space-y-2">
@@ -351,7 +395,7 @@ export function ReviewStage({
                   value={employeeCount}
                   onChange={(e) => setEmployeeCount(e.target.value)}
                   placeholder={t('review.employeeCountPlaceholder')}
-                  disabled={!!aiReview}
+    
                 />
               </div>
               <div className="space-y-2">
@@ -361,7 +405,7 @@ export function ReviewStage({
                   value={annualRevenue}
                   onChange={(e) => setAnnualRevenue(e.target.value)}
                   placeholder={t('review.annualRevenuePlaceholder')}
-                  disabled={!!aiReview}
+    
                 />
               </div>
               <div className="space-y-2">
@@ -371,33 +415,31 @@ export function ReviewStage({
                   value={fundingStage}
                   onChange={(e) => setFundingStage(e.target.value)}
                   placeholder={t('review.fundingStagePlaceholder')}
-                  disabled={!!aiReview}
+    
                 />
               </div>
             </div>
           )}
 
           {/* Save Button */}
-          {!aiReview && (
-            <div className="flex justify-end">
-              <Button
-                onClick={handleSave}
-                disabled={isSaving || businessPlanText.length < 50}
-              >
-                {isSaving ? (
-                  <>
-                    <LoadingSpinner size="sm" className="mr-2" />
-                    {t('common.processing')}
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    {t('review.save')}
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSave}
+              disabled={isSaving || businessPlanText.length < 50}
+            >
+              {isSaving ? (
+                <>
+                  <LoadingSpinner size="sm" className="mr-2" />
+                  {t('common.processing')}
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  {t('review.save')}
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -417,6 +459,21 @@ export function ReviewStage({
             <Button size="lg" onClick={handleAnalyze}>
               <Sparkles className="mr-2 h-4 w-4" />
               {t('review.analyzeButton')}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Re-analyze Button (when results exist but not confirmed) */}
+      {hasSaved && aiReview && !isConfirmed && !sse.isLoading && (
+        <Card className="border-dashed">
+          <CardContent className="flex items-center justify-between py-4">
+            <div>
+              <p className="text-sm font-medium">{t('review.reanalyzeDesc')}</p>
+            </div>
+            <Button variant="outline" onClick={handleAnalyze}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              {t('review.reanalyzeButton')}
             </Button>
           </CardContent>
         </Card>

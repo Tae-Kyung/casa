@@ -15,6 +15,8 @@ import {
   TrendingUp,
   Clock,
   Target,
+  RotateCcw,
+  Undo2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,6 +32,7 @@ interface StrategyStageProps {
   review: BusinessReview | null
   isConfirmed: boolean
   canGenerate: boolean
+  canCancelConfirm?: boolean
   onUpdate: () => void
 }
 
@@ -67,11 +70,13 @@ export function StrategyStage({
   review,
   isConfirmed,
   canGenerate,
+  canCancelConfirm = false,
   onUpdate,
 }: StrategyStageProps) {
   const t = useTranslations()
 
   const [isConfirming, setIsConfirming] = useState(false)
+  const [isCancellingConfirm, setIsCancellingConfirm] = useState(false)
   const [isFetching, setIsFetching] = useState(false)
   const [localReview, setLocalReview] = useState<BusinessReview | null>(review)
 
@@ -137,6 +142,28 @@ export function StrategyStage({
       toast.error(t('strategy.confirmFailed'))
     } finally {
       setIsConfirming(false)
+    }
+  }, [projectId, onUpdate, t])
+
+  const handleCancelConfirm = useCallback(async () => {
+    setIsCancellingConfirm(true)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/strategy/cancel-confirm`, {
+        method: 'POST',
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast.success(t('strategy.cancelConfirmSuccess'))
+        onUpdate()
+      } else {
+        toast.error(result.error || t('strategy.cancelConfirmFailed'))
+      }
+    } catch {
+      toast.error(t('strategy.cancelConfirmFailed'))
+    } finally {
+      setIsCancellingConfirm(false)
     }
   }, [projectId, onUpdate, t])
 
@@ -214,18 +241,35 @@ export function StrategyStage({
     return (
       <div className="space-y-6">
         <Card className="border-green-500 bg-green-50 dark:bg-green-950">
-          <CardContent className="flex items-center gap-4 py-6">
-            <div className="rounded-full bg-green-500 p-2">
-              <Check className="h-6 w-6 text-white" />
+          <CardContent className="flex items-center justify-between py-6">
+            <div className="flex items-center gap-4">
+              <div className="rounded-full bg-green-500 p-2">
+                <Check className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-green-700 dark:text-green-300">
+                  {t('strategy.gate3Passed')}
+                </h3>
+                <p className="text-sm text-green-600 dark:text-green-400">
+                  {t('strategy.gate3PassedDesc')}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-green-700 dark:text-green-300">
-                {t('strategy.gate3Passed')}
-              </h3>
-              <p className="text-sm text-green-600 dark:text-green-400">
-                {t('strategy.gate3PassedDesc')}
-              </p>
-            </div>
+            {canCancelConfirm && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelConfirm}
+                disabled={isCancellingConfirm}
+              >
+                {isCancellingConfirm ? (
+                  <LoadingSpinner size="sm" className="mr-2" />
+                ) : (
+                  <Undo2 className="mr-2 h-4 w-4" />
+                )}
+                {t('strategy.cancelConfirm')}
+              </Button>
+            )}
           </CardContent>
         </Card>
 
@@ -259,6 +303,21 @@ export function StrategyStage({
             <Button size="lg" onClick={handleGenerate}>
               <Compass className="mr-2 h-4 w-4" />
               {t('strategy.generateButton')}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Re-generate Button (when results exist but not confirmed) */}
+      {strategyResult && !isConfirmed && !sse.isLoading && (
+        <Card className="border-dashed">
+          <CardContent className="flex items-center justify-between py-4">
+            <div>
+              <p className="text-sm font-medium">{t('strategy.regenerateDesc')}</p>
+            </div>
+            <Button variant="outline" onClick={handleGenerate}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              {t('strategy.regenerateButton')}
             </Button>
           </CardContent>
         </Card>
