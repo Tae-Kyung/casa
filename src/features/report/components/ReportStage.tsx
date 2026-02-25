@@ -15,14 +15,22 @@ import {
   Flag,
   Printer,
   RotateCcw,
+  ChevronDown,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { useSSE } from '@/hooks/useSSE'
 import { toast } from 'sonner'
 import { MarkdownContent } from '@/components/common/markdown-content'
+import { exportToDocx } from '@/lib/utils/document-export'
 import type { BusinessReview } from '@/types/database'
 import type { Json } from '@/types/database'
 
@@ -120,13 +128,24 @@ export function ReportStage({
     }
   }, [projectId, onUpdate, t])
 
-  const handleDownload = useCallback(() => {
-    const reportContent = localReview?.report_content || ''
-    const executiveSummary = localReview?.executive_summary || ''
+  const getReportTitle = useCallback(() => {
     const companyName = localReview?.company_name || t('report.defaultCompanyName')
+    return `${companyName} - ${t('report.reportTitle')}`
+  }, [localReview?.company_name, t])
 
-    const reportHtml = marked.parse(reportContent, { async: false }) as string
-    const summaryHtml = executiveSummary ? marked.parse(executiveSummary, { async: false }) as string : ''
+  const getFullMarkdown = useCallback(() => {
+    const executiveSummary = localReview?.executive_summary || ''
+    const reportContent = localReview?.report_content || ''
+    if (executiveSummary) {
+      return `## ${t('report.executiveSummary')}\n\n${executiveSummary}\n\n---\n\n${reportContent}`
+    }
+    return reportContent
+  }, [localReview, t])
+
+  const handlePrint = useCallback(() => {
+    const title = getReportTitle()
+    const markdown = getFullMarkdown()
+    const bodyHtml = marked.parse(markdown, { async: false }) as string
 
     const htmlContent = `
 <!DOCTYPE html>
@@ -134,7 +153,7 @@ export function ReportStage({
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${companyName} - ${t('report.reportTitle')}</title>
+  <title>${title}</title>
   <style>
     body {
       font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -158,14 +177,6 @@ export function ReportStage({
     blockquote { border-left: 4px solid #2563eb; margin: 16px 0; padding: 12px 20px; background: #f0f4ff; border-radius: 0 8px 8px 0; }
     code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
     hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
-    .executive-summary {
-      background: #f0f4ff;
-      border-left: 4px solid #2563eb;
-      padding: 20px;
-      margin: 24px 0;
-      border-radius: 0 8px 8px 0;
-    }
-    .executive-summary h2 { margin-top: 0; border-bottom: none; }
     @media print {
       body { padding: 20px; }
       .no-print { display: none; }
@@ -173,11 +184,8 @@ export function ReportStage({
   </style>
 </head>
 <body>
-  <h1>${companyName} - ${t('report.reportTitle')}</h1>
-  ${summaryHtml ? `<div class="executive-summary"><h2>${t('report.executiveSummary')}</h2>${summaryHtml}</div>` : ''}
-  <div class="report-content">
-    ${reportHtml}
-  </div>
+  <h1>${title}</h1>
+  ${bodyHtml}
   <div class="no-print" style="margin-top: 40px; text-align: center;">
     <button onclick="window.print()" style="padding: 12px 24px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">
       ${t('report.print')}
@@ -191,7 +199,13 @@ export function ReportStage({
       newWindow.document.write(htmlContent)
       newWindow.document.close()
     }
-  }, [localReview, t])
+  }, [getReportTitle, getFullMarkdown, t])
+
+  const handleDownloadDoc = useCallback(() => {
+    const title = getReportTitle()
+    const markdown = getFullMarkdown()
+    exportToDocx(title, markdown)
+  }, [getReportTitle, getFullMarkdown])
 
   const parseJsonField = <T,>(data: Json | null): T | null => {
     if (!data) return null
@@ -404,10 +418,25 @@ export function ReportStage({
                   <FileText className="h-5 w-5 text-muted-foreground" />
                   <CardTitle className="text-base">{t('report.fullReport')}</CardTitle>
                 </div>
-                <Button variant="outline" size="sm" onClick={handleDownload}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  {t('report.download')}
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Download className="mr-2 h-4 w-4" />
+                      {t('report.download')}
+                      <ChevronDown className="ml-1 h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handlePrint}>
+                      <Printer className="mr-2 h-4 w-4" />
+                      {t('report.printOption')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDownloadDoc}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      {t('report.downloadDoc')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </CardHeader>
             <CardContent>
