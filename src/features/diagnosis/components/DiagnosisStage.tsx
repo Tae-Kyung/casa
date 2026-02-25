@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { useSSE } from '@/hooks/useSSE'
 import { toast } from 'sonner'
+import { MarkdownContent } from '@/components/common/markdown-content'
 import type { BusinessReview } from '@/types/database'
 import type { Json } from '@/types/database'
 
@@ -607,7 +608,7 @@ function DiagnosisResultDisplay({
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{result.competitive_position}</p>
+              <MarkdownContent content={result.competitive_position} className="text-sm text-muted-foreground" />
             </CardContent>
           </Card>
         )}
@@ -621,7 +622,7 @@ function DiagnosisResultDisplay({
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{result.growth_potential}</p>
+              <MarkdownContent content={result.growth_potential} className="text-sm text-muted-foreground" />
             </CardContent>
           </Card>
         )}

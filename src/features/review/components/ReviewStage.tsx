@@ -31,6 +31,7 @@ import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { useSSE } from '@/hooks/useSSE'
 import { toast } from 'sonner'
+import { MarkdownContent } from '@/components/common/markdown-content'
 import { extractTextFromPdf } from '@/lib/utils/pdf-extract'
 import type { BusinessReview } from '@/types/database'
 import type { Json } from '@/types/database'
@@ -793,7 +794,7 @@ function ReviewResultDisplay({
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{aiReview.financial_health}</p>
+              <MarkdownContent content={aiReview.financial_health} className="text-sm text-muted-foreground" />
             </CardContent>
           </Card>
         )}
@@ -807,7 +808,7 @@ function ReviewResultDisplay({
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{aiReview.market_position}</p>
+              <MarkdownContent content={aiReview.market_position} className="text-sm text-muted-foreground" />
             </CardContent>
           </Card>
         )}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { marked } from 'marked'
 import {
@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { useSSE } from '@/hooks/useSSE'
 import { toast } from 'sonner'
+import { MarkdownContent } from '@/components/common/markdown-content'
 import type { BusinessReview } from '@/types/database'
 import type { Json } from '@/types/database'
 
@@ -246,11 +247,6 @@ export function ReportStage({
     )
   }
 
-  const reportHtml = useMemo(() => {
-    if (!localReview?.report_content) return ''
-    return marked.parse(localReview.report_content, { async: false }) as string
-  }, [localReview?.report_content])
-
   const reviewScore = localReview?.review_score
   const diagnosisResult = parseJsonField<DiagnosisResult>(localReview?.diagnosis_result ?? null)
   const strategyResult = parseJsonField<StrategyResult>(localReview?.strategy_result ?? null)
@@ -365,10 +361,7 @@ export function ReportStage({
               <span className="font-medium">{t('report.generating')}</span>
             </div>
             {sse.data && (
-              <div
-                className="markdown-preview rounded-lg bg-muted/50 p-4 max-h-[400px] overflow-y-auto"
-                dangerouslySetInnerHTML={{ __html: marked.parse(sse.data, { async: false }) as string }}
-              />
+              <MarkdownContent content={sse.data} className="rounded-lg bg-muted/50 p-4 max-h-[400px] overflow-y-auto" />
             )}
           </CardContent>
         </Card>
@@ -419,10 +412,7 @@ export function ReportStage({
               </div>
             </CardHeader>
             <CardContent>
-              <div
-                className="markdown-preview rounded-lg bg-muted/30 p-6 max-h-[600px] overflow-y-auto"
-                dangerouslySetInnerHTML={{ __html: reportHtml }}
-              />
+              <MarkdownContent content={localReview?.report_content || ''} className="rounded-lg bg-muted/30 p-6 max-h-[600px] overflow-y-auto" />
             </CardContent>
           </Card>
         </div>

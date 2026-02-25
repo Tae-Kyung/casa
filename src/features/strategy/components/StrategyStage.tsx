@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { useSSE } from '@/hooks/useSSE'
 import { toast } from 'sonner'
+import { MarkdownContent } from '@/components/common/markdown-content'
 import type { BusinessReview } from '@/types/database'
 import type { Json } from '@/types/database'
 
@@ -525,7 +526,7 @@ function StrategyResultDisplay({
           </CardHeader>
           <CardContent>
             {typeof result.resource_requirements === 'string' ? (
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{result.resource_requirements}</p>
+              <MarkdownContent content={result.resource_requirements} className="text-sm text-muted-foreground" />
             ) : (
               <div className="space-y-3">
                 {result.resource_requirements.team && (
@@ -596,7 +597,7 @@ function StrategyResultDisplay({
           </CardHeader>
           <CardContent>
             {typeof result.financial_projections === 'string' ? (
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{result.financial_projections}</p>
+              <MarkdownContent content={result.financial_projections} className="text-sm text-muted-foreground" />
             ) : (
               <div className="space-y-3">
                 {result.financial_projections.revenue_target && (
