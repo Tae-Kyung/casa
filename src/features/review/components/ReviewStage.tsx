@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Save,
@@ -18,6 +18,9 @@ import {
   ChevronUp,
   RotateCcw,
   Undo2,
+  FileUp,
+  FileText,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -28,6 +31,7 @@ import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { useSSE } from '@/hooks/useSSE'
 import { toast } from 'sonner'
+import { extractTextFromPdf } from '@/lib/utils/pdf-extract'
 import type { BusinessReview } from '@/types/database'
 import type { Json } from '@/types/database'
 
@@ -68,6 +72,11 @@ export function ReviewStage({
   const [annualRevenue, setAnnualRevenue] = useState('')
   const [fundingStage, setFundingStage] = useState('')
   const [showCompanyInfo, setShowCompanyInfo] = useState(false)
+
+  // PDF upload state
+  const [isExtractingPdf, setIsExtractingPdf] = useState(false)
+  const [pdfFileName, setPdfFileName] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // UI state
   const [isSaving, setIsSaving] = useState(false)
@@ -132,6 +141,51 @@ export function ReviewStage({
       setIsFetching(false)
     }
   }
+
+  const handlePdfUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsExtractingPdf(true)
+    try {
+      const result = await extractTextFromPdf(file)
+
+      if (result.text.trim().length < 10) {
+        toast.error(t('review.pdfExtractEmpty'))
+        return
+      }
+
+      setBusinessPlanText(result.text)
+      setPdfFileName(file.name)
+      toast.success(t('review.pdfExtractSuccess', { pages: result.pageCount }))
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === 'PDF_TOO_LARGE') {
+          toast.error(t('review.pdfTooLarge'))
+        } else if (error.message === 'NOT_PDF') {
+          toast.error(t('review.pdfInvalidType'))
+        } else {
+          toast.error(t('review.pdfExtractFailed'))
+        }
+      } else {
+        toast.error(t('review.pdfExtractFailed'))
+      }
+    } finally {
+      setIsExtractingPdf(false)
+      // Reset file input so the same file can be re-selected
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }, [t])
+
+  const handleRemovePdf = useCallback(() => {
+    setPdfFileName(null)
+    setBusinessPlanText('')
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }, [])
 
   const handleSave = useCallback(async () => {
     if (businessPlanText.length < 50) {
@@ -317,6 +371,53 @@ export function ReviewStage({
           <CardTitle>{t('review.formTitle')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* PDF Upload */}
+          <div className="space-y-2">
+            <Label>{t('review.pdfUploadLabel')}</Label>
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                onChange={handlePdfUpload}
+                className="hidden"
+                disabled={isExtractingPdf}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isExtractingPdf}
+              >
+                {isExtractingPdf ? (
+                  <>
+                    <LoadingSpinner size="sm" className="mr-2" />
+                    {t('review.pdfExtracting')}
+                  </>
+                ) : (
+                  <>
+                    <FileUp className="mr-2 h-4 w-4" />
+                    {t('review.pdfUploadButton')}
+                  </>
+                )}
+              </Button>
+              {pdfFileName && (
+                <div className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">{pdfFileName}</span>
+                  <button
+                    type="button"
+                    onClick={handleRemovePdf}
+                    className="ml-1 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">{t('review.pdfUploadHint')}</p>
+          </div>
+
           {/* Business Plan Text */}
           <div className="space-y-2">
             <Label htmlFor="business_plan_text">{t('review.businessPlanLabel')}</Label>
