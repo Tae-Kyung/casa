@@ -7,15 +7,14 @@ export function LandingFooter() {
   const t = useTranslations('landing.footer')
 
   return (
-    <footer className="bg-slate-900 text-slate-300 py-12 md:py-16">
+    <footer className="bg-slate-900 dark:bg-slate-950 text-slate-300 py-12 md:py-16">
       <div className="container mx-auto px-4">
         <div className="grid md:grid-cols-3 gap-8 md:gap-12 mb-8">
           {/* Brand */}
           <div className="space-y-3">
             <div className="text-xl font-bold text-white">{t('brand')}</div>
             <p className="text-sm text-slate-400">{t('brandDesc')}</p>
-            <p className="text-sm text-slate-400">{t('org')}</p>
-            <p className="text-sm text-slate-400">{t('address')}</p>
+            <p className="text-sm text-slate-400 italic">{t('brandMotto')}</p>
           </div>
 
           {/* Quick links */}
@@ -23,22 +22,42 @@ export function LandingFooter() {
             <h3 className="text-sm font-semibold text-white mb-4">{t('linksTitle')}</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/signup" className="text-sm text-slate-400 hover:text-primary transition-colors">
+                <Link
+                  href="/signup"
+                  className="text-sm text-slate-400 hover:text-white transition-colors"
+                >
                   {t('linkStart')}
                 </Link>
               </li>
               <li>
-                <Link href="/login" className="text-sm text-slate-400 hover:text-primary transition-colors">
+                <Link
+                  href="/login"
+                  className="text-sm text-slate-400 hover:text-white transition-colors"
+                >
                   {t('linkLogin')}
                 </Link>
               </li>
               <li>
-                <a href="#features" className="text-sm text-slate-400 hover:text-primary transition-colors">
+                <a
+                  href="#tracks"
+                  className="text-sm text-slate-400 hover:text-white transition-colors"
+                >
+                  {t('linkTracks')}
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#features"
+                  className="text-sm text-slate-400 hover:text-white transition-colors"
+                >
                   {t('linkFeatures')}
                 </a>
               </li>
               <li>
-                <a href="#faq" className="text-sm text-slate-400 hover:text-primary transition-colors">
+                <a
+                  href="#faq"
+                  className="text-sm text-slate-400 hover:text-white transition-colors"
+                >
                   {t('linkFaq')}
                 </a>
               </li>

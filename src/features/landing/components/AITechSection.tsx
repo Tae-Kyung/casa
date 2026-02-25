@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { useTranslations } from 'next-intl'
 import { Check, X } from 'lucide-react'
 import { useScrollAnimation } from '../hooks/useScrollAnimation'
@@ -9,26 +8,20 @@ export function AITechSection() {
   const t = useTranslations('landing.aiTech')
   const { ref, isVisible } = useScrollAnimation()
 
-  const aiModels = [
-    { name: t('ai1Name'), role: t('ai1Role') },
-    { name: t('ai2Name'), role: t('ai2Role') },
-    { name: t('ai3Name'), role: t('ai3Role') },
-  ]
-
   const columns = [
     {
       title: t('col1Title'),
-      items: [t('col1Item1'), t('col1Item2'), t('col1Item3'), t('col1Item4')],
+      items: [t('col1Item1'), t('col1Item2'), t('col1Item3'), t('col1Item4'), t('col1Item5')],
       highlighted: false,
     },
     {
       title: t('col2Title'),
-      items: [t('col2Item1'), t('col2Item2'), t('col2Item3'), t('col2Item4')],
+      items: [t('col2Item1'), t('col2Item2'), t('col2Item3'), t('col2Item4'), t('col2Item5')],
       highlighted: false,
     },
     {
       title: t('col3Title'),
-      items: [t('col3Item1'), t('col3Item2'), t('col3Item3'), t('col3Item4')],
+      items: [t('col3Item1'), t('col3Item2'), t('col3Item3'), t('col3Item4'), t('col3Item5')],
       highlighted: true,
     },
   ]
@@ -42,32 +35,71 @@ export function AITechSection() {
           }`}
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4">{t('title')}</h2>
-          <p className="text-lg text-slate-300">{t('subtitle')}</p>
+          <p className="text-lg text-slate-300 max-w-2xl mx-auto">{t('subtitle')}</p>
         </div>
 
-        {/* Orchestrator illustration */}
+        {/* Orchestrator diagram */}
         <div
-          className={`max-w-3xl mx-auto mb-16 transition-all duration-700 ${
+          className={`max-w-2xl mx-auto mb-16 transition-all duration-700 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
           style={{ transitionDelay: isVisible ? '200ms' : '0ms' }}
         >
-          <div className="rounded-2xl overflow-hidden border border-slate-700">
-            <Image
-              src="/images/landing/ai-orchestration.png"
-              alt={t('orchestrator')}
-              width={800}
-              height={450}
-              className="w-full h-auto"
-            />
-          </div>
-          <div className="flex justify-center gap-8 mt-6">
-            {aiModels.map((m) => (
-              <div key={m.name} className="text-center">
-                <div className="text-sm font-bold">{m.name}</div>
-                <div className="text-xs text-slate-400">{m.role}</div>
+          <div className="relative">
+            {/* User input */}
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-600 bg-slate-800 text-sm font-medium">
+                <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                User Input
               </div>
-            ))}
+            </div>
+
+            {/* Connection line */}
+            <div className="flex justify-center mb-4">
+              <div className="w-px h-8 bg-gradient-to-b from-primary/60 to-primary/20" />
+            </div>
+
+            {/* AI models */}
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {[
+                { name: 'Claude', role: 'Logical Analysis', color: 'border-orange-400/50 bg-orange-400/5' },
+                { name: 'GPT-4o', role: 'Creative Expansion', color: 'border-green-400/50 bg-green-400/5' },
+                { name: 'Gemini', role: 'Market Data', color: 'border-blue-400/50 bg-blue-400/5' },
+              ].map((model) => (
+                <div
+                  key={model.name}
+                  className={`text-center p-3 rounded-xl border ${model.color}`}
+                >
+                  <div className="text-sm font-bold">{model.name}</div>
+                  <div className="text-xs text-slate-400">{model.role}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Connection line */}
+            <div className="flex justify-center mb-4">
+              <div className="w-px h-8 bg-gradient-to-b from-primary/20 to-primary/60" />
+            </div>
+
+            {/* Orchestrator */}
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-primary bg-primary/10 text-sm font-bold shadow-[0_0_20px_rgba(59,130,246,0.15)]">
+                <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                AI Orchestrator
+              </div>
+            </div>
+
+            {/* Connection line */}
+            <div className="flex justify-center mb-4">
+              <div className="w-px h-8 bg-gradient-to-b from-primary/60 to-emerald-500/60" />
+            </div>
+
+            {/* Result */}
+            <div className="text-center">
+              <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-emerald-500/50 bg-emerald-500/10 text-sm font-medium text-emerald-400">
+                Optimized Results
+              </div>
+            </div>
           </div>
         </div>
 
@@ -79,12 +111,19 @@ export function AITechSection() {
               className={`rounded-xl p-6 transition-all duration-700 ${
                 col.highlighted
                   ? 'border-2 border-primary bg-slate-800 ring-1 ring-primary/20'
-                  : 'border border-slate-700 bg-slate-800/50'
+                  : 'border border-slate-700 bg-slate-800/50 opacity-80'
               } ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-              style={{ transitionDelay: isVisible ? `${400 + ci * 150}ms` : '0ms' }}
+              style={{
+                transitionDelay: isVisible ? `${400 + ci * 150}ms` : '0ms',
+                opacity: isVisible ? (col.highlighted ? 1 : 0.8) : 0,
+              }}
             >
-              <h3 className={`text-lg font-bold mb-4 ${col.highlighted ? 'text-primary' : 'text-slate-300'}`}>
-                {col.highlighted && '⭐ '}{col.title}
+              <h3
+                className={`text-lg font-bold mb-4 ${
+                  col.highlighted ? 'text-primary' : 'text-slate-300'
+                }`}
+              >
+                {col.highlighted && '* '}{col.title}
               </h3>
               <ul className="space-y-3">
                 {col.items.map((item) => (

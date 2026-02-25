@@ -2,12 +2,12 @@
 
 import { Link } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
-import { UserPlus, PenTool, Cpu, Rocket, ArrowRight } from 'lucide-react'
+import { UserPlus, PenTool, Sparkles, ArrowRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useScrollAnimation } from '../hooks/useScrollAnimation'
 
-const stepIcons = [UserPlus, PenTool, Cpu, Rocket]
+const stepIcons = [UserPlus, PenTool, Sparkles]
 
 export function ProcessSection() {
   const t = useTranslations('landing.process')
@@ -17,7 +17,6 @@ export function ProcessSection() {
     { title: t('step1Title'), time: t('step1Time'), desc: t('step1Desc') },
     { title: t('step2Title'), time: t('step2Time'), desc: t('step2Desc') },
     { title: t('step3Title'), time: t('step3Time'), desc: t('step3Desc') },
-    { title: t('step4Title'), time: t('step4Time'), desc: t('step4Desc') },
   ]
 
   return (
@@ -32,9 +31,9 @@ export function ProcessSection() {
           <p className="text-lg text-muted-foreground">{t('subtitle')}</p>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-6 md:gap-8 relative">
+        <div className="grid md:grid-cols-3 gap-6 md:gap-8 relative max-w-4xl mx-auto">
           {/* Connection line (desktop) */}
-          <div className="hidden md:block absolute top-10 left-[12.5%] right-[12.5%] h-px border-t-2 border-dashed border-primary/30" />
+          <div className="hidden md:block absolute top-10 left-[16.7%] right-[16.7%] h-px border-t-2 border-dashed border-primary/30" />
 
           {steps.map((step, i) => {
             const Icon = stepIcons[i]
@@ -70,7 +69,7 @@ export function ProcessSection() {
           className={`text-center mt-12 space-y-3 transition-all duration-700 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
-          style={{ transitionDelay: isVisible ? '600ms' : '0ms' }}
+          style={{ transitionDelay: isVisible ? '450ms' : '0ms' }}
         >
           <Button size="lg" className="h-12 px-8" asChild>
             <Link href="/signup">

@@ -36,7 +36,8 @@ function StatItem({
       style={{ transitionDelay: isVisible ? `${delay}ms` : '0ms' }}
     >
       <div className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-primary mb-2">
-        {isStatic ? value : animated}{suffix}
+        {isStatic ? value : animated}
+        {suffix}
       </div>
       <div className="text-base md:text-lg font-medium mb-1">{label}</div>
       <div className="text-sm text-muted-foreground">{sub}</div>
@@ -51,11 +52,12 @@ export function StatsSection() {
   const stats = [
     { value: t('stat1Value'), suffix: t('stat1Suffix'), label: t('stat1Label'), sub: t('stat1Sub') },
     { value: t('stat2Value'), suffix: t('stat2Suffix'), label: t('stat2Label'), sub: t('stat2Sub') },
-    { value: t('stat3Value'), suffix: t('stat3Suffix'), label: t('stat3Label'), sub: t('stat3Sub') },
-    { value: t('stat4Value'), suffix: '', label: t('stat4Label'), sub: t('stat4Sub'), isStatic: true },
+    { value: t('stat3Value'), suffix: t('stat3Suffix'), label: t('stat3Label'), sub: t('stat3Sub'), isStatic: true },
+    { value: t('stat4Value'), suffix: t('stat4Suffix'), label: t('stat4Label'), sub: t('stat4Sub'), isStatic: true },
+    { value: t('stat5Value'), suffix: t('stat5Suffix'), label: t('stat5Label'), sub: t('stat5Sub'), isStatic: true },
   ]
 
-  const bottomItems = [t('bottom1'), t('bottom2'), t('bottom3'), t('bottom4')]
+  const bottomItems = [t('bottom1'), t('bottom2'), t('bottom3')]
 
   return (
     <section className="py-20 md:py-24 bg-primary/5">
@@ -68,7 +70,7 @@ export function StatsSection() {
           {t('title')}
         </h2>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 mb-12">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-8 md:gap-10 mb-12">
           {stats.map((s, i) => (
             <StatItem
               key={s.label}
@@ -87,7 +89,7 @@ export function StatsSection() {
           className={`flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm text-muted-foreground transition-all duration-700 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
-          style={{ transitionDelay: isVisible ? '600ms' : '0ms' }}
+          style={{ transitionDelay: isVisible ? '750ms' : '0ms' }}
         >
           {bottomItems.map((item) => (
             <span key={item} className="flex items-center gap-1.5">

@@ -8,7 +8,7 @@ function CaseCard({
   caseKey,
   t,
 }: {
-  caseKey: 'case1' | 'case2' | 'case3'
+  caseKey: 'case1' | 'case2'
   t: ReturnType<typeof useTranslations<'landing.caseStudy'>>
 }) {
   const befores = [
@@ -37,10 +37,15 @@ function CaseCard({
       <div className="grid md:grid-cols-3 gap-4 md:gap-6">
         {/* Before */}
         <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 p-5">
-          <h4 className="text-sm font-bold text-red-600 dark:text-red-400 mb-3">{t('beforeLabel')}</h4>
+          <h4 className="text-sm font-bold text-red-600 dark:text-red-400 mb-3">
+            {t('beforeLabel')}
+          </h4>
           <ul className="space-y-2">
             {befores.map((item, i) => (
-              <li key={i} className="text-sm text-red-700 dark:text-red-300/80 flex items-start gap-2">
+              <li
+                key={i}
+                className="text-sm text-red-700 dark:text-red-300/80 flex items-start gap-2"
+              >
                 <span className="text-red-400 shrink-0 mt-1">-</span>
                 {item}
               </li>
@@ -54,7 +59,7 @@ function CaseCard({
           <ul className="space-y-2">
             {casas.map((item, i) => (
               <li key={i} className="text-sm flex items-start gap-2">
-                <span className="text-primary shrink-0 mt-1">→</span>
+                <span className="text-primary shrink-0 mt-1">&rarr;</span>
                 {item}
               </li>
             ))}
@@ -63,10 +68,15 @@ function CaseCard({
 
         {/* After */}
         <div className="rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/30 p-5">
-          <h4 className="text-sm font-bold text-green-600 dark:text-green-400 mb-3">{t('afterLabel')}</h4>
+          <h4 className="text-sm font-bold text-green-600 dark:text-green-400 mb-3">
+            {t('afterLabel')}
+          </h4>
           <ul className="space-y-2">
             {afters.map((item, i) => (
-              <li key={i} className="text-sm text-green-700 dark:text-green-300/80 flex items-start gap-2">
+              <li
+                key={i}
+                className="text-sm text-green-700 dark:text-green-300/80 flex items-start gap-2"
+              >
                 <span className="text-green-400 shrink-0 mt-1">+</span>
                 {item}
               </li>
@@ -95,25 +105,31 @@ export function CaseStudySection() {
         </div>
 
         <div
-          className={`transition-all duration-700 ${
+          className={`max-w-4xl mx-auto transition-all duration-700 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
           style={{ transitionDelay: isVisible ? '200ms' : '0ms' }}
         >
           <Tabs defaultValue="case1" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-8 h-auto">
-              <TabsTrigger value="case1" className="text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2">{t('case1Tab')}</TabsTrigger>
-              <TabsTrigger value="case2" className="text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2">{t('case2Tab')}</TabsTrigger>
-              <TabsTrigger value="case3" className="text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2">{t('case3Tab')}</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-8 h-auto">
+              <TabsTrigger
+                value="case1"
+                className="text-xs sm:text-sm px-3 py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+              >
+                {t('tab1')}
+              </TabsTrigger>
+              <TabsTrigger
+                value="case2"
+                className="text-xs sm:text-sm px-3 py-2 data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-600"
+              >
+                {t('tab2')}
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="case1">
               <CaseCard caseKey="case1" t={t} />
             </TabsContent>
             <TabsContent value="case2">
               <CaseCard caseKey="case2" t={t} />
-            </TabsContent>
-            <TabsContent value="case3">
-              <CaseCard caseKey="case3" t={t} />
             </TabsContent>
           </Tabs>
         </div>

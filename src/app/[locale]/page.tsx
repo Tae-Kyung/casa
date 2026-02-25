@@ -4,14 +4,15 @@ import { createClient } from '@/lib/supabase/server'
 import { LandingNav } from '@/features/landing/components/LandingNav'
 import { HeroSection } from '@/features/landing/components/HeroSection'
 import { ProblemSection } from '@/features/landing/components/ProblemSection'
-import { SolutionOverview } from '@/features/landing/components/SolutionOverview'
-import { FeatureSection } from '@/features/landing/components/FeatureSection'
+import { DualTrackSection } from '@/features/landing/components/DualTrackSection'
+import { PreStartupTrackSection } from '@/features/landing/components/PreStartupTrackSection'
+import { StartupTrackSection } from '@/features/landing/components/StartupTrackSection'
+import { FeatureHighlightSection } from '@/features/landing/components/FeatureHighlightSection'
 import { AITechSection } from '@/features/landing/components/AITechSection'
 import { StatsSection } from '@/features/landing/components/StatsSection'
 import { CaseStudySection } from '@/features/landing/components/CaseStudySection'
 import { TestimonialSection } from '@/features/landing/components/TestimonialSection'
 import { ProcessSection } from '@/features/landing/components/ProcessSection'
-import { PartnerSection } from '@/features/landing/components/PartnerSection'
 import { FAQSection } from '@/features/landing/components/FAQSection'
 import { FinalCTASection } from '@/features/landing/components/FinalCTASection'
 import { LandingFooter } from '@/features/landing/components/LandingFooter'
@@ -36,14 +37,15 @@ export default async function LandingPage({ params }: Props) {
       <LandingNav />
       <HeroSection />
       <ProblemSection />
-      <SolutionOverview />
-      <FeatureSection />
+      <DualTrackSection />
+      <PreStartupTrackSection />
+      <StartupTrackSection />
+      <FeatureHighlightSection />
       <AITechSection />
       <StatsSection />
       <CaseStudySection />
       <TestimonialSection />
       <ProcessSection />
-      <PartnerSection />
       <FAQSection />
       <FinalCTASection />
       <LandingFooter />
