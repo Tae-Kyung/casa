@@ -126,6 +126,7 @@ export function ReportStage({
     const companyName = localReview?.company_name || t('report.defaultCompanyName')
 
     const reportHtml = marked.parse(reportContent, { async: false }) as string
+    const summaryHtml = executiveSummary ? marked.parse(executiveSummary, { async: false }) as string : ''
 
     const htmlContent = `
 <!DOCTYPE html>
@@ -173,7 +174,7 @@ export function ReportStage({
 </head>
 <body>
   <h1>${companyName} - ${t('report.reportTitle')}</h1>
-  ${executiveSummary ? `<div class="executive-summary"><h2>${t('report.executiveSummary')}</h2><p>${executiveSummary}</p></div>` : ''}
+  ${summaryHtml ? `<div class="executive-summary"><h2>${t('report.executiveSummary')}</h2>${summaryHtml}</div>` : ''}
   <div class="report-content">
     ${reportHtml}
   </div>
@@ -390,9 +391,7 @@ export function ReportStage({
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {localReview.executive_summary}
-                </p>
+                <MarkdownContent content={localReview.executive_summary} className="text-sm text-muted-foreground leading-relaxed" />
               </CardContent>
             </Card>
           )}
