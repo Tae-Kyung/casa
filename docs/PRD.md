@@ -1,6 +1,6 @@
 # PRD: CASA (CBNU AI-Agentic Startup Accelerator) MVP
 
-> **문서 버전:** 1.5
+> **문서 버전:** 1.6
 > **작성일:** 2026-02-22
 > **대상 스택:** Next.js 15 (App Router) + Supabase + Tailwind CSS + Vercel
 
@@ -26,11 +26,20 @@
 | 역할 | 설명 | 핵심 니즈 |
 |------|------|-----------|
 | **예비창업자** | 아이디어는 있으나 구체화 역량 부족 | 체계적인 아이디어 검증, 문서화 |
-| **입주기업** | 창업보육센터 입주 기업 | IR 자료, 사업계획서 고도화 |
+| **창업자(입주기업)** | 이미 사업을 운영 중인 창업자/입주기업 | 기존 사업계획서 AI 검토, 진단, 전략 수립, 보고서 |
 | **창업동아리** | 대학 내 창업 동아리 팀 | 빠른 프로토타이핑, 피드백 |
 | **멘토(Admin)** | 창업지원단 담당자 | 다수 팀 효율적 관리, 진행 모니터링 |
 
-### 1.5 지원 언어
+### 1.5 프로젝트 트랙 (이중 트랙)
+
+플랫폼은 사용자 유형에 따라 **두 가지 프로젝트 트랙**을 제공합니다.
+
+| 트랙 | `project_type` | 대상 | 워크플로우 | 설명 |
+|------|----------------|------|-----------|------|
+| **예비창업자** | `pre_startup` | 아이디어만 있는 예비창업자 | 아이디어 입력 → 사업성 평가 → 문서 생성 → 배포 (Gate 1→2→3→4) | 기존 F1~F5 플로우 |
+| **창업자** | `startup` | 이미 사업을 운영 중인 창업자 | 검토 → 진단 → 전략 → 보고서 (단계별 확정) | 사업계획서 기반 AI 분석 (F10) |
+
+### 1.6 지원 언어
 
 | 언어 | 코드 | 우선순위 | 비고 |
 |------|------|----------|------|
@@ -507,7 +516,7 @@ POST /api/projects/{id}/evaluation/dispute  # 이의 제기
    - 섹션별 수정 요청 가능
    - 전체 재생성 요청 가능
 4. 수정 요청 시 AI가 해당 섹션만 재생성
-5. 모든 문서 확정 후 다운로드(MD/PDF/Word)/배포 준비 단계 진행
+5. 모든 문서 확정 후 내보내기(인쇄하기/Word 문서 다운로드)/배포 준비 단계 진행
 
 **API 엔드포인트:**
 ```
@@ -685,6 +694,75 @@ POST  /api/projects/{id}/mentor-request    # 멘토링 요청
 
 **데이터 모델 변경:** `bi_users`에 `expertise_tags`, `industry_tags`, `bio` 컬럼 추가
 
+#### F10: 창업자 트랙 (사업계획서 기반 AI 분석)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 이미 사업을 운영 중인 창업자를 위한 사업계획서 기반 AI 분석 파이프라인 |
+| **대상** | `project_type = 'startup'`인 프로젝트 |
+| **입력** | 사업계획서 텍스트 (직접 입력 또는 PDF 업로드로 텍스트 추출) |
+| **출력** | AI 검토 → 비즈니스 진단 → 전략 제안 → 종합 보고서 |
+| **AI 모델** | Claude 3.5 Sonnet (SSE 스트리밍) |
+
+**4단계 워크플로우:**
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ 1. 검토     │     │ 2. 진단     │     │ 3. 전략     │     │ 4. 보고서   │
+│   (Review)  │────▶│ (Diagnosis) │────▶│ (Strategy)  │────▶│  (Report)   │
+│             │     │             │     │             │     │             │
+│• 사업계획서 │     │• SWOT 분석  │     │• 성장 전략  │     │• 종합 보고서│
+│  입력/PDF   │     │• 재무 건전성│     │• 자원 배분  │     │• 경영 요약  │
+│• AI 검토    │     │• 시장 포지션│     │• 재무 전망  │     │• 인쇄/Word  │
+│• 사용자 확정│     │• 성장 잠재력│     │• 실행 계획  │     │  내보내기   │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+```
+
+**1단계: 검토 (Review)**
+- 사업계획서 텍스트 직접 입력 (최소 50자)
+- **PDF 업로드 지원**: 클라이언트 측 `pdfjs-dist`로 텍스트 추출 (최대 10MB)
+- 기업 정보 입력 (회사명, 업종, 설립연도, 직원 수, 매출, 투자 단계)
+- AI가 사업계획서를 분석하여 검토 결과 생성 (SSE 스트리밍)
+- 사용자가 검토 결과를 확인하고 확정 → 다음 단계 진행
+
+**2단계: 진단 (Diagnosis)**
+- 검토 결과 기반으로 AI가 비즈니스 진단 수행
+- SWOT 분석, 재무 건전성, 시장 포지셔닝, 성장 잠재력 분석
+- 사용자가 진단 결과를 확인하고 확정 → 다음 단계 진행
+
+**3단계: 전략 (Strategy)**
+- 검토 + 진단 결과 기반으로 AI가 전략 제안
+- 성장 전략, 자원 배분, 재무 전망, 실행 계획, 리스크 관리
+- 사용자가 전략을 확인하고 확정 → 다음 단계 진행
+
+**4단계: 보고서 (Report)**
+- 검토 + 진단 + 전략 결과를 종합한 최종 보고서 생성
+- 경영 요약(executive summary) 포함
+- **내보내기 옵션**: 인쇄하기 (새 창 → 브라우저 인쇄) / Word 문서 (.doc) 다운로드
+- AI 생성 콘텐츠는 **마크다운 렌더링**으로 서식이 적용된 형태로 표시
+
+**공통 기능:**
+- 모든 단계에서 재실행 가능 (AI 재분석)
+- 확정 취소 가능 (이전 단계로 되돌리기)
+- AI 생성 콘텐츠는 `marked` 라이브러리로 마크다운 렌더링 (`MarkdownContent` 공통 컴포넌트)
+
+**API 엔드포인트:**
+```
+POST   /api/projects/{id}/review                  # 사업계획서 저장/수정
+POST   /api/projects/{id}/review/analyze           # AI 검토 실행 (SSE)
+POST   /api/projects/{id}/review/confirm           # 검토 확정
+POST   /api/projects/{id}/review/cancel-confirm    # 검토 확정 취소
+POST   /api/projects/{id}/diagnosis/analyze        # AI 진단 실행 (SSE)
+POST   /api/projects/{id}/diagnosis/confirm        # 진단 확정
+POST   /api/projects/{id}/diagnosis/cancel-confirm # 진단 확정 취소
+POST   /api/projects/{id}/strategy/generate        # AI 전략 생성 (SSE)
+POST   /api/projects/{id}/strategy/confirm         # 전략 확정
+POST   /api/projects/{id}/strategy/cancel-confirm  # 전략 확정 취소
+POST   /api/projects/{id}/report/generate          # 보고서 생성 (SSE)
+```
+
+**데이터 모델:** `bi_business_reviews` 테이블 (아래 섹션 3.2 참조)
+
 ---
 
 ## 3. 데이터 모델
@@ -767,6 +845,7 @@ CREATE TABLE bi_projects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES bi_users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  project_type TEXT DEFAULT 'pre_startup' CHECK (project_type IN ('pre_startup', 'startup')),  -- 트랙 구분 (F10)
   status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'in_progress', 'completed', 'archived')),
   current_stage TEXT DEFAULT 'idea' CHECK (current_stage IN ('idea', 'evaluation', 'document', 'deploy', 'done')),
   -- 승인 게이트 추적
@@ -889,6 +968,46 @@ CREATE TABLE bi_approvals (
   rejection_reason TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- =====================================================
+-- 창업자 트랙 테이블 (F10)
+-- =====================================================
+
+-- 비즈니스 리뷰 테이블 (창업자 트랙 전용)
+CREATE TABLE bi_business_reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES bi_projects(id) ON DELETE CASCADE,
+  -- 1단계: 사업계획서 입력 + AI 검토
+  business_plan_text TEXT,            -- 사업계획서 텍스트 (직접 입력 또는 PDF 추출)
+  company_name TEXT,
+  industry TEXT,
+  founded_year INTEGER,
+  employee_count INTEGER,
+  annual_revenue TEXT,
+  funding_stage TEXT,
+  ai_review JSONB,                     -- AI 검토 결과
+  review_score INTEGER,                -- AI 검토 점수
+  swot_analysis JSONB,                 -- SWOT 분석 결과
+  is_review_confirmed BOOLEAN DEFAULT false,
+  review_confirmed_at TIMESTAMPTZ,
+  -- 2단계: 진단
+  diagnosis_result JSONB,              -- AI 진단 결과
+  is_diagnosis_confirmed BOOLEAN DEFAULT false,
+  diagnosis_confirmed_at TIMESTAMPTZ,
+  -- 3단계: 전략
+  strategy_result JSONB,               -- AI 전략 제안
+  action_items JSONB,                  -- 실행 항목
+  is_strategy_confirmed BOOLEAN DEFAULT false,
+  strategy_confirmed_at TIMESTAMPTZ,
+  -- 4단계: 보고서
+  report_content TEXT,                 -- 종합 보고서 (Markdown)
+  executive_summary TEXT,              -- 경영 요약
+  -- 메타
+  ai_model_used TEXT DEFAULT 'claude',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_bi_business_reviews_project_id ON bi_business_reviews(project_id);
 
 -- =====================================================
 -- 프롬프트 관리 테이블
@@ -3021,8 +3140,8 @@ export const maxDuration = 120;
 ---
 
 *문서 작성: Claude Opus 4.5*
-*최종 수정: 2026-02-16*
-*버전: 1.4*
+*최종 수정: 2026-02-25*
+*버전: 1.6*
 
 ---
 
@@ -3036,3 +3155,4 @@ export const maxDuration = 120;
 | 1.3 | 2026-02-15 | **프롬프트 관리 시스템 추가**: bi_prompts/bi_prompt_versions/bi_prompt_variables 테이블, PromptEngine 클래스, Redis 캐싱, 관리자 UI, 버전 관리/롤백, 시드 데이터, 관리자 API 엔드포인트 |
 | 1.4 | 2026-02-16 | **랜딩(홍보) 페이지 전면 개편**: 6개→14개 섹션 확장, features/landing/ 컴포넌트 14개 신규, 스크롤 애니메이션(IntersectionObserver + CSS keyframes), 카운트업 훅, shadcn/ui Accordion 추가, landing 다국어 ~250키 확장(ko/en), 폴더 구조·UI/UX 가이드라인·마일스톤 섹션 PRD 반영 |
 | 1.5 | 2026-02-22 | **모두의 창업 연계 기능 추가**: F6(시장 중심 피칭 코치), F7(GTM 체크리스트), F8(공개 프로젝트 프로필), F9(멘토·전문가 매칭 기초) 4개 기능 정의, 데이터 모델 확장(bi_projects.visibility, bi_users.expertise_tags/industry_tags/bio, bi_documents.type 확장), Phase 6 마일스톤 추가 |
+| 1.6 | 2026-02-25 | **창업자 트랙(F10) 추가**: 이중 트랙 체계(pre_startup/startup) 도입, 사업계획서 기반 AI 분석 파이프라인(검토→진단→전략→보고서), bi_business_reviews 테이블, PDF 업로드(pdfjs-dist), 마크다운 렌더링(MarkdownContent), 보고서 내보내기(인쇄/Word .doc) |
