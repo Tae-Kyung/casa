@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
+import { marked } from 'marked'
 import {
   FileText,
   Check,
@@ -123,6 +124,8 @@ export function ReportStage({
     const executiveSummary = localReview?.executive_summary || ''
     const companyName = localReview?.company_name || t('report.defaultCompanyName')
 
+    const reportHtml = marked.parse(reportContent, { async: false }) as string
+
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="ko">
@@ -140,8 +143,19 @@ export function ReportStage({
       line-height: 1.8;
     }
     h1 { font-size: 28px; border-bottom: 3px solid #2563eb; padding-bottom: 12px; margin-bottom: 24px; }
-    h2 { font-size: 22px; color: #2563eb; margin-top: 32px; }
-    h3 { font-size: 18px; margin-top: 24px; }
+    h2 { font-size: 22px; color: #2563eb; margin-top: 32px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
+    h3 { font-size: 18px; margin-top: 24px; color: #374151; }
+    p { margin: 12px 0; }
+    ul, ol { margin: 12px 0; padding-left: 24px; }
+    li { margin: 6px 0; }
+    strong { color: #111827; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+    th { background: #f3f4f6; font-weight: 600; text-align: left; padding: 10px 12px; border: 1px solid #d1d5db; }
+    td { padding: 10px 12px; border: 1px solid #d1d5db; }
+    tr:nth-child(even) { background: #f9fafb; }
+    blockquote { border-left: 4px solid #2563eb; margin: 16px 0; padding: 12px 20px; background: #f0f4ff; border-radius: 0 8px 8px 0; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+    hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
     .executive-summary {
       background: #f0f4ff;
       border-left: 4px solid #2563eb;
@@ -149,8 +163,7 @@ export function ReportStage({
       margin: 24px 0;
       border-radius: 0 8px 8px 0;
     }
-    .executive-summary h2 { margin-top: 0; }
-    pre { white-space: pre-wrap; word-wrap: break-word; }
+    .executive-summary h2 { margin-top: 0; border-bottom: none; }
     @media print {
       body { padding: 20px; }
       .no-print { display: none; }
@@ -161,7 +174,7 @@ export function ReportStage({
   <h1>${companyName} - ${t('report.reportTitle')}</h1>
   ${executiveSummary ? `<div class="executive-summary"><h2>${t('report.executiveSummary')}</h2><p>${executiveSummary}</p></div>` : ''}
   <div class="report-content">
-    <pre>${reportContent}</pre>
+    ${reportHtml}
   </div>
   <div class="no-print" style="margin-top: 40px; text-align: center;">
     <button onclick="window.print()" style="padding: 12px 24px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">
@@ -232,6 +245,11 @@ export function ReportStage({
       </Card>
     )
   }
+
+  const reportHtml = useMemo(() => {
+    if (!localReview?.report_content) return ''
+    return marked.parse(localReview.report_content, { async: false }) as string
+  }, [localReview?.report_content])
 
   const reviewScore = localReview?.review_score
   const diagnosisResult = parseJsonField<DiagnosisResult>(localReview?.diagnosis_result ?? null)
@@ -347,11 +365,10 @@ export function ReportStage({
               <span className="font-medium">{t('report.generating')}</span>
             </div>
             {sse.data && (
-              <div className="rounded-lg bg-muted/50 p-4 max-h-[400px] overflow-y-auto">
-                <pre className="whitespace-pre-wrap text-sm text-muted-foreground font-mono">
-                  {sse.data}
-                </pre>
-              </div>
+              <div
+                className="markdown-preview rounded-lg bg-muted/50 p-4 max-h-[400px] overflow-y-auto"
+                dangerouslySetInnerHTML={{ __html: marked.parse(sse.data, { async: false }) as string }}
+              />
             )}
           </CardContent>
         </Card>
@@ -402,11 +419,10 @@ export function ReportStage({
               </div>
             </CardHeader>
             <CardContent>
-              <div className="rounded-lg bg-muted/30 p-6 max-h-[600px] overflow-y-auto">
-                <pre className="whitespace-pre-wrap text-sm text-foreground font-mono leading-relaxed">
-                  {localReview?.report_content}
-                </pre>
-              </div>
+              <div
+                className="markdown-preview rounded-lg bg-muted/30 p-6 max-h-[600px] overflow-y-auto"
+                dangerouslySetInnerHTML={{ __html: reportHtml }}
+              />
             </CardContent>
           </Card>
         </div>
