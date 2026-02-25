@@ -6,22 +6,22 @@ import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-
 
 const createReviewSchema = z.object({
   business_plan_text: z.string().min(50, '사업계획서는 최소 50자 이상이어야 합니다.'),
-  company_name: z.string().optional(),
-  industry: z.string().optional(),
-  founded_year: z.number().optional(),
-  employee_count: z.number().optional(),
-  annual_revenue: z.string().optional(),
-  funding_stage: z.string().optional(),
+  company_name: z.string().nullable().optional(),
+  industry: z.string().nullable().optional(),
+  founded_year: z.number().nullable().optional(),
+  employee_count: z.number().nullable().optional(),
+  annual_revenue: z.string().nullable().optional(),
+  funding_stage: z.string().nullable().optional(),
 })
 
 const updateReviewSchema = z.object({
   business_plan_text: z.string().min(50, '사업계획서는 최소 50자 이상이어야 합니다.').optional(),
-  company_name: z.string().optional(),
-  industry: z.string().optional(),
-  founded_year: z.number().optional(),
-  employee_count: z.number().optional(),
-  annual_revenue: z.string().optional(),
-  funding_stage: z.string().optional(),
+  company_name: z.string().nullable().optional(),
+  industry: z.string().nullable().optional(),
+  founded_year: z.number().nullable().optional(),
+  employee_count: z.number().nullable().optional(),
+  annual_revenue: z.string().nullable().optional(),
+  funding_stage: z.string().nullable().optional(),
 })
 
 interface RouteContext {
