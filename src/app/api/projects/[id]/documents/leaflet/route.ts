@@ -2,12 +2,11 @@ import { NextRequest } from 'next/server'
 import { requireProjectOwner } from '@/lib/auth/guards'
 import { deductCredit } from '@/lib/credits'
 import { createClient } from '@/lib/supabase/server'
-import { errorResponse, handleApiError } from '@/lib/utils/api-response'
+import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { preparePrompt } from '@/lib/prompts'
-import { createSSEResponse } from '@/lib/ai/claude'
-import { streamGemini } from '@/lib/ai/gemini'
+import { generateImage } from '@/lib/ai/gemini'
 
-// Gemini 스트리밍은 오래 걸릴 수 있으므로 타임아웃 확장
+// 이미지 생성은 오래 걸릴 수 있으므로 타임아웃 확장
 export const maxDuration = 120
 
 interface RouteContext {
@@ -80,6 +79,7 @@ export async function POST(
       solution: ideaCard.solution || '',
       target: ideaCard.target || '',
       differentiation: ideaCard.differentiation || '',
+      raw_input: ideaCard.raw_input || '',
       total_score: String(evaluation.total_score ?? ''),
       investor_score: String(evaluation.investor_score ?? ''),
       market_score: String(evaluation.market_score ?? ''),
@@ -92,84 +92,85 @@ export async function POST(
       return errorResponse('리플렛 프롬프트를 찾을 수 없습니다.', 500)
     }
 
-    const projectId = id
-    const existingDocId = existingDoc?.id
-    const projectName = project.name
-    const systemPrompt = prompt.systemPrompt
-    const userPrompt = prompt.userPrompt
-    const model = prompt.model
-    const temperature = prompt.temperature
-    const maxTokens = prompt.maxTokens
+    // Gemini 이미지 생성 호출
+    const result = await generateImage(prompt.systemPrompt, prompt.userPrompt, {
+      model: prompt.model,
+      temperature: prompt.temperature,
+    })
 
-    async function* generateDocument() {
-      let fullContent = ''
+    // Supabase Storage에 이미지 업로드
+    const ext = result.mimeType === 'image/jpeg' ? 'jpg' : 'png'
+    const fileName = `leaflet-${id}-${Date.now()}.${ext}`
+    const filePath = `leaflets/${fileName}`
 
-      yield { type: 'start', data: JSON.stringify({ type: 'leaflet', model }) }
-
-      const stream = streamGemini(systemPrompt, userPrompt, {
-        model,
-        temperature,
-        maxTokens,
-        thinkingBudget: 0, // HTML 생성은 thinking 불필요, 출력 토큰 절약
+    const { error: uploadError } = await supabase.storage
+      .from('documents')
+      .upload(filePath, result.imageData, {
+        contentType: result.mimeType,
+        cacheControl: '3600',
+        upsert: true,
       })
 
-      for await (const event of stream) {
-        if (event.type === 'text') {
-          fullContent += event.data
-          yield { type: 'text', data: event.data }
-        }
+    if (uploadError) {
+      if (uploadError.message.includes('Bucket not found')) {
+        return errorResponse(
+          '스토리지 버킷(documents)이 설정되지 않았습니다. 관리자에게 문의하세요.',
+          500
+        )
       }
-
-      fullContent = fullContent.trim()
-      const fenceMatch = fullContent.match(/^```(?:html)?\s*\n?([\s\S]*?)\n?\s*```$/)
-      if (fenceMatch) {
-        fullContent = fenceMatch[1].trim()
-      }
-
-      const supabaseUpdate = await createClient()
-
-      let documentId: string
-
-      if (existingDocId) {
-        const { data: updated, error: updateError } = await supabaseUpdate
-          .from('bi_documents')
-          .update({
-            content: fullContent,
-            ai_model_used: model,
-          })
-          .eq('id', existingDocId)
-          .select('id')
-          .single()
-
-        if (updateError) throw updateError
-        documentId = updated.id
-      } else {
-        const { data: created, error: createError } = await supabaseUpdate
-          .from('bi_documents')
-          .insert({
-            project_id: projectId,
-            type: 'leaflet',
-            title: `${projectName} 홍보 리플렛`,
-            content: fullContent,
-            ai_model_used: model,
-          })
-          .select('id')
-          .single()
-
-        if (createError) throw createError
-        documentId = created.id
-      }
-
-      yield {
-        type: 'complete',
-        data: JSON.stringify({
-          documentId,
-          type: 'leaflet',
-        })
-      }
+      throw uploadError
     }
 
-    return createSSEResponse(generateDocument())
+    // 공개 URL 생성
+    const { data: publicUrl } = supabase.storage
+      .from('documents')
+      .getPublicUrl(filePath)
+
+    const imageUrl = publicUrl.publicUrl
+
+    // DB 저장
+    let documentId: string
+
+    if (existingDoc?.id) {
+      const { data: updated, error: updateError } = await supabase
+        .from('bi_documents')
+        .update({
+          content: imageUrl,
+          storage_path: imageUrl,
+          file_name: fileName,
+          ai_model_used: prompt.model,
+        })
+        .eq('id', existingDoc.id)
+        .select('id')
+        .single()
+
+      if (updateError) throw updateError
+      documentId = updated.id
+    } else {
+      const { data: created, error: createError } = await supabase
+        .from('bi_documents')
+        .insert({
+          project_id: id,
+          type: 'leaflet',
+          title: `${project.name} 홍보 리플렛`,
+          content: imageUrl,
+          storage_path: imageUrl,
+          file_name: fileName,
+          ai_model_used: prompt.model,
+        })
+        .select('id')
+        .single()
+
+      if (createError) throw createError
+      documentId = created.id
+    }
+
+    return successResponse({
+      documentId,
+      type: 'leaflet',
+      imageUrl,
+      model: prompt.model,
+    })
   } catch (error) {
     return handleApiError(error)
   }

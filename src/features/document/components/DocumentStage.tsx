@@ -92,8 +92,8 @@ type DocumentTypeKey = 'business_plan' | 'pitch' | 'landing' | 'ppt' | 'leaflet'
 
 const REQUIRED_DOC_TYPES: DocumentTypeKey[] = ['business_plan', 'pitch', 'landing']
 const OPTIONAL_DOC_TYPES: DocumentTypeKey[] = ['ppt', 'leaflet', 'infographic', 'startup_application']
-const HTML_DOC_TYPES = new Set<string>(['landing', 'ppt', 'leaflet'])
-const IMAGE_DOC_TYPES = new Set<string>(['infographic'])
+const HTML_DOC_TYPES = new Set<string>(['landing', 'ppt'])
+const IMAGE_DOC_TYPES = new Set<string>(['infographic', 'leaflet'])
 
 export function DocumentStage({
   projectId,
