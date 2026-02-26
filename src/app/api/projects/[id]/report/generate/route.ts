@@ -1,10 +1,10 @@
 import { NextRequest } from 'next/server'
 import { requireProjectOwner } from '@/lib/auth/guards'
-import { deductCredit } from '@/lib/credits'
+import { deductCredits } from '@/lib/credits'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { streamClaude, createSSEResponse } from '@/lib/ai/claude'
-import { preparePrompt } from '@/lib/prompts'
+import { preparePrompt, getPromptCreditCost } from '@/lib/prompts'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -101,7 +101,7 @@ export async function POST(
   try {
     const { id } = await context.params
     const user = await requireProjectOwner(id)
-    await deductCredit(user.id, 'ai_report', id)
+    await deductCredits(user.id, await getPromptCreditCost('startup_report'), 'ai_report', id)
 
     const supabase = await createClient()
 

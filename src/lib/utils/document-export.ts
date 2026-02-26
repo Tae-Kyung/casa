@@ -151,6 +151,97 @@ export function exportToPdf(title: string, markdown: string): void {
   }
 }
 
+export function exportImagesToPdf(title: string, imageUrls: string[]): void {
+  const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>${title}</title>
+<style>
+  @page {
+    size: landscape;
+    margin: 0;
+  }
+  @media print {
+    body { margin: 0; padding: 0; }
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    background: #000;
+  }
+  .slide-page {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    page-break-after: always;
+    overflow: hidden;
+  }
+  .slide-page:last-child {
+    page-break-after: auto;
+  }
+  .slide-page img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+</style>
+</head>
+<body>
+${imageUrls.map((url) => `<div class="slide-page"><img src="${url}" /></div>`).join('\n')}
+</body>
+</html>`
+
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
+    return
+  }
+
+  printWindow.document.write(html)
+  printWindow.document.close()
+
+  // 이미지 로딩 대기 후 인쇄
+  printWindow.onload = () => {
+    const images = printWindow.document.querySelectorAll('img')
+    let loadedCount = 0
+    const total = images.length
+
+    if (total === 0) {
+      printWindow.print()
+      return
+    }
+
+    images.forEach((img) => {
+      if (img.complete) {
+        loadedCount++
+        if (loadedCount === total) {
+          setTimeout(() => printWindow.print(), 300)
+        }
+      } else {
+        img.onload = () => {
+          loadedCount++
+          if (loadedCount === total) {
+            setTimeout(() => printWindow.print(), 300)
+          }
+        }
+        img.onerror = () => {
+          loadedCount++
+          if (loadedCount === total) {
+            setTimeout(() => printWindow.print(), 300)
+          }
+        }
+      }
+    })
+  }
+}
+
 export function exportToPptx(title: string, htmlContent: string): void {
   const pptx = new PptxGenJS()
   pptx.layout = 'LAYOUT_WIDE' // 16:9

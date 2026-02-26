@@ -15,6 +15,7 @@ const updatePromptSchema = z.object({
   model: z.string().optional(),
   temperature: z.number().min(0).max(2).optional(),
   max_tokens: z.number().min(100).max(8000).optional(),
+  credit_cost: z.number().int().min(0).max(100).optional(),
   is_active: z.boolean().optional(),
   change_note: z.string().optional(),
 })

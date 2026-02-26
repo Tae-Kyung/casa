@@ -441,6 +441,7 @@ export interface Database {
           model: string
           temperature: number
           max_tokens: number
+          credit_cost: number
           version: number
           is_active: boolean
           created_by: string | null
@@ -459,6 +460,7 @@ export interface Database {
           model?: string
           temperature?: number
           max_tokens?: number
+          credit_cost?: number
           version?: number
           is_active?: boolean
           created_by?: string | null
@@ -477,6 +479,7 @@ export interface Database {
           model?: string
           temperature?: number
           max_tokens?: number
+          credit_cost?: number
           version?: number
           is_active?: boolean
           created_by?: string | null

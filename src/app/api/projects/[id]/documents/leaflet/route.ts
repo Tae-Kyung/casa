@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server'
 import { requireProjectOwner } from '@/lib/auth/guards'
-import { deductCredit } from '@/lib/credits'
+import { deductCredits } from '@/lib/credits'
 import { createClient } from '@/lib/supabase/server'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
-import { preparePrompt } from '@/lib/prompts'
+import { preparePrompt, getPromptCreditCost } from '@/lib/prompts'
 import { generateImage } from '@/lib/ai/gemini'
 
 // 이미지 생성은 오래 걸릴 수 있으므로 타임아웃 확장
@@ -20,7 +20,7 @@ export async function POST(
   try {
     const { id } = await context.params
     const user = await requireProjectOwner(id)
-    await deductCredit(user.id, 'ai_doc_leaflet', id)
+    await deductCredits(user.id, await getPromptCreditCost('doc_leaflet'), 'ai_doc_leaflet', id)
 
     const supabase = await createClient()
 

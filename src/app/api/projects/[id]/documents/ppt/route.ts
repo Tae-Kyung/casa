@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server'
 import { requireProjectOwner } from '@/lib/auth/guards'
-import { deductCredit } from '@/lib/credits'
+import { deductCredits } from '@/lib/credits'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
-import { preparePrompt } from '@/lib/prompts'
+import { preparePrompt, getPromptCreditCost } from '@/lib/prompts'
 import { createSSEResponse } from '@/lib/ai/claude'
 import { streamGemini } from '@/lib/ai/gemini'
 import { buildPptHtml } from '@/lib/templates/ppt-template'
@@ -22,7 +22,7 @@ export async function POST(
   try {
     const { id } = await context.params
     const user = await requireProjectOwner(id)
-    await deductCredit(user.id, 'ai_doc_ppt', id)
+    await deductCredits(user.id, await getPromptCreditCost('doc_ppt'), 'ai_doc_ppt', id)
 
     const supabase = await createClient()
 

@@ -50,6 +50,7 @@ export default function PromptEditPage({ params }: PageProps) {
     model: 'claude-sonnet-4-20250514',
     temperature: 0.7,
     max_tokens: 2000,
+    credit_cost: 1,
     is_active: true,
   })
   const [versions, setVersions] = useState<PromptVersion[]>([])
@@ -481,6 +482,22 @@ export default function PromptEditPage({ params }: PageProps) {
                   setPrompt({ ...prompt, max_tokens: parseInt(e.target.value) })
                 }
               />
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="credit_cost">{t('admin.prompts.creditCost')}</Label>
+              <Input
+                id="credit_cost"
+                type="number"
+                min="0"
+                max="100"
+                value={prompt.credit_cost ?? 1}
+                onChange={(e) =>
+                  setPrompt({ ...prompt, credit_cost: parseInt(e.target.value) || 0 })
+                }
+              />
+              <p className="text-xs text-muted-foreground">{t('admin.prompts.creditCostDesc')}</p>
             </div>
           </div>
         </CardContent>

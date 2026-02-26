@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server'
 import { requireProjectOwner } from '@/lib/auth/guards'
-import { deductCredit } from '@/lib/credits'
+import { deductCredits } from '@/lib/credits'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
-import { preparePrompt } from '@/lib/prompts'
+import { preparePrompt, getPromptCreditCost } from '@/lib/prompts'
 import { streamClaude, createSSEResponse } from '@/lib/ai/claude'
 
 interface RouteContext {
@@ -18,7 +18,7 @@ export async function POST(
   try {
     const { id } = await routeContext.params
     const user = await requireProjectOwner(id)
-    await deductCredit(user.id, 'ai_doc_startup_application', id)
+    await deductCredits(user.id, await getPromptCreditCost('doc_startup_application'), 'ai_doc_startup_application', id)
 
     const supabase = await createClient()
 

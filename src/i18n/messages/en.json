@@ -517,6 +517,8 @@
       "aiModel": "AI Model",
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "Description of the prompt",
+      "creditCost": "Credit Cost",
+      "creditCostDesc": "Number of credits to deduct when this prompt is executed (0 = free, default 1)",
       "aiSettings": "AI Settings",
       "systemPrompt": "System Prompt",
       "systemPromptPlaceholder": "Enter the AI's role and behavior instructions...",

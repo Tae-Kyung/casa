@@ -8,6 +8,7 @@ export interface PreparedPrompt {
   model: string
   temperature: number
   maxTokens: number
+  creditCost: number
 }
 
 /**
@@ -81,7 +82,17 @@ export async function preparePrompt(
     model: prompt.model,
     temperature: prompt.temperature,
     maxTokens: prompt.max_tokens,
+    creditCost: prompt.credit_cost ?? 1,
   }
+}
+
+/**
+ * 프롬프트의 크레딧 비용 조회 (캐시 우선)
+ * 프롬프트가 없으면 기본값 1 반환
+ */
+export async function getPromptCreditCost(key: string): Promise<number> {
+  const prompt = await getPrompt(key)
+  return prompt?.credit_cost ?? 1
 }
 
 /**

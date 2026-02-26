@@ -16,6 +16,7 @@ const createPromptSchema = z.object({
   model: z.string().default('claude-sonnet-4-20250514'),
   temperature: z.number().min(0).max(2).default(0.7),
   max_tokens: z.number().min(100).max(8000).default(2000),
+  credit_cost: z.number().int().min(0).max(100).default(1),
 })
 
 // GET: 프롬프트 목록 조회

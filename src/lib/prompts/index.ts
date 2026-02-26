@@ -2,6 +2,7 @@ export {
   getPrompt,
   renderTemplate,
   preparePrompt,
+  getPromptCreditCost,
   invalidatePromptCache,
   invalidateAllPromptCache,
   listPrompts,

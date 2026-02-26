@@ -517,6 +517,8 @@
       "aiModel": "AI 모델",
       "descriptionLabel": "설명",
       "descriptionPlaceholder": "프롬프트에 대한 설명",
+      "creditCost": "크레딧 소진량",
+      "creditCostDesc": "이 프롬프트 실행 시 차감할 크레딧 수 (0 = 무료, 기본값 1)",
       "aiSettings": "AI 설정",
       "systemPrompt": "시스템 프롬프트",
       "systemPromptPlaceholder": "AI의 역할과 행동 지침을 입력하세요...",

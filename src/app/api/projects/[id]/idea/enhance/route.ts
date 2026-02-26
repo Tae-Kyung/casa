@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server'
 import { requireProjectOwner } from '@/lib/auth/guards'
-import { deductCredit } from '@/lib/credits'
+import { deductCredits } from '@/lib/credits'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
-import { preparePrompt } from '@/lib/prompts'
+import { preparePrompt, getPromptCreditCost } from '@/lib/prompts'
 import { streamClaude, createSSEResponse } from '@/lib/ai/claude'
 
 interface RouteContext {
@@ -34,7 +34,7 @@ export async function POST(
   try {
     const { id } = await context.params
     const user = await requireProjectOwner(id)
-    await deductCredit(user.id, 'ai_idea_enhance', id)
+    await deductCredits(user.id, await getPromptCreditCost('idea_enhancement'), 'ai_idea_enhance', id)
 
     const body = await request.json()
     const rawInput = body.raw_input

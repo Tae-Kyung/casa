@@ -24,7 +24,7 @@ import {
   Undo2
 } from 'lucide-react'
 import { marked } from 'marked'
-import { exportToPdf, exportToDocx, exportToPptx } from '@/lib/utils/document-export'
+import { exportToPdf, exportToDocx, exportToPptx, exportImagesToPdf } from '@/lib/utils/document-export'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -616,17 +616,34 @@ export function DocumentStage({
                   {t('document.preview')}
                 </Button>
                 {isMultiImageType ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setPreviewSlideIndex(0)
-                      setPreviewDoc(doc)
-                    }}
-                  >
-                    <Eye className="mr-1 h-4 w-4" />
-                    {t('documentStage.slideshow')}
-                  </Button>
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setPreviewSlideIndex(0)
+                        setPreviewDoc(doc)
+                      }}
+                    >
+                      <Eye className="mr-1 h-4 w-4" />
+                      {t('documentStage.slideshow')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        try {
+                          const urls = JSON.parse(doc.content || '[]')
+                          if (Array.isArray(urls) && urls.length > 0) {
+                            exportImagesToPdf(doc.title, urls)
+                          }
+                        } catch { /* ignore */ }
+                      }}
+                    >
+                      <Download className="mr-1 h-4 w-4" />
+                      PDF
+                    </Button>
+                  </>
                 ) : isImageType ? (
                   <Button
                     size="sm"
