@@ -36,15 +36,20 @@ export async function generateImage(
   options: GeminiOptions = {}
 ): Promise<GeminiImageResponse> {
   const {
-    model = 'gemini-3-pro-image-preview',
+    model = 'gemini-2.5-flash-image',
     temperature = 0.7,
   } = options
 
+  // system prompt를 user prompt 앞에 합쳐서 전달
+  // (이미지 생성 모델은 systemInstruction을 지원하지 않을 수 있음)
+  const fullPrompt = systemPrompt
+    ? `${systemPrompt}\n\n---\n\n${userPrompt}`
+    : userPrompt
+
   const response = await ai.models.generateContent({
     model,
-    contents: userPrompt,
+    contents: fullPrompt,
     config: {
-      systemInstruction: systemPrompt,
       temperature,
       responseModalities: ['IMAGE', 'TEXT'],
     },
