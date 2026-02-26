@@ -13,7 +13,7 @@ interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-const IMAGE_MODEL = 'gemini-2.5-flash-image'
+const IMAGE_MODEL = 'gemini-3-pro-image-preview'
 const TEXT_MODEL = 'gemini-2.5-flash'
 
 // Phase 1: 발표 시나리오 기획 시스템 프롬프트
