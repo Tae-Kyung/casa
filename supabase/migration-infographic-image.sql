@@ -7,19 +7,40 @@ VALUES ('documents', 'documents', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. documents 버킷 공개 읽기 정책
-CREATE POLICY IF NOT EXISTS "Public read access for documents"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'documents');
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Public read access for documents' AND tablename = 'objects'
+  ) THEN
+    CREATE POLICY "Public read access for documents"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'documents');
+  END IF;
+END $$;
 
 -- 3. documents 버킷 인증 사용자 업로드 정책
-CREATE POLICY IF NOT EXISTS "Authenticated users can upload documents"
-ON storage.objects FOR INSERT
-WITH CHECK (bucket_id = 'documents' AND auth.role() = 'authenticated');
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Authenticated users can upload documents' AND tablename = 'objects'
+  ) THEN
+    CREATE POLICY "Authenticated users can upload documents"
+    ON storage.objects FOR INSERT
+    WITH CHECK (bucket_id = 'documents' AND auth.role() = 'authenticated');
+  END IF;
+END $$;
 
 -- 4. documents 버킷 인증 사용자 업데이트 정책
-CREATE POLICY IF NOT EXISTS "Authenticated users can update documents"
-ON storage.objects FOR UPDATE
-USING (bucket_id = 'documents' AND auth.role() = 'authenticated');
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Authenticated users can update documents' AND tablename = 'objects'
+  ) THEN
+    CREATE POLICY "Authenticated users can update documents"
+    ON storage.objects FOR UPDATE
+    USING (bucket_id = 'documents' AND auth.role() = 'authenticated');
+  END IF;
+END $$;
 
 -- 5. 인포그래픽 프롬프트 업데이트 (이미지 생성용)
 INSERT INTO bi_prompts (key, name, description, category, system_prompt, user_prompt_template, model, temperature, max_tokens)
