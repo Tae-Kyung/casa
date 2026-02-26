@@ -3,9 +3,11 @@ import { requireProjectOwner } from '@/lib/auth/guards'
 import { deductCredits } from '@/lib/credits'
 import { createClient } from '@/lib/supabase/server'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
-import { generateImage } from '@/lib/ai/gemini'
+import { callGemini, generateImage } from '@/lib/ai/gemini'
+import { getPromptCreditCost } from '@/lib/prompts'
+import { buildPptImageHtml } from '@/lib/templates/ppt-image-template'
 
-// 이미지 8장 병렬 생성이므로 타임아웃 확장
+// Phase 1 (text) + Phase 2 (8 images) 병렬 생성이므로 타임아웃 확장
 export const maxDuration = 300
 
 interface RouteContext {
@@ -13,68 +15,82 @@ interface RouteContext {
 }
 
 const IMAGE_MODEL = 'gemini-2.5-flash-image'
+const TEXT_MODEL = 'gemini-2.5-flash'
 
-interface SlideConfig {
-  name: string
-  buildPrompt: (ctx: SlideContext) => string
-}
+// Phase 1: 스토리 생성 시스템 프롬프트
+const STORY_SYSTEM_PROMPT = `You are a professional presentation storytelling expert. Given information about a startup, generate a cohesive 8-slide presentation story in JSON format.
 
-interface SlideContext {
-  projectName: string
-  problem: string
-  solution: string
-  target: string
-  differentiation: string
-  totalScore: number
-  investorScore: number
-  marketScore: number
-  techScore: number
-}
+IMPORTANT RULES:
+- All slide titles, subtitles, and points MUST be in Korean (한국어).
+- All visualDescription fields MUST be in English (for image generation AI).
+- visualDescription should describe ONLY visual scenes, objects, and abstract imagery. DO NOT include any text, letters, numbers, or written words in the visual description.
+- Each slide should flow naturally as a coherent narrative.
+- Keep text concise: titles under 20 characters, points under 40 characters each.
 
-const STYLE_BASE = `Professional presentation slide design, 16:9 aspect ratio, modern corporate style with clean layout, gradient background (dark navy to purple), high contrast white text. Visually polished like a top-tier pitch deck. Minimal text - use icons, illustrations, and visual elements to convey information.`
+Return ONLY valid JSON with this exact structure:
+{
+  "theme": {
+    "primaryColor": "#hex color matching the brand mood",
+    "secondaryColor": "#hex complementary color",
+    "style": "one word mood: modern, elegant, bold, warm, tech, creative"
+  },
+  "slides": [
+    {
+      "type": "cover",
+      "title": "서비스명",
+      "subtitle": "핵심 가치를 표현하는 한 줄 태그라인",
+      "visualDescription": "Cinematic wide shot of [abstract visual metaphor for the service]. No text, no letters, no numbers. Dramatic lighting, depth of field."
+    },
+    {
+      "type": "problem",
+      "title": "문제 정의",
+      "subtitle": "현재 시장이 겪고 있는 핵심 문제",
+      "points": ["핵심 문제점 1", "핵심 문제점 2", "핵심 문제점 3"],
+      "visualDescription": "Dark dramatic scene symbolizing [the problem]. Abstract, moody. No text, no words."
+    },
+    {
+      "type": "solution",
+      "title": "솔루션",
+      "subtitle": "우리의 해결 방식을 한 문장으로",
+      "points": ["핵심 기능 1", "핵심 기능 2", "핵심 기능 3"],
+      "visualDescription": "Bright hopeful scene showing [solution metaphor]. Clean, optimistic. No text."
+    },
+    {
+      "type": "features",
+      "title": "주요 기능",
+      "points": ["기능 1: 설명", "기능 2: 설명", "기능 3: 설명", "기능 4: 설명"],
+      "visualDescription": "Clean modern interface elements, floating UI cards, holographic display. Abstract tech. No text."
+    },
+    {
+      "type": "market",
+      "title": "시장 기회",
+      "subtitle": "타겟 시장과 성장 가능성",
+      "points": ["타겟 고객층", "시장 규모", "성장률"],
+      "visualDescription": "Expansive aerial view of growing cityscape, network connections, global map visualization. No text."
+    },
+    {
+      "type": "competitive",
+      "title": "경쟁 우위",
+      "points": ["차별점 1", "차별점 2", "차별점 3"],
+      "visualDescription": "Single glowing object standing above others, spotlight effect, trophy, podium. Abstract victory. No text."
+    },
+    {
+      "type": "roadmap",
+      "title": "성장 로드맵",
+      "points": ["Phase 1: 목표", "Phase 2: 목표", "Phase 3: 목표"],
+      "visualDescription": "Ascending staircase leading to bright horizon, milestone markers, forward-moving arrows. No text."
+    },
+    {
+      "type": "cta",
+      "title": "함께 시작하세요",
+      "subtitle": "다음 단계를 위한 제안 메시지",
+      "visualDescription": "Inspiring wide landscape, sunrise over mountains, open road leading to bright future. Warm colors. No text."
+    }
+  ]
+}`
 
-const SLIDES: SlideConfig[] = [
-  {
-    name: 'cover',
-    buildPrompt: (ctx) =>
-      `${STYLE_BASE} Title slide for a startup service called "${ctx.projectName}". Show the service name prominently in large bold white text at the center. Add a subtle tech-inspired geometric pattern or abstract illustration in the background. Include a short tagline area below the title. Professional, modern, and impactful first impression. The overall mood should be ambitious and innovative.`,
-  },
-  {
-    name: 'problem',
-    buildPrompt: (ctx) =>
-      `${STYLE_BASE} "Problem" slide for a startup pitch deck. Visualize this problem: "${ctx.problem}". Use dramatic visual metaphors - broken chains, warning icons, frustrated user silhouettes, or abstract representations of pain points. Use red/orange accent colors to convey urgency. Show 3-4 pain point icons arranged in a clean grid. The slide should make viewers immediately feel the problem's severity.`,
-  },
-  {
-    name: 'solution',
-    buildPrompt: (ctx) =>
-      `${STYLE_BASE} "Solution" slide for a startup pitch deck. Visualize this solution: "${ctx.solution}". Show a bright, optimistic design with green/teal accent colors. Use visual metaphors like a lightbulb, puzzle pieces fitting together, or a bridge connecting two sides. Include 3-4 feature icons in a clean layout showing key capabilities. The design should convey relief, innovation, and clarity.`,
-  },
-  {
-    name: 'features',
-    buildPrompt: (ctx) =>
-      `${STYLE_BASE} "Key Features" slide for a startup pitch deck about "${ctx.projectName}". Solution: "${ctx.solution}". Display 4 key feature cards in a 2x2 grid layout. Each card has a colorful icon and a short label area. Use distinct accent colors (blue, green, purple, orange) for each feature card. Clean, modern card design with subtle shadows. The layout should be balanced and easy to scan.`,
-  },
-  {
-    name: 'market',
-    buildPrompt: (ctx) =>
-      `${STYLE_BASE} "Target Market" slide for a startup pitch deck. Target customers: "${ctx.target}". Show a visual market analysis with: a large circle diagram (TAM/SAM/SOM style), user persona silhouettes, and growth arrow graphics. Use blue accent colors. Include abstract data visualization elements like bar charts or pie charts. The slide should convey a massive market opportunity.`,
-  },
-  {
-    name: 'competitive',
-    buildPrompt: (ctx) =>
-      `${STYLE_BASE} "Competitive Advantage" slide for a startup pitch deck. Differentiation: "${ctx.differentiation}". Show a comparison visual where the service stands out - use a podium, a spotlight on a central element, or a radar chart showing superiority. Use gold/amber accent colors for the winning element. Include shield or trophy icons to represent strengths. Clean and confident visual.`,
-  },
-  {
-    name: 'scores',
-    buildPrompt: (ctx) =>
-      `${STYLE_BASE} "AI Evaluation Score" slide for a startup pitch deck. Show a professional scorecard dashboard. Display a large circular progress gauge showing overall score ${ctx.totalScore}/100 in the center. Around it, show 3 smaller gauges: Investor Score ${ctx.investorScore}, Market Score ${ctx.marketScore}, Tech Score ${ctx.techScore}. Use green for high scores (80+), yellow for medium (60-79), red for low. Modern data dashboard aesthetic.`,
-  },
-  {
-    name: 'cta',
-    buildPrompt: (ctx) =>
-      `${STYLE_BASE} "Call to Action" closing slide for a startup pitch deck about "${ctx.projectName}". Create an impactful final slide with a large inspirational visual - a rocket launching, a handshake, or a path leading to a bright horizon. Include space for contact information and next steps. Use vibrant gradient accents (cyan to purple). The slide should leave viewers excited and motivated to engage. Add "Thank You" text area.`,
-  },
-]
+// Phase 2: 이미지 생성 스타일 프리픽스
+const IMAGE_STYLE_PREFIX = `Professional presentation background image, 16:9 aspect ratio, cinematic quality, high resolution. ABSOLUTELY NO TEXT, NO LETTERS, NO WORDS, NO NUMBERS in the image. Pure visual imagery only.`
 
 export async function POST(
   request: NextRequest,
@@ -84,8 +100,8 @@ export async function POST(
     const { id } = await context.params
     const user = await requireProjectOwner(id)
 
-    // 5 크레딧 차감
-    await deductCredits(user.id, 5, 'ai_doc_ppt_image', id)
+    // 크레딧 차감
+    await deductCredits(user.id, await getPromptCreditCost('doc_ppt_image'), 'ai_doc_ppt_image', id)
 
     const supabase = await createClient()
 
@@ -138,41 +154,82 @@ export async function POST(
       return errorResponse('이미 확정된 이미지 PPT가 있습니다.', 400)
     }
 
-    const slideContext: SlideContext = {
-      projectName: project.name || '',
-      problem: ideaCard.problem || ideaCard.raw_input || '',
-      solution: ideaCard.solution || '',
-      target: ideaCard.target || '',
-      differentiation: ideaCard.differentiation || '',
-      totalScore: evaluation.total_score ?? 0,
-      investorScore: evaluation.investor_score ?? 0,
-      marketScore: evaluation.market_score ?? 0,
-      techScore: evaluation.tech_score ?? 0,
+    // ─── Phase 1: 텍스트 모델로 스토리 JSON 생성 ───
+    const storyUserPrompt = `다음 스타트업 정보를 바탕으로 프레젠테이션 스토리를 생성해주세요.
+
+## 서비스명
+${project.name}
+
+## 문제
+${ideaCard.problem || ideaCard.raw_input || ''}
+
+## 솔루션
+${ideaCard.solution || ''}
+
+## 타겟 고객
+${ideaCard.target || ''}
+
+## 차별점
+${ideaCard.differentiation || ''}
+
+## AI 평가 점수
+- 종합: ${evaluation.total_score ?? 0}/100
+- 투자 관점: ${evaluation.investor_score ?? 0}
+- 시장 관점: ${evaluation.market_score ?? 0}
+- 기술 관점: ${evaluation.tech_score ?? 0}
+
+위 정보를 바탕으로 8장 슬라이드의 프레젠테이션 스토리를 JSON으로 생성하세요.`
+
+    const storyResponse = await callGemini(STORY_SYSTEM_PROMPT, storyUserPrompt, {
+      model: TEXT_MODEL,
+      temperature: 0.7,
+      maxTokens: 4000,
+      jsonMode: true,
+    })
+
+    let storyData: Record<string, unknown>
+    try {
+      let cleanContent = storyResponse.content.trim()
+      const fenceMatch = cleanContent.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/)
+      if (fenceMatch) {
+        cleanContent = fenceMatch[1].trim()
+      }
+      storyData = JSON.parse(cleanContent)
+    } catch {
+      return errorResponse('스토리 생성에 실패했습니다. 다시 시도해주세요.', 500)
     }
 
-    // 8장 슬라이드 이미지 병렬 생성
-    const results = await Promise.allSettled(
-      SLIDES.map(async (slide) => {
-        const prompt = slide.buildPrompt(slideContext)
-        const result = await generateImage(
-          '', // system prompt는 사용하지 않음 (이미지 모델은 미지원)
-          prompt,
-          { model: IMAGE_MODEL, temperature: 0.8 }
-        )
-        return { name: slide.name, ...result }
+    const slides = Array.isArray(storyData.slides) ? storyData.slides : []
+    if (slides.length === 0) {
+      return errorResponse('슬라이드 스토리를 생성하지 못했습니다. 다시 시도해주세요.', 500)
+    }
+
+    // ─── Phase 2: 각 슬라이드의 visualDescription으로 이미지 병렬 생성 ───
+    const imageResults = await Promise.allSettled(
+      slides.map(async (slide: Record<string, unknown>, index: number) => {
+        const visualDesc = typeof slide.visualDescription === 'string'
+          ? slide.visualDescription
+          : 'Abstract professional background with soft gradient lighting'
+
+        const prompt = `${IMAGE_STYLE_PREFIX} Slide ${index + 1} of ${slides.length}. ${visualDesc}`
+
+        const result = await generateImage('', prompt, {
+          model: IMAGE_MODEL,
+          temperature: 0.8,
+        })
+        return { index, ...result }
       })
     )
 
-    // 성공한 이미지들만 업로드
-    const imageUrls: string[] = []
+    // 성공한 이미지들 업로드
+    const imageUrls: (string | null)[] = new Array(slides.length).fill(null)
     const timestamp = Date.now()
 
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i]
+    for (const result of imageResults) {
       if (result.status === 'fulfilled') {
-        const { name, imageData, mimeType } = result.value
+        const { index, imageData, mimeType } = result.value
         const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png'
-        const fileName = `ppt-image-${id}-${name}-${timestamp}.${ext}`
+        const fileName = `ppt-image-${id}-slide${index + 1}-${timestamp}.${ext}`
         const filePath = `ppt-images/${fileName}`
 
         const { error: uploadError } = await supabase.storage
@@ -190,7 +247,7 @@ export async function POST(
               500
             )
           }
-          console.error(`Failed to upload slide ${name}:`, uploadError)
+          console.error(`Failed to upload slide ${index + 1}:`, uploadError)
           continue
         }
 
@@ -198,29 +255,31 @@ export async function POST(
           .from('documents')
           .getPublicUrl(filePath)
 
-        imageUrls.push(publicUrl.publicUrl)
+        imageUrls[index] = publicUrl.publicUrl
       } else {
-        console.error(`Failed to generate slide ${SLIDES[i].name}:`, result.reason)
+        console.error(`Failed to generate slide ${result.reason}`)
       }
     }
 
-    if (imageUrls.length === 0) {
+    const successCount = imageUrls.filter(Boolean).length
+    if (successCount === 0) {
       return errorResponse('이미지 생성에 실패했습니다. 다시 시도해주세요.', 500)
     }
 
-    // content에 JSON 배열로 모든 이미지 URL 저장
-    // storage_path에 첫 번째 이미지 (썸네일용)
-    const contentJson = JSON.stringify(imageUrls)
+    // ─── Phase 3: HTML 슬라이드쇼 빌드 ───
+    const htmlContent = buildPptImageHtml(storyData, imageUrls)
+    const firstImageUrl = imageUrls.find(Boolean) || null
+
     let documentId: string
 
     if (existingDoc?.id) {
       const { data: updated, error: updateError } = await supabase
         .from('bi_documents')
         .update({
-          content: contentJson,
-          storage_path: imageUrls[0],
+          content: htmlContent,
+          storage_path: firstImageUrl,
           file_name: `ppt-image-${id}-${timestamp}`,
-          ai_model_used: IMAGE_MODEL,
+          ai_model_used: `${TEXT_MODEL} + ${IMAGE_MODEL}`,
         })
         .eq('id', existingDoc.id)
         .select('id')
@@ -234,11 +293,11 @@ export async function POST(
         .insert({
           project_id: id,
           type: 'ppt_image',
-          title: `${project.name} 서비스 소개 PPT (이미지)`,
-          content: contentJson,
-          storage_path: imageUrls[0],
+          title: `${project.name} 서비스 소개 PPT`,
+          content: htmlContent,
+          storage_path: firstImageUrl,
           file_name: `ppt-image-${id}-${timestamp}`,
-          ai_model_used: IMAGE_MODEL,
+          ai_model_used: `${TEXT_MODEL} + ${IMAGE_MODEL}`,
         })
         .select('id')
         .single()
@@ -250,10 +309,9 @@ export async function POST(
     return successResponse({
       documentId,
       type: 'ppt_image',
-      imageUrls,
-      slideCount: imageUrls.length,
-      totalSlides: SLIDES.length,
-      model: IMAGE_MODEL,
+      slideCount: slides.length,
+      imageCount: successCount,
+      model: `${TEXT_MODEL} + ${IMAGE_MODEL}`,
     })
   } catch (error) {
     return handleApiError(error)
