@@ -10,10 +10,13 @@ import {
   Newspaper,
   BarChart3,
   ClipboardList,
+  Image as ImageIcon,
   Check,
   RefreshCw,
   Download,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Eye,
   AlertTriangle,
   Edit3,
@@ -88,12 +91,13 @@ interface DocumentStageProps {
   onUpdate: () => void
 }
 
-type DocumentTypeKey = 'business_plan' | 'pitch' | 'landing' | 'ppt' | 'leaflet' | 'infographic' | 'startup_application'
+type DocumentTypeKey = 'business_plan' | 'pitch' | 'landing' | 'ppt' | 'ppt_image' | 'leaflet' | 'infographic' | 'startup_application'
 
 const REQUIRED_DOC_TYPES: DocumentTypeKey[] = ['business_plan', 'pitch', 'landing']
-const OPTIONAL_DOC_TYPES: DocumentTypeKey[] = ['ppt', 'leaflet', 'infographic', 'startup_application']
+const OPTIONAL_DOC_TYPES: DocumentTypeKey[] = ['ppt', 'ppt_image', 'leaflet', 'infographic', 'startup_application']
 const HTML_DOC_TYPES = new Set<string>(['landing', 'ppt'])
 const IMAGE_DOC_TYPES = new Set<string>(['infographic', 'leaflet'])
+const MULTI_IMAGE_DOC_TYPES = new Set<string>(['ppt_image'])
 
 export function DocumentStage({
   projectId,
@@ -134,6 +138,12 @@ export function DocumentStage({
       description: t('documentStage.pptDesc'),
       apiPath: 'ppt',
     },
+    ppt_image: {
+      icon: ImageIcon,
+      label: t('document.pptImage'),
+      description: t('documentStage.pptImageDesc'),
+      apiPath: 'ppt-image',
+    },
     leaflet: {
       icon: Newspaper,
       label: t('document.leaflet'),
@@ -167,6 +177,9 @@ export function DocumentStage({
   const [isRevising, setIsRevising] = useState(false)
   const [reviseStreamContent, setReviseStreamContent] = useState('')
 
+  // 슬라이드쇼 프리뷰 상태
+  const [previewSlideIndex, setPreviewSlideIndex] = useState(0)
+
   // 문서 확정 해제 관련 상태
   const [unconfirmingId, setUnconfirmingId] = useState<string | null>(null)
 
@@ -198,7 +211,7 @@ export function DocumentStage({
       }
 
       // 이미지 타입은 JSON 응답 (비스트리밍)
-      if (IMAGE_DOC_TYPES.has(type)) {
+      if (IMAGE_DOC_TYPES.has(type) || MULTI_IMAGE_DOC_TYPES.has(type)) {
         const result = await response.json()
         if (result.success) {
           toast.success(t('documentStage.generateComplete', { label: documentConfig[type].label }))
@@ -498,7 +511,8 @@ export function DocumentStage({
     const isConfirming = confirmingId === doc?.id
     const isHtmlType = HTML_DOC_TYPES.has(type)
     const isImageType = IMAGE_DOC_TYPES.has(type)
-    const noRevise = isHtmlType || isImageType
+    const isMultiImageType = MULTI_IMAGE_DOC_TYPES.has(type)
+    const noRevise = isHtmlType || isImageType || isMultiImageType
 
     return (
       <Card key={type} className={doc?.is_confirmed ? 'border-green-500' : ''}>
@@ -526,12 +540,17 @@ export function DocumentStage({
                   </Badge>
                 )}
               </div>
-              {!isImageType && streamingLength > 0 && (
+              {isMultiImageType && (
+                <p className="text-xs text-muted-foreground">
+                  {t('documentStage.generatingSlides')}
+                </p>
+              )}
+              {!isImageType && !isMultiImageType && streamingLength > 0 && (
                 <p className="text-xs text-muted-foreground">
                   {t('documentStage.generatingChars', { count: streamingLength.toLocaleString() })}
                 </p>
               )}
-              {!isImageType && streamingContent && (
+              {!isImageType && !isMultiImageType && streamingContent && (
                 <div className="max-h-32 overflow-y-auto rounded bg-muted p-2">
                   <pre className="whitespace-pre-wrap text-xs">
                     {streamingContent.slice(-500)}...
@@ -552,6 +571,33 @@ export function DocumentStage({
                   />
                 </div>
               )}
+              {/* 멀티 이미지 타입: 첫 번째 이미지 썸네일 + 슬라이드 수 */}
+              {isMultiImageType && doc.storage_path && (
+                <div className="overflow-hidden rounded border relative">
+                  <img
+                    src={doc.storage_path}
+                    alt={doc.title}
+                    className="h-40 w-full cursor-pointer object-cover transition-opacity hover:opacity-80"
+                    onClick={() => {
+                      setPreviewSlideIndex(0)
+                      setPreviewDoc(doc)
+                    }}
+                  />
+                  {doc.content && (() => {
+                    try {
+                      const urls = JSON.parse(doc.content)
+                      if (Array.isArray(urls)) {
+                        return (
+                          <span className="absolute bottom-2 right-2 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
+                            {urls.length} {t('documentStage.slides')}
+                          </span>
+                        )
+                      }
+                    } catch { /* ignore */ }
+                    return null
+                  })()}
+                </div>
+              )}
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>{t('documentStage.createdAt', { date: new Date(doc.created_at).toLocaleDateString() })}</span>
                 {doc.ai_model_used && (
@@ -569,7 +615,19 @@ export function DocumentStage({
                   <Eye className="mr-1 h-4 w-4" />
                   {t('document.preview')}
                 </Button>
-                {isImageType ? (
+                {isMultiImageType ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setPreviewSlideIndex(0)
+                      setPreviewDoc(doc)
+                    }}
+                  >
+                    <Eye className="mr-1 h-4 w-4" />
+                    {t('documentStage.slideshow')}
+                  </Button>
+                ) : isImageType ? (
                   <Button
                     size="sm"
                     variant="outline"
@@ -794,12 +852,86 @@ export function DocumentStage({
 
       {/* 미리보기 다이얼로그 */}
       <Dialog open={!!previewDoc} onOpenChange={() => setPreviewDoc(null)}>
-        <DialogContent className="max-h-[90vh] max-w-4xl overflow-hidden">
+        <DialogContent className={`max-h-[90vh] overflow-hidden ${previewDoc && MULTI_IMAGE_DOC_TYPES.has(previewDoc.type) ? 'max-w-5xl' : 'max-w-4xl'}`}>
           <DialogHeader>
             <DialogTitle>{previewDoc?.title}</DialogTitle>
           </DialogHeader>
           <div className="max-h-[70vh] overflow-y-auto">
-            {previewDoc && IMAGE_DOC_TYPES.has(previewDoc.type) ? (
+            {previewDoc && MULTI_IMAGE_DOC_TYPES.has(previewDoc.type) ? (() => {
+              let slides: string[] = []
+              try {
+                slides = JSON.parse(previewDoc.content || '[]')
+              } catch { /* ignore */ }
+              if (slides.length === 0) return <p className="text-center text-muted-foreground">{t('documentStage.noSlides')}</p>
+              return (
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative w-full flex items-center justify-center bg-black/5 dark:bg-white/5 rounded-lg p-2 min-h-[400px]">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/20 text-white hover:bg-black/40"
+                      onClick={() => setPreviewSlideIndex((prev) => (prev - 1 + slides.length) % slides.length)}
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </Button>
+                    <img
+                      src={slides[previewSlideIndex]}
+                      alt={`Slide ${previewSlideIndex + 1}`}
+                      className="max-h-[60vh] rounded object-contain"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/20 text-white hover:bg-black/40"
+                      onClick={() => setPreviewSlideIndex((prev) => (prev + 1) % slides.length)}
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm text-muted-foreground">
+                      {previewSlideIndex + 1} / {slides.length}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const a = document.createElement('a')
+                        a.href = slides[previewSlideIndex]
+                        a.download = `slide-${previewSlideIndex + 1}.png`
+                        a.target = '_blank'
+                        document.body.appendChild(a)
+                        a.click()
+                        document.body.removeChild(a)
+                      }}
+                    >
+                      <Download className="mr-1 h-4 w-4" />
+                      {t('documentStage.downloadSlide')}
+                    </Button>
+                  </div>
+                  {/* 썸네일 네비게이션 */}
+                  <div className="flex gap-2 overflow-x-auto pb-2 w-full justify-center">
+                    {slides.map((url, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setPreviewSlideIndex(i)}
+                        className={`shrink-0 overflow-hidden rounded border-2 transition-all ${
+                          i === previewSlideIndex
+                            ? 'border-primary ring-2 ring-primary/30'
+                            : 'border-transparent opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        <img
+                          src={url}
+                          alt={`Slide ${i + 1}`}
+                          className="h-14 w-24 object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })() : previewDoc && IMAGE_DOC_TYPES.has(previewDoc.type) ? (
               <div className="flex justify-center">
                 <img
                   src={previewDoc.storage_path || previewDoc.content || ''}

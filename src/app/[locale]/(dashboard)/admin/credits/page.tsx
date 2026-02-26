@@ -59,6 +59,7 @@ const REASON_LABELS: Record<string, string> = {
   ai_doc_pitch: '피치덱 생성',
   ai_doc_landing: '랜딩페이지 생성',
   ai_doc_ppt: 'PPT 생성',
+  ai_doc_ppt_image: 'PPT 이미지 생성 (8장)',
   ai_doc_leaflet: '리플렛 생성',
   ai_doc_infographic: '인포그래픽 생성',
   ai_doc_startup_application: '창업지원서 생성',

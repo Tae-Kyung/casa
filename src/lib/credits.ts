@@ -74,6 +74,55 @@ export async function deductCredit(
 }
 
 /**
+ * AI 호출 전 크레딧 N개 차감
+ * 잔액 부족 시 InsufficientCreditsError throw
+ */
+export async function deductCredits(
+  userId: string,
+  amount: number,
+  reason: string,
+  projectId?: string
+): Promise<number> {
+  const supabase = await createClient()
+
+  const { data: user, error: userError } = await supabase
+    .from('bi_users')
+    .select('ai_credits')
+    .eq('id', userId)
+    .single()
+
+  if (userError || !user) {
+    throw new Error('사용자를 찾을 수 없습니다.')
+  }
+
+  const currentCredits = user.ai_credits ?? 0
+
+  if (currentCredits < amount) {
+    throw new InsufficientCreditsError(currentCredits)
+  }
+
+  const newBalance = currentCredits - amount
+
+  const { error: updateError } = await supabase
+    .from('bi_users')
+    .update({ ai_credits: newBalance })
+    .eq('id', userId)
+
+  if (updateError) throw updateError
+
+  await supabase.from('bi_credit_logs').insert({
+    user_id: userId,
+    amount: -amount,
+    balance_after: newBalance,
+    reason,
+    project_id: projectId || null,
+    created_by: userId,
+  })
+
+  return newBalance
+}
+
+/**
  * 관리자가 크레딧 충전
  */
 export async function addCredits(
