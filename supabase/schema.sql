@@ -12,7 +12,7 @@ CREATE TYPE project_status AS ENUM ('draft', 'in_progress', 'completed', 'archiv
 CREATE TYPE project_type AS ENUM ('pre_startup', 'startup');
 CREATE TYPE project_stage AS ENUM ('idea', 'evaluation', 'document', 'deploy', 'done');
 CREATE TYPE gate_status AS ENUM ('gate_1', 'gate_2', 'gate_3', 'gate_4', 'completed');
-CREATE TYPE document_type AS ENUM ('business_plan', 'pitch', 'landing', 'ppt', 'leaflet', 'infographic');
+CREATE TYPE document_type AS ENUM ('business_plan', 'pitch', 'landing', 'ppt', 'leaflet', 'infographic', 'startup_application');
 CREATE TYPE feedback_type AS ENUM ('comment', 'approval', 'rejection', 'revision_request');
 CREATE TYPE approval_status AS ENUM ('pending', 'approved', 'rejected', 'revision_requested');
 CREATE TYPE prompt_category AS ENUM ('ideation', 'evaluation', 'document', 'marketing');

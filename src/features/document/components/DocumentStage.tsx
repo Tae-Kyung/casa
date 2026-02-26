@@ -9,6 +9,7 @@ import {
   Monitor,
   Newspaper,
   BarChart3,
+  ClipboardList,
   Check,
   RefreshCw,
   Download,
@@ -87,10 +88,10 @@ interface DocumentStageProps {
   onUpdate: () => void
 }
 
-type DocumentTypeKey = 'business_plan' | 'pitch' | 'landing' | 'ppt' | 'leaflet' | 'infographic'
+type DocumentTypeKey = 'business_plan' | 'pitch' | 'landing' | 'ppt' | 'leaflet' | 'infographic' | 'startup_application'
 
 const REQUIRED_DOC_TYPES: DocumentTypeKey[] = ['business_plan', 'pitch', 'landing']
-const OPTIONAL_DOC_TYPES: DocumentTypeKey[] = ['ppt', 'leaflet', 'infographic']
+const OPTIONAL_DOC_TYPES: DocumentTypeKey[] = ['ppt', 'leaflet', 'infographic', 'startup_application']
 const HTML_DOC_TYPES = new Set<string>(['landing', 'ppt', 'leaflet', 'infographic'])
 
 export function DocumentStage({
@@ -143,6 +144,12 @@ export function DocumentStage({
       label: t('document.infographic'),
       description: t('documentStage.infographicDesc'),
       apiPath: 'infographic',
+    },
+    startup_application: {
+      icon: ClipboardList,
+      label: t('document.startupApplication'),
+      description: t('documentStage.startupApplicationDesc'),
+      apiPath: 'startup-application',
     },
   }
   const [generatingType, setGeneratingType] = useState<DocumentTypeKey | null>(null)
