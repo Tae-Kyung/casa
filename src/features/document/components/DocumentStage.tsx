@@ -92,7 +92,8 @@ type DocumentTypeKey = 'business_plan' | 'pitch' | 'landing' | 'ppt' | 'leaflet'
 
 const REQUIRED_DOC_TYPES: DocumentTypeKey[] = ['business_plan', 'pitch', 'landing']
 const OPTIONAL_DOC_TYPES: DocumentTypeKey[] = ['ppt', 'leaflet', 'infographic', 'startup_application']
-const HTML_DOC_TYPES = new Set<string>(['landing', 'ppt', 'leaflet', 'infographic'])
+const HTML_DOC_TYPES = new Set<string>(['landing', 'ppt', 'leaflet'])
+const IMAGE_DOC_TYPES = new Set<string>(['infographic'])
 
 export function DocumentStage({
   projectId,
@@ -194,6 +195,18 @@ export function DocumentStage({
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || t('documentStage.generateFailed'))
+      }
+
+      // 이미지 타입은 JSON 응답 (비스트리밍)
+      if (IMAGE_DOC_TYPES.has(type)) {
+        const result = await response.json()
+        if (result.success) {
+          toast.success(t('documentStage.generateComplete', { label: documentConfig[type].label }))
+          onUpdate()
+        } else {
+          throw new Error(result.error || t('documentStage.generateFailed'))
+        }
+        return
       }
 
       const reader = response.body?.getReader()
@@ -484,6 +497,8 @@ export function DocumentStage({
     const isGenerating = generatingType === type
     const isConfirming = confirmingId === doc?.id
     const isHtmlType = HTML_DOC_TYPES.has(type)
+    const isImageType = IMAGE_DOC_TYPES.has(type)
+    const noRevise = isHtmlType || isImageType
 
     return (
       <Card key={type} className={doc?.is_confirmed ? 'border-green-500' : ''}>
@@ -511,12 +526,12 @@ export function DocumentStage({
                   </Badge>
                 )}
               </div>
-              {streamingLength > 0 && (
+              {!isImageType && streamingLength > 0 && (
                 <p className="text-xs text-muted-foreground">
                   {t('documentStage.generatingChars', { count: streamingLength.toLocaleString() })}
                 </p>
               )}
-              {streamingContent && (
+              {!isImageType && streamingContent && (
                 <div className="max-h-32 overflow-y-auto rounded bg-muted p-2">
                   <pre className="whitespace-pre-wrap text-xs">
                     {streamingContent.slice(-500)}...
@@ -526,6 +541,17 @@ export function DocumentStage({
             </div>
           ) : doc ? (
             <div className="space-y-2">
+              {/* 이미지 타입: 썸네일 미리보기 */}
+              {isImageType && doc.storage_path && (
+                <div className="overflow-hidden rounded border">
+                  <img
+                    src={doc.storage_path}
+                    alt={doc.title}
+                    className="h-40 w-full cursor-pointer object-cover transition-opacity hover:opacity-80"
+                    onClick={() => setPreviewDoc(doc)}
+                  />
+                </div>
+              )}
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>{t('documentStage.createdAt', { date: new Date(doc.created_at).toLocaleDateString() })}</span>
                 {doc.ai_model_used && (
@@ -543,7 +569,26 @@ export function DocumentStage({
                   <Eye className="mr-1 h-4 w-4" />
                   {t('document.preview')}
                 </Button>
-                {isHtmlType ? (
+                {isImageType ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      if (doc.storage_path) {
+                        const a = document.createElement('a')
+                        a.href = doc.storage_path
+                        a.download = doc.file_name || `${doc.title}.png`
+                        a.target = '_blank'
+                        document.body.appendChild(a)
+                        a.click()
+                        document.body.removeChild(a)
+                      }
+                    }}
+                  >
+                    <Download className="mr-1 h-4 w-4" />
+                    {t('document.download')}
+                  </Button>
+                ) : isHtmlType ? (
                   <>
                     <Button
                       size="sm"
@@ -605,20 +650,21 @@ export function DocumentStage({
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2 pt-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setReviseDoc(doc)
-                      setReviseSection('')
-                      setReviseInstruction('')
-                    }}
-                    disabled={!!generatingType || isHtmlType}
-                    title={isHtmlType ? t('documentStage.htmlNoRevise') : ''}
-                  >
-                    <Edit3 className="mr-1 h-4 w-4" />
-                    {t('documentStage.sectionRevise')}
-                  </Button>
+                  {!noRevise && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setReviseDoc(doc)
+                        setReviseSection('')
+                        setReviseInstruction('')
+                      }}
+                      disabled={!!generatingType}
+                    >
+                      <Edit3 className="mr-1 h-4 w-4" />
+                      {t('documentStage.sectionRevise')}
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
@@ -753,7 +799,15 @@ export function DocumentStage({
             <DialogTitle>{previewDoc?.title}</DialogTitle>
           </DialogHeader>
           <div className="max-h-[70vh] overflow-y-auto">
-            {previewDoc && HTML_DOC_TYPES.has(previewDoc.type) ? (
+            {previewDoc && IMAGE_DOC_TYPES.has(previewDoc.type) ? (
+              <div className="flex justify-center">
+                <img
+                  src={previewDoc.storage_path || previewDoc.content || ''}
+                  alt={previewDoc.title}
+                  className="max-h-[65vh] rounded object-contain"
+                />
+              </div>
+            ) : previewDoc && HTML_DOC_TYPES.has(previewDoc.type) ? (
               <iframe
                 srcDoc={previewDoc.content || ''}
                 className="h-[60vh] w-full rounded border"

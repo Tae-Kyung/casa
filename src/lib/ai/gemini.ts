@@ -20,6 +20,58 @@ export interface GeminiResponse {
   stopReason: string | null
 }
 
+export interface GeminiImageResponse {
+  imageData: Buffer
+  mimeType: string
+  textContent: string | null
+}
+
+/**
+ * Gemini 이미지 생성 API 호출
+ * gemini-2.5-flash-image 또는 gemini-3-pro-image-preview 모델 사용
+ */
+export async function generateImage(
+  systemPrompt: string,
+  userPrompt: string,
+  options: GeminiOptions = {}
+): Promise<GeminiImageResponse> {
+  const {
+    model = 'gemini-3-pro-image-preview',
+    temperature = 0.7,
+  } = options
+
+  const response = await ai.models.generateContent({
+    model,
+    contents: userPrompt,
+    config: {
+      systemInstruction: systemPrompt,
+      temperature,
+      responseModalities: ['IMAGE', 'TEXT'],
+    },
+  })
+
+  let imageData: Buffer | null = null
+  let mimeType = 'image/png'
+  let textContent: string | null = null
+
+  if (response.candidates?.[0]?.content?.parts) {
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) {
+        imageData = Buffer.from(part.inlineData.data!, 'base64')
+        mimeType = part.inlineData.mimeType || 'image/png'
+      } else if (part.text) {
+        textContent = part.text
+      }
+    }
+  }
+
+  if (!imageData) {
+    throw new Error('이미지 생성에 실패했습니다. 모델이 이미지를 반환하지 않았습니다.')
+  }
+
+  return { imageData, mimeType, textContent }
+}
+
 /**
  * Gemini API 동기 호출
  */
