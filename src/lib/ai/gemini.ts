@@ -51,7 +51,7 @@ export async function generateImage(
     contents: fullPrompt,
     config: {
       temperature,
-      responseModalities: ['IMAGE', 'TEXT'],
+      responseModalities: ['TEXT', 'IMAGE'],
     },
   })
 
