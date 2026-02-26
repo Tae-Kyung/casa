@@ -451,7 +451,15 @@
       "rechargeSuccess": "{amount} credits have been added to {name}.",
       "rechargeFailed": "Failed to recharge credits.",
       "rechargeConfirm": "Recharge",
-      "noUsers": "No users found."
+      "noUsers": "No users found.",
+      "history": "History",
+      "historyTitle": "Credit History",
+      "historyFetchFailed": "Failed to load credit history.",
+      "historyEmpty": "No credit history found.",
+      "historyBalance": "Balance",
+      "historyProject": "Project",
+      "historyBy": "Recharged by",
+      "historyTotal": "{count} total records"
     },
     "prompts": {
       "syncCache": "Sync Cache",

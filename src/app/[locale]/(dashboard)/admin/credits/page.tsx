@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { Search, Coins, Plus, RefreshCw } from 'lucide-react'
+import { Search, Coins, Plus, RefreshCw, History, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import {
@@ -27,6 +27,48 @@ interface UserCredit {
   created_at: string
 }
 
+interface CreditLog {
+  id: string
+  amount: number
+  balance_after: number
+  reason: string
+  project_id: string | null
+  created_by: string | null
+  created_at: string
+  created_by_name: string | null
+  project_name: string | null
+}
+
+interface HistoryResponse {
+  logs: CreditLog[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
+const REASON_LABELS: Record<string, string> = {
+  admin_recharge: '관리자 충전',
+  ai_idea_expand: '아이디어 확장',
+  ai_idea_enhance: '아이디어 강화',
+  ai_similar_companies: '유사 기업 분석',
+  ai_mentor_review: '멘토 리뷰',
+  ai_evaluation: 'AI 평가',
+  ai_evaluation_retry: 'AI 평가 재시도',
+  ai_doc_business_plan: '사업계획서 생성',
+  ai_doc_pitch: '피치덱 생성',
+  ai_doc_landing: '랜딩페이지 생성',
+  ai_doc_ppt: 'PPT 생성',
+  ai_doc_leaflet: '리플렛 생성',
+  ai_doc_infographic: '인포그래픽 생성',
+  ai_doc_startup_application: '창업지원서 생성',
+  ai_doc_revise: '문서 수정',
+  ai_review_analyze: '사업 리뷰 분석',
+  ai_diagnosis: '진단 분석',
+  ai_strategy: '전략 생성',
+  ai_report: '보고서 생성',
+}
+
 export default function AdminCreditsPage() {
   const t = useTranslations()
 
@@ -36,6 +78,12 @@ export default function AdminCreditsPage() {
   const [rechargeTarget, setRechargeTarget] = useState<UserCredit | null>(null)
   const [rechargeAmount, setRechargeAmount] = useState('30')
   const [isRecharging, setIsRecharging] = useState(false)
+
+  // 히스토리 상태
+  const [historyTarget, setHistoryTarget] = useState<UserCredit | null>(null)
+  const [historyData, setHistoryData] = useState<HistoryResponse | null>(null)
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false)
+  const [historyPage, setHistoryPage] = useState(1)
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true)
@@ -59,6 +107,36 @@ export default function AdminCreditsPage() {
   useEffect(() => {
     fetchUsers()
   }, [fetchUsers])
+
+  const fetchHistory = useCallback(async (userId: string, page: number) => {
+    setIsHistoryLoading(true)
+    try {
+      const response = await fetch(`/api/admin/credits/${userId}/history?page=${page}&limit=20`)
+      const result = await response.json()
+
+      if (result.success) {
+        setHistoryData(result.data)
+      } else {
+        toast.error(t('admin.credits.historyFetchFailed'))
+      }
+    } catch {
+      toast.error(t('admin.credits.historyFetchFailed'))
+    } finally {
+      setIsHistoryLoading(false)
+    }
+  }, [t])
+
+  const openHistory = (user: UserCredit) => {
+    setHistoryTarget(user)
+    setHistoryPage(1)
+    fetchHistory(user.id, 1)
+  }
+
+  const handleHistoryPageChange = (newPage: number) => {
+    if (!historyTarget) return
+    setHistoryPage(newPage)
+    fetchHistory(historyTarget.id, newPage)
+  }
 
   const handleRecharge = async () => {
     if (!rechargeTarget) return
@@ -110,6 +188,21 @@ export default function AdminCreditsPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     fetchUsers()
+  }
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return date.toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  const getReasonLabel = (reason: string) => {
+    return REASON_LABELS[reason] || reason
   }
 
   return (
@@ -182,7 +275,7 @@ export default function AdminCreditsPage() {
                     {user.ai_credits}
                   </Badge>
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-2 flex gap-1">
                   <Button
                     variant="outline"
                     size="sm"
@@ -193,6 +286,14 @@ export default function AdminCreditsPage() {
                   >
                     <Plus className="mr-1.5 h-4 w-4" />
                     {t('admin.credits.recharge')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openHistory(user)}
+                    title={t('admin.credits.history')}
+                  >
+                    <History className="h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>
@@ -263,6 +364,120 @@ export default function AdminCreditsPage() {
               {t('admin.credits.rechargeConfirm')}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 크레딧 히스토리 다이얼로그 */}
+      <Dialog open={!!historyTarget} onOpenChange={(open) => {
+        if (!open) {
+          setHistoryTarget(null)
+          setHistoryData(null)
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              {t('admin.credits.historyTitle')}
+            </DialogTitle>
+            {historyTarget && (
+              <div className="flex items-center gap-3 pt-2">
+                <span className="text-sm font-medium">{historyTarget.name || historyTarget.email}</span>
+                <Badge variant={getCreditBadge(historyTarget.ai_credits)} className="text-sm px-2 py-0.5">
+                  <Coins className="mr-1 h-3 w-3" />
+                  {historyTarget.ai_credits}
+                </Badge>
+              </div>
+            )}
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {isHistoryLoading ? (
+              <div className="flex justify-center py-12">
+                <LoadingSpinner size="lg" />
+              </div>
+            ) : historyData && historyData.logs.length > 0 ? (
+              <div className="space-y-2">
+                {historyData.logs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="flex items-start gap-3 rounded-lg border px-3 py-2.5"
+                  >
+                    {/* 아이콘 */}
+                    <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+                      log.amount > 0
+                        ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                    }`}>
+                      {log.amount > 0 ? (
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      ) : (
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      )}
+                    </div>
+
+                    {/* 내용 */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium truncate">
+                          {getReasonLabel(log.reason)}
+                        </p>
+                        <span className={`shrink-0 text-sm font-bold ${
+                          log.amount > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                        }`}>
+                          {log.amount > 0 ? '+' : ''}{log.amount}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        <span>{formatDate(log.created_at)}</span>
+                        <span>{t('admin.credits.historyBalance')}: {log.balance_after}</span>
+                        {log.project_name && (
+                          <span className="truncate">{t('admin.credits.historyProject')}: {log.project_name}</span>
+                        )}
+                        {log.created_by_name && log.amount > 0 && (
+                          <span>{t('admin.credits.historyBy')}: {log.created_by_name}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-12">
+                <p className="text-sm text-muted-foreground">{t('admin.credits.historyEmpty')}</p>
+              </div>
+            )}
+          </div>
+
+          {/* 페이지네이션 */}
+          {historyData && historyData.totalPages > 1 && (
+            <div className="flex items-center justify-between border-t pt-3 mt-3">
+              <span className="text-xs text-muted-foreground">
+                {t('admin.credits.historyTotal', { count: historyData.total })}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={historyPage <= 1}
+                  onClick={() => handleHistoryPageChange(historyPage - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm">
+                  {historyPage} / {historyData.totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={historyPage >= historyData.totalPages}
+                  onClick={() => handleHistoryPageChange(historyPage + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
