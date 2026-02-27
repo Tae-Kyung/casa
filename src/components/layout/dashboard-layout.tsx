@@ -320,13 +320,16 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
 
         <div className="mt-auto space-y-4">
           {credits !== null && (
-            <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
+            <Link
+              href="/credits"
+              className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 hover:bg-muted/80 transition-colors cursor-pointer"
+            >
               <Coins className="h-4 w-4 text-amber-500" />
               <span className="text-sm font-medium">{tCredits('remaining')}</span>
               <span className={`ml-auto text-sm font-bold ${credits <= 0 ? 'text-red-500' : credits <= 5 ? 'text-amber-500' : ''}`}>
                 {credits}
               </span>
-            </div>
+            </Link>
           )}
           <div className="flex items-center justify-center gap-2">
             <ThemeToggle />
@@ -355,13 +358,17 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
           </div>
           <div className="mt-auto space-y-4">
             {credits !== null && (
-              <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
+              <Link
+                href="/credits"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 hover:bg-muted/80 transition-colors cursor-pointer"
+              >
                 <Coins className="h-4 w-4 text-amber-500" />
                 <span className="text-sm font-medium">{tCredits('remaining')}</span>
                 <span className={`ml-auto text-sm font-bold ${credits <= 0 ? 'text-red-500' : credits <= 5 ? 'text-amber-500' : ''}`}>
                   {credits}
                 </span>
-              </div>
+              </Link>
             )}
             <div className="flex items-center justify-center gap-2">
               <ThemeToggle />
