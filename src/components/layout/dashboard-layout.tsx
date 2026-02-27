@@ -26,12 +26,20 @@ import { MobileDrawer } from '@/components/common/mobile-drawer'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { Badge } from '@/components/ui/badge'
 
 interface NavItem {
   href: string
   label: string
   icon: React.ReactNode
-  roles?: ('user' | 'mentor' | 'admin')[]
+  badge?: number
+  exactMatch?: boolean
+}
+
+interface NavSection {
+  label?: string
+  items: NavItem[]
+  separator?: boolean
 }
 
 interface DashboardLayoutProps {
@@ -39,14 +47,174 @@ interface DashboardLayoutProps {
   userRole?: 'user' | 'mentor' | 'admin'
 }
 
+function getSectionsForRole(
+  userRole: 'user' | 'mentor' | 'admin',
+  t: ReturnType<typeof useTranslations>,
+  pendingCount: number
+): NavSection[] {
+  if (userRole === 'admin') {
+    return [
+      {
+        label: t('nav.adminOverview'),
+        items: [
+          {
+            href: '/admin',
+            label: t('nav.admin'),
+            icon: <Shield className="h-5 w-5" />,
+            exactMatch: true,
+          },
+        ],
+      },
+      {
+        label: t('nav.management'),
+        items: [
+          {
+            href: '/admin/approvals',
+            label: t('nav.approvals'),
+            icon: <CheckCircle className="h-5 w-5" />,
+            badge: pendingCount > 0 ? pendingCount : undefined,
+          },
+          {
+            href: '/admin/users',
+            label: t('nav.users'),
+            icon: <Users className="h-5 w-5" />,
+          },
+          {
+            href: '/admin/credits',
+            label: t('nav.credits'),
+            icon: <Coins className="h-5 w-5" />,
+          },
+          {
+            href: '/admin/prompts',
+            label: t('nav.prompts'),
+            icon: <MessageSquare className="h-5 w-5" />,
+          },
+        ],
+      },
+      {
+        separator: true,
+        label: t('nav.userView'),
+        items: [
+          {
+            href: '/dashboard',
+            label: t('nav.dashboard'),
+            icon: <LayoutDashboard className="h-5 w-5" />,
+            exactMatch: true,
+          },
+          {
+            href: '/projects',
+            label: t('nav.projects'),
+            icon: <FolderKanban className="h-5 w-5" />,
+          },
+          {
+            href: '/showcase',
+            label: t('nav.showcase'),
+            icon: <Award className="h-5 w-5" />,
+          },
+          {
+            href: '/settings',
+            label: t('nav.settings'),
+            icon: <Settings className="h-5 w-5" />,
+          },
+        ],
+      },
+    ]
+  }
+
+  if (userRole === 'mentor') {
+    return [
+      {
+        items: [
+          {
+            href: '/dashboard',
+            label: t('nav.dashboard'),
+            icon: <LayoutDashboard className="h-5 w-5" />,
+            exactMatch: true,
+          },
+          {
+            href: '/projects',
+            label: t('nav.projects'),
+            icon: <FolderKanban className="h-5 w-5" />,
+          },
+          {
+            href: '/projects/new',
+            label: t('nav.newProject'),
+            icon: <Plus className="h-5 w-5" />,
+          },
+        ],
+      },
+      {
+        label: t('nav.management'),
+        items: [
+          {
+            href: '/admin/approvals',
+            label: t('nav.approvals'),
+            icon: <CheckCircle className="h-5 w-5" />,
+            badge: pendingCount > 0 ? pendingCount : undefined,
+          },
+        ],
+      },
+      {
+        items: [
+          {
+            href: '/showcase',
+            label: t('nav.showcase'),
+            icon: <Award className="h-5 w-5" />,
+          },
+          {
+            href: '/settings',
+            label: t('nav.settings'),
+            icon: <Settings className="h-5 w-5" />,
+          },
+        ],
+      },
+    ]
+  }
+
+  // user
+  return [
+    {
+      items: [
+        {
+          href: '/dashboard',
+          label: t('nav.dashboard'),
+          icon: <LayoutDashboard className="h-5 w-5" />,
+          exactMatch: true,
+        },
+        {
+          href: '/projects',
+          label: t('nav.projects'),
+          icon: <FolderKanban className="h-5 w-5" />,
+        },
+        {
+          href: '/projects/new',
+          label: t('nav.newProject'),
+          icon: <Plus className="h-5 w-5" />,
+        },
+        {
+          href: '/showcase',
+          label: t('nav.showcase'),
+          icon: <Award className="h-5 w-5" />,
+        },
+        {
+          href: '/settings',
+          label: t('nav.settings'),
+          icon: <Settings className="h-5 w-5" />,
+        },
+      ],
+    },
+  ]
+}
+
 export function DashboardLayout({ children, userRole = 'user' }: DashboardLayoutProps) {
-  const t = useTranslations('nav')
+  const t = useTranslations()
   const tAuth = useTranslations('auth')
   const tCredits = useTranslations('credits')
   const pathname = usePathname()
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [credits, setCredits] = useState<number | null>(null)
+  const [pendingCount, setPendingCount] = useState(0)
 
   useEffect(() => {
     fetch('/api/credits')
@@ -59,67 +227,21 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
       .catch(() => {})
   }, [pathname])
 
-  const navItems: NavItem[] = [
-    {
-      href: '/dashboard',
-      label: t('dashboard'),
-      icon: <LayoutDashboard className="h-5 w-5" />,
-    },
-    {
-      href: '/projects',
-      label: t('projects'),
-      icon: <FolderKanban className="h-5 w-5" />,
-    },
-    {
-      href: '/projects/new',
-      label: t('newProject'),
-      icon: <Plus className="h-5 w-5" />,
-    },
-    {
-      href: '/admin/approvals',
-      label: t('approvals'),
-      icon: <CheckCircle className="h-5 w-5" />,
-      roles: ['mentor', 'admin'],
-    },
-    {
-      href: '/admin/prompts',
-      label: t('prompts'),
-      icon: <MessageSquare className="h-5 w-5" />,
-      roles: ['admin'],
-    },
-    {
-      href: '/admin/credits',
-      label: t('credits'),
-      icon: <Coins className="h-5 w-5" />,
-      roles: ['admin'],
-    },
-    {
-      href: '/admin/users',
-      label: t('users'),
-      icon: <Users className="h-5 w-5" />,
-      roles: ['admin'],
-    },
-    {
-      href: '/admin',
-      label: t('admin'),
-      icon: <Shield className="h-5 w-5" />,
-      roles: ['admin'],
-    },
-    {
-      href: '/showcase',
-      label: t('showcase'),
-      icon: <Award className="h-5 w-5" />,
-    },
-    {
-      href: '/settings',
-      label: t('settings'),
-      icon: <Settings className="h-5 w-5" />,
-    },
-  ]
+  // 승인 대기 건수 조회 (admin/mentor)
+  useEffect(() => {
+    if (userRole === 'admin' || userRole === 'mentor') {
+      fetch('/api/admin/dashboard')
+        .then(res => res.json())
+        .then(result => {
+          if (result.success) {
+            setPendingCount(result.data.pendingApprovals || 0)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [userRole])
 
-  const filteredNavItems = navItems.filter(
-    (item) => !item.roles || item.roles.includes(userRole)
-  )
+  const sections = getSectionsForRole(userRole, t, pendingCount)
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -129,28 +251,50 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
     router.refresh()
   }
 
-  const isActive = (href: string) => {
+  const isActive = (href: string, exactMatch?: boolean) => {
     const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}/, '')
+    if (exactMatch) {
+      return pathWithoutLocale === href
+    }
     return pathWithoutLocale === href || pathWithoutLocale.startsWith(`${href}/`)
   }
 
+  const logoHref = userRole === 'admin' ? '/admin' : '/dashboard'
+
   const NavContent = () => (
     <nav className="flex flex-col gap-1">
-      {filteredNavItems.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          onClick={() => setMobileMenuOpen(false)}
-          className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-            isActive(item.href)
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+      {sections.map((section, sIdx) => (
+        <div key={sIdx}>
+          {section.separator && sIdx > 0 && (
+            <div className="my-3 border-t border-border" />
           )}
-        >
-          {item.icon}
-          {item.label}
-        </Link>
+          {section.label && (
+            <div className="mb-1 mt-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {section.label}
+            </div>
+          )}
+          {section.items.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileMenuOpen(false)}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                isActive(item.href, item.exactMatch)
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              )}
+            >
+              {item.icon}
+              {item.label}
+              {item.badge !== undefined && item.badge > 0 && (
+                <Badge variant="destructive" className="ml-auto h-5 min-w-[20px] px-1.5 text-xs">
+                  {item.badge}
+                </Badge>
+              )}
+            </Link>
+          ))}
+        </div>
       ))}
     </nav>
   )
@@ -160,8 +304,13 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
       {/* Desktop Sidebar */}
       <aside className="hidden w-64 flex-col border-r bg-card p-4 md:flex">
         <div className="mb-8">
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href={logoHref} className="flex items-center gap-2">
             <span className="text-xl font-bold">CASA</span>
+            {userRole === 'admin' && (
+              <Badge variant="secondary" className="text-xs">
+                Admin
+              </Badge>
+            )}
           </Link>
         </div>
 
@@ -198,7 +347,7 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
       <MobileDrawer
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
-        title="CASA"
+        title={userRole === 'admin' ? 'CASA Admin' : 'CASA'}
       >
         <div className="flex h-full flex-col">
           <div className="flex-1">
@@ -241,8 +390,13 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <Link href="/dashboard" className="text-lg font-bold">
+          <Link href={logoHref} className="flex items-center gap-2 text-lg font-bold">
             CASA
+            {userRole === 'admin' && (
+              <Badge variant="secondary" className="text-xs">
+                Admin
+              </Badge>
+            )}
           </Link>
           <div className="w-10" /> {/* Spacer for centering */}
         </header>

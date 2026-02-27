@@ -56,7 +56,10 @@
     "approvals": "Approvals",
     "users": "User Management",
     "showcase": "Showcase",
-    "credits": "Credit Management"
+    "credits": "Credit Management",
+    "adminOverview": "Overview",
+    "management": "Management",
+    "userView": "User View"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -390,7 +393,20 @@
       "noRecentUsers": "No recent users.",
       "roleUser": "User",
       "roleMentor": "Mentor",
-      "roleAdmin": "Admin"
+      "roleAdmin": "Admin",
+      "totalCreditsConsumed": "Credits Consumed",
+      "avgCreditsPerUser": "Avg Credits/User",
+      "consumptionRate": "{rate}% consumed",
+      "projectsByType": "Projects by Type",
+      "creditTrends": "Credit Trends (7 days)",
+      "consumed": "Consumed",
+      "recharged": "Recharged",
+      "recentActivity": "Recent Activity",
+      "activityUserJoined": "{name} joined",
+      "activityProjectCreated": "Project \"{name}\" created",
+      "activityApprovalRequested": "{gate} approval requested",
+      "activityDocGenerated": "{type} document generated",
+      "noActivity": "No recent activity"
     },
     "users": {
       "title": "User Management",

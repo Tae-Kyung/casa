@@ -56,7 +56,10 @@
     "approvals": "승인 관리",
     "users": "가입자 관리",
     "showcase": "쇼케이스",
-    "credits": "크레딧 관리"
+    "credits": "크레딧 관리",
+    "adminOverview": "관리 개요",
+    "management": "관리",
+    "userView": "사용자 화면"
   },
   "dashboard": {
     "title": "대시보드",
@@ -390,7 +393,20 @@
       "noRecentUsers": "최근 가입자가 없습니다.",
       "roleUser": "사용자",
       "roleMentor": "멘토",
-      "roleAdmin": "관리자"
+      "roleAdmin": "관리자",
+      "totalCreditsConsumed": "소진 크레딧",
+      "avgCreditsPerUser": "사용자 평균 크레딧",
+      "consumptionRate": "소진율 {rate}%",
+      "projectsByType": "프로젝트 유형별 분포",
+      "creditTrends": "크레딧 추이 (7일)",
+      "consumed": "소진",
+      "recharged": "충전",
+      "recentActivity": "최근 활동",
+      "activityUserJoined": "{name}님이 가입",
+      "activityProjectCreated": "\"{name}\" 프로젝트 생성",
+      "activityApprovalRequested": "{gate} 승인 요청",
+      "activityDocGenerated": "{type} 문서 생성",
+      "noActivity": "최근 활동이 없습니다"
     },
     "users": {
       "title": "가입자 관리",

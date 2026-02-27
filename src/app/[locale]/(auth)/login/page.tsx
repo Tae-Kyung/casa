@@ -46,7 +46,19 @@ export default function LoginPage() {
     }
 
     toast.success(t('auth.loginSuccess'))
-    router.push('/dashboard')
+
+    // 역할에 따라 리다이렉트
+    const { data: { user: loggedInUser } } = await supabase.auth.getUser()
+    if (loggedInUser) {
+      const { data: profile } = await supabase
+        .from('bi_users')
+        .select('role')
+        .eq('id', loggedInUser.id)
+        .single()
+      router.push(profile?.role === 'admin' ? '/admin' : '/dashboard')
+    } else {
+      router.push('/dashboard')
+    }
     router.refresh()
   }
 

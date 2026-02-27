@@ -28,7 +28,20 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      let redirectPath = next
+      // 기본 리다이렉트(/dashboard)인 경우 역할에 따라 분기
+      if (next === '/dashboard') {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase
+            .from('bi_users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+          if (profile?.role === 'admin') redirectPath = '/admin'
+        }
+      }
+      return NextResponse.redirect(`${origin}${redirectPath}`)
     }
   }
 

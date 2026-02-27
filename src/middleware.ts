@@ -70,7 +70,14 @@ export async function middleware(request: NextRequest) {
   if (user && isAuthOnlyPath) {
     const locale = pathname.split('/')[1] || 'ko'
     const url = request.nextUrl.clone()
-    url.pathname = `/${locale}/dashboard`
+    const { data: userData } = await supabase
+      .from('bi_users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    url.pathname = userData?.role === 'admin'
+      ? `/${locale}/admin`
+      : `/${locale}/dashboard`
     return NextResponse.redirect(url)
   }
 
