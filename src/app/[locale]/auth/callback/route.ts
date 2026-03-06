@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
             .eq('id', user.id)
             .single()
           if (profile?.role === 'admin') redirectPath = '/admin'
+          else if (profile?.role === 'institution') redirectPath = '/institution/dashboard'
         }
       }
       return NextResponse.redirect(`${origin}${redirectPath}`)

@@ -34,7 +34,13 @@ export default async function LandingPage({ params }: Props) {
       .select('role')
       .eq('id', user.id)
       .single()
-    redirect(profile?.role === 'admin' ? `/${locale}/admin` : `/${locale}/dashboard`)
+    if (profile?.role === 'admin') {
+      redirect(`/${locale}/admin`)
+    } else if (profile?.role === 'institution') {
+      redirect(`/${locale}/institution/dashboard`)
+    } else {
+      redirect(`/${locale}/dashboard`)
+    }
   }
 
   return (

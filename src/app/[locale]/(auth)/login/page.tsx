@@ -55,7 +55,13 @@ export default function LoginPage() {
         .select('role')
         .eq('id', loggedInUser.id)
         .single()
-      router.push(profile?.role === 'admin' ? '/admin' : '/dashboard')
+      if (profile?.role === 'admin') {
+        router.push('/admin')
+      } else if (profile?.role === 'institution') {
+        router.push('/institution/dashboard')
+      } else {
+        router.push('/dashboard')
+      }
     } else {
       router.push('/dashboard')
     }
