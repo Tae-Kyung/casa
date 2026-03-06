@@ -75,7 +75,20 @@
     "credits": "크레딧 관리",
     "adminOverview": "관리 개요",
     "management": "관리",
-    "userView": "사용자 화면"
+    "userView": "사용자 화면",
+    "institutions": "기관 관리",
+    "programs": "프로그램 관리",
+    "mentors": "멘토 관리",
+    "mappings": "매핑 관리",
+    "overview": "전국 현황",
+    "institutionManagement": "기관 운영",
+    "matches": "매칭",
+    "reports": "보고서",
+    "payouts": "수당",
+    "messages": "메시지",
+    "notifications": "알림",
+    "mentoringProjects": "멘토링 프로젝트",
+    "personal": "개인"
   },
   "dashboard": {
     "title": "대시보드",

@@ -17,6 +17,14 @@ import {
   Users,
   Award,
   Coins,
+  Building2,
+  Link2,
+  FileText,
+  DollarSign,
+  Mail,
+  Bell,
+  BookOpen,
+  BarChart3,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -44,11 +52,11 @@ interface NavSection {
 
 interface DashboardLayoutProps {
   children: React.ReactNode
-  userRole?: 'user' | 'mentor' | 'admin'
+  userRole?: 'user' | 'mentor' | 'institution' | 'admin'
 }
 
 function getSectionsForRole(
-  userRole: 'user' | 'mentor' | 'admin',
+  userRole: 'user' | 'mentor' | 'institution' | 'admin',
   t: ReturnType<typeof useTranslations>,
   pendingCount: number
 ): NavSection[] {
@@ -57,65 +65,54 @@ function getSectionsForRole(
       {
         label: t('nav.adminOverview'),
         items: [
-          {
-            href: '/admin',
-            label: t('nav.admin'),
-            icon: <Shield className="h-5 w-5" />,
-            exactMatch: true,
-          },
+          { href: '/admin', label: t('nav.admin'), icon: <Shield className="h-5 w-5" />, exactMatch: true },
+          { href: '/admin/overview', label: t('nav.overview'), icon: <BarChart3 className="h-5 w-5" /> },
         ],
       },
       {
         label: t('nav.management'),
         items: [
-          {
-            href: '/admin/approvals',
-            label: t('nav.approvals'),
-            icon: <CheckCircle className="h-5 w-5" />,
-            badge: pendingCount > 0 ? pendingCount : undefined,
-          },
-          {
-            href: '/admin/users',
-            label: t('nav.users'),
-            icon: <Users className="h-5 w-5" />,
-          },
-          {
-            href: '/admin/credits',
-            label: t('nav.credits'),
-            icon: <Coins className="h-5 w-5" />,
-          },
-          {
-            href: '/admin/prompts',
-            label: t('nav.prompts'),
-            icon: <MessageSquare className="h-5 w-5" />,
-          },
+          { href: '/admin/approvals', label: t('nav.approvals'), icon: <CheckCircle className="h-5 w-5" />, badge: pendingCount > 0 ? pendingCount : undefined },
+          { href: '/admin/users', label: t('nav.users'), icon: <Users className="h-5 w-5" /> },
+          { href: '/admin/institutions', label: t('nav.institutions'), icon: <Building2 className="h-5 w-5" /> },
+          { href: '/admin/programs', label: t('nav.programs'), icon: <BookOpen className="h-5 w-5" /> },
+          { href: '/admin/mentors', label: t('nav.mentors'), icon: <Users className="h-5 w-5" /> },
+          { href: '/admin/mappings', label: t('nav.mappings'), icon: <Link2 className="h-5 w-5" /> },
+          { href: '/admin/credits', label: t('nav.credits'), icon: <Coins className="h-5 w-5" /> },
+          { href: '/admin/prompts', label: t('nav.prompts'), icon: <MessageSquare className="h-5 w-5" /> },
         ],
       },
       {
         separator: true,
         label: t('nav.userView'),
         items: [
-          {
-            href: '/dashboard',
-            label: t('nav.dashboard'),
-            icon: <LayoutDashboard className="h-5 w-5" />,
-            exactMatch: true,
-          },
-          {
-            href: '/projects',
-            label: t('nav.projects'),
-            icon: <FolderKanban className="h-5 w-5" />,
-          },
-          {
-            href: '/showcase',
-            label: t('nav.showcase'),
-            icon: <Award className="h-5 w-5" />,
-          },
-          {
-            href: '/settings',
-            label: t('nav.settings'),
-            icon: <Settings className="h-5 w-5" />,
-          },
+          { href: '/dashboard', label: t('nav.dashboard'), icon: <LayoutDashboard className="h-5 w-5" />, exactMatch: true },
+          { href: '/projects', label: t('nav.projects'), icon: <FolderKanban className="h-5 w-5" /> },
+          { href: '/settings', label: t('nav.settings'), icon: <Settings className="h-5 w-5" /> },
+        ],
+      },
+    ]
+  }
+
+  if (userRole === 'institution') {
+    return [
+      {
+        label: t('nav.institutionManagement'),
+        items: [
+          { href: '/institution/dashboard', label: t('nav.dashboard'), icon: <LayoutDashboard className="h-5 w-5" />, exactMatch: true },
+          { href: '/institution/projects', label: t('nav.projects'), icon: <FolderKanban className="h-5 w-5" /> },
+          { href: '/institution/mentors', label: t('nav.mentors'), icon: <Users className="h-5 w-5" /> },
+          { href: '/institution/matches', label: t('nav.matches'), icon: <Link2 className="h-5 w-5" /> },
+          { href: '/institution/reports', label: t('nav.reports'), icon: <FileText className="h-5 w-5" /> },
+          { href: '/institution/payouts', label: t('nav.payouts'), icon: <DollarSign className="h-5 w-5" /> },
+          { href: '/institution/messages', label: t('nav.messages'), icon: <Mail className="h-5 w-5" /> },
+        ],
+      },
+      {
+        separator: true,
+        items: [
+          { href: '/notifications', label: t('nav.notifications'), icon: <Bell className="h-5 w-5" /> },
+          { href: '/settings', label: t('nav.settings'), icon: <Settings className="h-5 w-5" /> },
         ],
       },
     ]
@@ -125,47 +122,25 @@ function getSectionsForRole(
     return [
       {
         items: [
-          {
-            href: '/dashboard',
-            label: t('nav.dashboard'),
-            icon: <LayoutDashboard className="h-5 w-5" />,
-            exactMatch: true,
-          },
-          {
-            href: '/projects',
-            label: t('nav.projects'),
-            icon: <FolderKanban className="h-5 w-5" />,
-          },
-          {
-            href: '/projects/new',
-            label: t('nav.newProject'),
-            icon: <Plus className="h-5 w-5" />,
-          },
+          { href: '/dashboard', label: t('nav.dashboard'), icon: <LayoutDashboard className="h-5 w-5" />, exactMatch: true },
+          { href: '/mentoring/projects', label: t('nav.mentoringProjects'), icon: <Users className="h-5 w-5" /> },
+          { href: '/mentoring/payouts', label: t('nav.payouts'), icon: <DollarSign className="h-5 w-5" /> },
         ],
       },
       {
-        label: t('nav.management'),
+        separator: true,
+        label: t('nav.personal'),
         items: [
-          {
-            href: '/admin/approvals',
-            label: t('nav.approvals'),
-            icon: <CheckCircle className="h-5 w-5" />,
-            badge: pendingCount > 0 ? pendingCount : undefined,
-          },
+          { href: '/projects', label: t('nav.projects'), icon: <FolderKanban className="h-5 w-5" /> },
+          { href: '/projects/new', label: t('nav.newProject'), icon: <Plus className="h-5 w-5" /> },
         ],
       },
       {
         items: [
-          {
-            href: '/showcase',
-            label: t('nav.showcase'),
-            icon: <Award className="h-5 w-5" />,
-          },
-          {
-            href: '/settings',
-            label: t('nav.settings'),
-            icon: <Settings className="h-5 w-5" />,
-          },
+          { href: '/institution/messages', label: t('nav.messages'), icon: <Mail className="h-5 w-5" /> },
+          { href: '/notifications', label: t('nav.notifications'), icon: <Bell className="h-5 w-5" /> },
+          { href: '/showcase', label: t('nav.showcase'), icon: <Award className="h-5 w-5" /> },
+          { href: '/settings', label: t('nav.settings'), icon: <Settings className="h-5 w-5" /> },
         ],
       },
     ]
@@ -175,32 +150,17 @@ function getSectionsForRole(
   return [
     {
       items: [
-        {
-          href: '/dashboard',
-          label: t('nav.dashboard'),
-          icon: <LayoutDashboard className="h-5 w-5" />,
-          exactMatch: true,
-        },
-        {
-          href: '/projects',
-          label: t('nav.projects'),
-          icon: <FolderKanban className="h-5 w-5" />,
-        },
-        {
-          href: '/projects/new',
-          label: t('nav.newProject'),
-          icon: <Plus className="h-5 w-5" />,
-        },
-        {
-          href: '/showcase',
-          label: t('nav.showcase'),
-          icon: <Award className="h-5 w-5" />,
-        },
-        {
-          href: '/settings',
-          label: t('nav.settings'),
-          icon: <Settings className="h-5 w-5" />,
-        },
+        { href: '/dashboard', label: t('nav.dashboard'), icon: <LayoutDashboard className="h-5 w-5" />, exactMatch: true },
+        { href: '/projects', label: t('nav.projects'), icon: <FolderKanban className="h-5 w-5" /> },
+        { href: '/projects/new', label: t('nav.newProject'), icon: <Plus className="h-5 w-5" /> },
+        { href: '/showcase', label: t('nav.showcase'), icon: <Award className="h-5 w-5" /> },
+      ],
+    },
+    {
+      items: [
+        { href: '/institution/messages', label: t('nav.messages'), icon: <Mail className="h-5 w-5" /> },
+        { href: '/notifications', label: t('nav.notifications'), icon: <Bell className="h-5 w-5" /> },
+        { href: '/settings', label: t('nav.settings'), icon: <Settings className="h-5 w-5" /> },
       ],
     },
   ]
@@ -259,7 +219,7 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
     return pathWithoutLocale === href || pathWithoutLocale.startsWith(`${href}/`)
   }
 
-  const logoHref = userRole === 'admin' ? '/admin' : '/dashboard'
+  const logoHref = userRole === 'admin' ? '/admin' : userRole === 'institution' ? '/institution/dashboard' : '/dashboard'
 
   const NavContent = () => (
     <nav className="flex flex-col gap-1">

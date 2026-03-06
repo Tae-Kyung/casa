@@ -75,7 +75,20 @@
     "credits": "Credit Management",
     "adminOverview": "Overview",
     "management": "Management",
-    "userView": "User View"
+    "userView": "User View",
+    "institutions": "Institutions",
+    "programs": "Programs",
+    "mentors": "Mentors",
+    "mappings": "Mappings",
+    "overview": "National Overview",
+    "institutionManagement": "Institution",
+    "matches": "Matches",
+    "reports": "Reports",
+    "payouts": "Payouts",
+    "messages": "Messages",
+    "notifications": "Notifications",
+    "mentoringProjects": "Mentoring",
+    "personal": "Personal"
   },
   "dashboard": {
     "title": "Dashboard",
