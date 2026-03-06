@@ -266,7 +266,7 @@ export default function InstitutionDashboardPage() {
                   {item.mentors.length === 0 ? (
                     <div className="flex items-center gap-3 px-4 py-3 md:grid md:grid-cols-12">
                       <div className="col-span-4 min-w-0">
-                        <Link href={`/institution/projects`} className="truncate text-sm font-medium hover:underline">
+                        <Link href={`/institution/projects`} className="block truncate text-sm font-medium hover:underline">
                           {item.project.name}
                         </Link>
                       </div>
@@ -288,7 +288,7 @@ export default function InstitutionDashboardPage() {
                         {/* 프로젝트명: 첫번째 멘토만 표시 */}
                         <div className="col-span-4 min-w-0">
                           {idx === 0 ? (
-                            <Link href={`/institution/projects`} className="truncate text-sm font-medium hover:underline">
+                            <Link href={`/institution/projects`} className="block truncate text-sm font-medium hover:underline">
                               {item.project.name}
                             </Link>
                           ) : (

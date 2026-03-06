@@ -23,13 +23,7 @@ export async function GET(request: NextRequest) {
       return successResponse([])
     }
 
-    // 멘토 프로필 (서류 URL) 조회 — select('*')로 조회 후 cast
-    const { data: profiles } = await supabase
-      .from('bi_mentor_profiles')
-      .select('*')
-      .in('user_id', mentorIds)
-
-    // 멘토 기본 정보 조회
+    // 멘토 기본 정보 조회 (기준: 멘토 풀 전체)
     const { data: users } = await supabase
       .from('bi_users')
       .select('id, name, email')
@@ -40,17 +34,29 @@ export async function GET(request: NextRequest) {
       userMap[u.id] = { name: u.name, email: u.email }
     }
 
-    const result = (profiles || []).map((row) => {
+    // 멘토 프로필 (서류 URL) 조회 — 있는 경우만
+    const { data: profiles } = await supabase
+      .from('bi_mentor_profiles')
+      .select('*')
+      .in('user_id', mentorIds)
+
+    const profileMap: Record<string, Record<string, unknown>> = {}
+    for (const row of profiles || []) {
       const p = row as Record<string, unknown>
-      const userId = p.user_id as string
+      profileMap[p.user_id as string] = p
+    }
+
+    // 멘토 풀 전체를 기준으로 결과 생성 (프로필 없어도 표시)
+    const result = mentorIds.map((mentorId) => {
+      const p = profileMap[mentorId]
       return {
-        mentor_id: userId,
-        name: userMap[userId]?.name || null,
-        email: userMap[userId]?.email || '',
-        resume_url: (p.resume_url as string) || null,
-        bank_account_url: (p.bank_account_url as string) || null,
-        privacy_consent_url: (p.privacy_consent_url as string) || null,
-        documents_complete: !!(p.resume_url && p.bank_account_url && p.privacy_consent_url),
+        mentor_id: mentorId,
+        name: userMap[mentorId]?.name || null,
+        email: userMap[mentorId]?.email || '',
+        resume_url: (p?.resume_url as string) || null,
+        bank_account_url: (p?.bank_account_url as string) || null,
+        privacy_consent_url: (p?.privacy_consent_url as string) || null,
+        documents_complete: !!(p?.resume_url && p?.bank_account_url && p?.privacy_consent_url),
       }
     })
 
