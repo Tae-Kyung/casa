@@ -71,7 +71,8 @@ export async function GET(request: NextRequest) {
     const { data, error } = await dataQuery
 
     if (error) {
-      return errorResponse(error.message, 500)
+      console.error('Supabase query error:', error.message)
+      return errorResponse('프롬프트 목록을 불러오는데 실패했습니다.', 500)
     }
 
     return paginatedResponse(data || [], count || 0, page, limit)
@@ -112,7 +113,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      return errorResponse(error.message, 500)
+      console.error('Supabase insert error:', error.message)
+      return errorResponse('프롬프트 생성에 실패했습니다.', 500)
     }
 
     return successResponse(data, 201)

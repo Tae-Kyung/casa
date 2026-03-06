@@ -64,7 +64,8 @@ export async function PATCH(
       .single()
 
     if (error) {
-      return errorResponse(error.message, 500)
+      console.error('Supabase update error:', error.message)
+      return errorResponse('캔버스 저장에 실패했습니다.', 500)
     }
 
     return successResponse(data)

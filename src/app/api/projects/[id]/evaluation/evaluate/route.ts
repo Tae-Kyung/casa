@@ -297,9 +297,10 @@ IMPORTANT: Write all string values in the SAME LANGUAGE as the user's idea input
                 }))
               }
             } catch (error) {
+              console.error(`Evaluation error (${persona.name}):`, error)
               controller.enqueue(sseEvent('error', {
                 persona: persona.name,
-                message: error instanceof Error ? error.message : 'Unknown error',
+                message: '평가 처리 중 오류가 발생했습니다.',
               }))
             }
           }
@@ -367,8 +368,8 @@ IMPORTANT: Write all string values in the SAME LANGUAGE as the user's idea input
             recommendations,
           }))
         } catch (error) {
-          const msg = error instanceof Error ? error.message : 'Unknown error'
-          controller.enqueue(sseEvent('error', { message: msg }))
+          console.error('Evaluation SSE error:', error)
+          controller.enqueue(sseEvent('error', { message: '평가 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }))
         } finally {
           controller.close()
         }

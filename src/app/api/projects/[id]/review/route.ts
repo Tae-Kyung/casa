@@ -98,7 +98,8 @@ export async function POST(
       .single()
 
     if (error) {
-      return errorResponse(error.message, 500)
+      console.error('Supabase insert error:', error.message)
+      return errorResponse('사업 검토 저장에 실패했습니다.', 500)
     }
 
     // 프로젝트 상태 업데이트
@@ -167,7 +168,8 @@ export async function PATCH(
       .single()
 
     if (error) {
-      return errorResponse(error.message, 500)
+      console.error('Supabase update error:', error.message)
+      return errorResponse('사업 검토 수정에 실패했습니다.', 500)
     }
 
     // 프로젝트 상태 업데이트
