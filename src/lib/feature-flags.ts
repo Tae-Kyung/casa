@@ -1,10 +1,10 @@
 export const FEATURE_FLAGS = {
-  MENTORING_SYSTEM: false,
-  INSTITUTION_DASHBOARD: false,
-  PAYOUT_MANAGEMENT: false,
-  MESSAGE_SYSTEM: false,
-  NOTIFICATION_SYSTEM: false,
-  MULTI_ROLE_SIGNUP: false,
+  MENTORING_SYSTEM: true,
+  INSTITUTION_DASHBOARD: true,
+  PAYOUT_MANAGEMENT: true,
+  MESSAGE_SYSTEM: true,
+  NOTIFICATION_SYSTEM: true,
+  MULTI_ROLE_SIGNUP: true,
 } as const
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS
