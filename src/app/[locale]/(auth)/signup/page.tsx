@@ -69,7 +69,7 @@ export default function SignupPage() {
       }
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -81,6 +81,19 @@ export default function SignupPage() {
       toast.error(error.message)
       setIsLoading(false)
       return
+    }
+
+    // 멘토/기관 역할인 경우 API로 역할 업데이트 (트리거 의존 제거)
+    if (multiRoleEnabled && selectedRole !== 'user' && data.user?.id) {
+      try {
+        await fetch('/api/auth/post-signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: data.user.id }),
+        })
+      } catch {
+        // 역할 업데이트 실패해도 가입 자체는 성공
+      }
     }
 
     if (multiRoleEnabled && selectedRole !== 'user') {
