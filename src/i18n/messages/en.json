@@ -1000,6 +1000,56 @@
       "noArtifacts": "No artifacts available."
     }
   },
+  "applicant": {
+    "feedback": {
+      "title": "Mentor Feedback",
+      "description": "View feedback from your mentor.",
+      "mentorInfo": "Assigned Mentor",
+      "noMentors": "No mentors assigned.",
+      "sessions": "Mentoring Sessions",
+      "noSessions": "No mentoring sessions yet.",
+      "round": "Round",
+      "comments": "Comments",
+      "noComments": "No comments.",
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "acknowledged": "Acknowledged",
+      "fetchFailed": "Failed to load feedback."
+    },
+    "apply": {
+      "title": "Apply to Institution",
+      "description": "Apply to an institution program.",
+      "selectInstitution": "Select Institution",
+      "motivation": "Motivation",
+      "motivationPlaceholder": "Please describe your motivation for applying.",
+      "submit": "Submit Application",
+      "currentApplications": "Application Status",
+      "noApplications": "No applications yet.",
+      "pending": "Under Review",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "completed": "Completed",
+      "applied": "Application submitted.",
+      "applyFailed": "Failed to submit application.",
+      "alreadyApplied": "Already applied to this institution.",
+      "fetchFailed": "Failed to load application info."
+    },
+    "satisfaction": {
+      "title": "Mentoring Satisfaction Survey",
+      "description": "Rate your mentoring experience.",
+      "expertise": "Expertise",
+      "specificity": "Feedback Specificity",
+      "responsiveness": "Responsiveness",
+      "overall": "Overall Satisfaction",
+      "comment": "Additional Comments",
+      "commentPlaceholder": "Share any additional feedback.",
+      "submit": "Submit Survey",
+      "submitted": "Survey submitted.",
+      "submitFailed": "Failed to submit survey.",
+      "alreadySubmitted": "You have already submitted a survey.",
+      "fetchFailed": "Failed to load survey info."
+    }
+  },
   "notifications": {
     "title": "Notifications",
     "noNotifications": "No new notifications.",

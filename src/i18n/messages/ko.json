@@ -1000,6 +1000,56 @@
       "noArtifacts": "산출물이 없습니다."
     }
   },
+  "applicant": {
+    "feedback": {
+      "title": "멘토 피드백",
+      "description": "멘토의 피드백을 확인합니다.",
+      "mentorInfo": "배정 멘토",
+      "noMentors": "배정된 멘토가 없습니다.",
+      "sessions": "멘토링 세션",
+      "noSessions": "아직 멘토링 세션이 없습니다.",
+      "round": "라운드",
+      "comments": "코멘트",
+      "noComments": "코멘트가 없습니다.",
+      "draft": "임시저장",
+      "submitted": "제출됨",
+      "acknowledged": "확인됨",
+      "fetchFailed": "피드백을 불러오는데 실패했습니다."
+    },
+    "apply": {
+      "title": "기관 지원 신청",
+      "description": "기관 프로그램에 지원합니다.",
+      "selectInstitution": "기관 선택",
+      "motivation": "지원 동기",
+      "motivationPlaceholder": "지원 동기를 작성해주세요.",
+      "submit": "지원 신청",
+      "currentApplications": "지원 현황",
+      "noApplications": "지원 내역이 없습니다.",
+      "pending": "심사중",
+      "approved": "승인됨",
+      "rejected": "반려됨",
+      "completed": "완료",
+      "applied": "지원이 완료되었습니다.",
+      "applyFailed": "지원 신청에 실패했습니다.",
+      "alreadyApplied": "이미 지원한 기관입니다.",
+      "fetchFailed": "지원 정보를 불러오는데 실패했습니다."
+    },
+    "satisfaction": {
+      "title": "멘토링 만족도 평가",
+      "description": "멘토링에 대한 만족도를 평가해주세요.",
+      "expertise": "전문성",
+      "specificity": "피드백 구체성",
+      "responsiveness": "응답 속도",
+      "overall": "전체 만족도",
+      "comment": "자유 의견",
+      "commentPlaceholder": "추가 의견이 있으시면 작성해주세요.",
+      "submit": "평가 제출",
+      "submitted": "평가가 제출되었습니다.",
+      "submitFailed": "평가 제출에 실패했습니다.",
+      "alreadySubmitted": "이미 평가를 제출하셨습니다.",
+      "fetchFailed": "평가 정보를 불러오는데 실패했습니다."
+    }
+  },
   "notifications": {
     "title": "알림",
     "noNotifications": "새 알림이 없습니다.",
