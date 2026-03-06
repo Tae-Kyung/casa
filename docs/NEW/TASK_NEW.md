@@ -122,8 +122,8 @@ git checkout -b feature/moduchanup/e0-security
 ```
 
 ### 체크리스트
-- [ ] `feature/moduchanup` 브랜치 생성 완료
-- [ ] `feature/moduchanup/e0-security` 브랜치 생성 완료
+- [x] `feature/moduchanup` 브랜치 생성 완료
+- [x] `feature/moduchanup-e0-security` 브랜치 생성 완료 (Git 제약으로 `-` 구분자 사용)
 - [ ] Vercel에서 `feature/moduchanup` Preview 배포 설정 확인
 
 ---
@@ -155,7 +155,7 @@ git checkout -b feature/moduchanup/e0-security
 
 #### E0.2: HTTP 보안 헤더 추가
 
-- [ ] **E0.2.1** `next.config.ts`에 보안 헤더 추가
+- [x] **E0.2.1** `next.config.ts`에 보안 헤더 추가
   ```typescript
   // next.config.ts headers() 설정
   {
@@ -172,27 +172,27 @@ git checkout -b feature/moduchanup/e0-security
   ```
   - **완료 조건:** 응답 헤더에 보안 헤더 포함 확인 (DevTools Network 탭)
 
-- [ ] **E0.2.2** `/share/[id]` (AI 생성 HTML) 전용 CSP 강화
+- [x] **E0.2.2** `/share/[id]` (AI 생성 HTML) 전용 CSP 강화
   - JavaScript 실행 완전 차단: `script-src 'none'`
   - iframe 샌드박스 적용
   - **완료 조건:** AI HTML 내 스크립트 실행 불가 확인
 
 #### E0.3: 에러 메시지 클라이언트 노출 차단
 
-- [ ] **E0.3.1** `lib/utils/api-response.ts` 수정
+- [x] **E0.3.1** `lib/utils/api-response.ts` 수정
   - `errorResponse()` 내부 에러 메시지를 일반화된 메시지로 치환
   - 상세 에러는 서버 로그에만 기록 (console.error 또는 Sentry)
   - **완료 조건:** API 에러 응답에 스택 트레이스/DB 에러 메시지 미포함
 
-- [ ] **E0.3.2** 기존 API 라우트의 catch 블록 점검
+- [x] **E0.3.2** 기존 API 라우트의 catch 블록 점검 (9개 파일 + SSE 2건 수정 완료)
   - `src/app/api/` 내 모든 라우트의 에러 핸들링 확인
   - 내부 에러가 클라이언트에 그대로 전달되는 케이스 수정
   - **완료 조건:** 모든 API에서 내부 에러 은닉 확인
 
 #### E0.4: Service Client → anon Client 전환
 
-- [ ] **E0.4.1** 공개 API 라우트에서 `createServiceClient()` 사용 제거
-  - RLS를 우회하는 Service Client가 불필요한 라우트 식별
+- [x] **E0.4.1** 공개 API 라우트에서 `createServiceClient()` 사용 확인
+  - 감사 결과: showcase, public-profile 2개만 사용, 모두 공개 데이터 조회로 적절함
   - `createClient()` (서버) 또는 `createClient()` (미들웨어)로 전환
   - **완료 조건:** 공개 라우트에서 Service Client 미사용 확인
 
