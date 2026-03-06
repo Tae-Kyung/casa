@@ -72,11 +72,40 @@ export async function GET(request: NextRequest) {
       matchMap[m.project_id] = { mentor_role: m.mentor_role, status: m.status }
     }
 
-    // 프로젝트에 소유자 + 매칭 정보 결합
+    // 프로젝트-기관 매핑 조회
+    const { data: mappings } = await supabase
+      .from('bi_project_institution_maps')
+      .select('project_id, institution_id')
+      .in('project_id', projectIds)
+      .eq('status', 'approved')
+
+    let institutionMap: Record<string, { id: string; name: string }> = {}
+    const mappingList = mappings || []
+    if (mappingList.length > 0) {
+      const institutionIds = [...new Set(mappingList.map((m) => m.institution_id))]
+      const { data: institutions } = await supabase
+        .from('bi_institutions')
+        .select('id, name')
+        .in('id', institutionIds)
+
+      const instLookup: Record<string, { id: string; name: string }> = {}
+      for (const inst of institutions || []) {
+        instLookup[inst.id] = inst
+      }
+
+      for (const m of mappingList) {
+        if (instLookup[m.institution_id]) {
+          institutionMap[m.project_id] = instLookup[m.institution_id]
+        }
+      }
+    }
+
+    // 프로젝트에 소유자 + 매칭 + 기관 정보 결합
     const enriched = projectRows.map((p) => ({
       ...p,
       user: userMap[p.user_id] || null,
       match: matchMap[p.id] || null,
+      institution: institutionMap[p.id] || null,
     }))
 
     return paginatedResponse(enriched, count || 0, page, limit)

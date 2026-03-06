@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { UserPlus, RefreshCw, User2 } from 'lucide-react'
+import { UserPlus, RefreshCw, User2, Search } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -51,8 +51,12 @@ export default function InstitutionMentorsPage() {
 
   // Invite modal state
   const [isInviteOpen, setIsInviteOpen] = useState(false)
-  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteQuery, setInviteQuery] = useState('')
   const [isInviting, setIsInviting] = useState(false)
+  const [searchResults, setSearchResults] = useState<{ id: string; name: string | null; email: string; role: string }[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [selectedMentor, setSelectedMentor] = useState<{ id: string; name: string | null; email: string } | null>(null)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Status change loading
   const [updatingId, setUpdatingId] = useState<string | null>(null)
@@ -87,22 +91,64 @@ export default function InstitutionMentorsPage() {
     fetchMentors()
   }, [currentPage])
 
+  const searchMentors = useCallback(async (query: string) => {
+    if (query.trim().length < 2) {
+      setSearchResults([])
+      return
+    }
+    setIsSearching(true)
+    try {
+      const params = new URLSearchParams({ q: query.trim(), limit: '10' })
+      const response = await fetch(`/api/users/search?${params}`)
+      const result = await response.json()
+      if (result.success) {
+        setSearchResults(
+          (result.data as { id: string; name: string | null; email: string; role: string }[])
+            .filter((u) => u.role === 'mentor')
+        )
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsSearching(false)
+    }
+  }, [])
+
+  const handleQueryChange = (value: string) => {
+    setInviteQuery(value)
+    setSelectedMentor(null)
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    searchTimeoutRef.current = setTimeout(() => searchMentors(value), 300)
+  }
+
+  const handleSelectMentor = (mentor: { id: string; name: string | null; email: string }) => {
+    setSelectedMentor(mentor)
+    setInviteQuery(mentor.name ? `${mentor.name} (${mentor.email})` : mentor.email)
+    setSearchResults([])
+  }
+
   const handleInvite = async () => {
-    if (!inviteEmail.trim()) return
+    if (!selectedMentor && !inviteQuery.trim()) return
 
     setIsInviting(true)
     try {
+      const body = selectedMentor
+        ? { mentor_id: selectedMentor.id }
+        : { email: inviteQuery.trim() }
+
       const response = await fetch('/api/institution/mentors/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail.trim() }),
+        body: JSON.stringify(body),
       })
       const result = await response.json()
 
       if (result.success) {
         toast.success(t('institution.mentors.inviteSuccess'))
         setIsInviteOpen(false)
-        setInviteEmail('')
+        setInviteQuery('')
+        setSelectedMentor(null)
+        setSearchResults([])
         fetchMentors()
       } else {
         toast.error(result.error || t('institution.mentors.inviteFailed'))
@@ -285,23 +331,65 @@ export default function InstitutionMentorsPage() {
       )}
 
       {/* Invite Mentor Modal */}
-      <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+      <Dialog open={isInviteOpen} onOpenChange={(open) => {
+        setIsInviteOpen(open)
+        if (!open) {
+          setInviteQuery('')
+          setSelectedMentor(null)
+          setSearchResults([])
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('institution.mentors.inviteMentor')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>{t('institution.mentors.emailLabel')}</Label>
-              <Input
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder={t('institution.mentors.emailPlaceholder')}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleInvite()
-                }}
-              />
+              <Label>{t('institution.mentors.searchLabel')}</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={inviteQuery}
+                  onChange={(e) => handleQueryChange(e.target.value)}
+                  placeholder={t('institution.mentors.searchPlaceholder')}
+                  className="pl-9"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (selectedMentor || inviteQuery.trim())) handleInvite()
+                  }}
+                />
+              </div>
+              {/* Search Results Dropdown */}
+              {searchResults.length > 0 && !selectedMentor && (
+                <div className="mt-1 rounded-md border bg-popover shadow-md">
+                  {searchResults.map((mentor) => (
+                    <button
+                      key={mentor.id}
+                      type="button"
+                      className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-accent transition-colors"
+                      onClick={() => handleSelectMentor(mentor)}
+                    >
+                      <User2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{mentor.name || '-'}</p>
+                        <p className="truncate text-xs text-muted-foreground">{mentor.email}</p>
+                      </div>
+                      <Badge variant="secondary" className="text-xs shrink-0">
+                        {t('institution.mentors.mentorRole')}
+                      </Badge>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {isSearching && (
+                <div className="mt-1 flex items-center justify-center py-2">
+                  <LoadingSpinner size="sm" />
+                </div>
+              )}
+              {inviteQuery.trim().length >= 2 && !isSearching && searchResults.length === 0 && !selectedMentor && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t('institution.mentors.noSearchResults')}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -310,7 +398,7 @@ export default function InstitutionMentorsPage() {
             </Button>
             <Button
               onClick={handleInvite}
-              disabled={isInviting || !inviteEmail.trim()}
+              disabled={isInviting || (!selectedMentor && !inviteQuery.trim())}
             >
               {isInviting ? <LoadingSpinner size="sm" className="mr-2" /> : null}
               {t('institution.mentors.sendInvite')}

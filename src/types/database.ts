@@ -739,6 +739,7 @@ export interface Database {
           approved_by: string | null
           max_mentors: number
           max_projects: number
+          session_unit_price: number
           created_at: string
           updated_at: string
         }
@@ -755,6 +756,7 @@ export interface Database {
           approved_by?: string | null
           max_mentors?: number
           max_projects?: number
+          session_unit_price?: number
           created_at?: string
           updated_at?: string
         }
@@ -771,6 +773,7 @@ export interface Database {
           approved_by?: string | null
           max_mentors?: number
           max_projects?: number
+          session_unit_price?: number
           created_at?: string
           updated_at?: string
         }
@@ -935,6 +938,7 @@ export interface Database {
           program_id: string | null
           mentor_role: MentorMatchRole
           status: MentorMatchStatus
+          unit_price: number
           matched_by: string | null
           started_at: string | null
           completed_at: string | null
@@ -949,6 +953,7 @@ export interface Database {
           program_id?: string | null
           mentor_role?: MentorMatchRole
           status?: MentorMatchStatus
+          unit_price?: number
           matched_by?: string | null
           started_at?: string | null
           completed_at?: string | null
@@ -963,6 +968,7 @@ export interface Database {
           program_id?: string | null
           mentor_role?: MentorMatchRole
           status?: MentorMatchStatus
+          unit_price?: number
           matched_by?: string | null
           started_at?: string | null
           completed_at?: string | null

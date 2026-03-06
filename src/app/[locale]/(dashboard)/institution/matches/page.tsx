@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { Link2, RefreshCw, Plus, Pencil, Trash2 } from 'lucide-react'
+import { Link2, RefreshCw, Plus, Pencil, Trash2, DollarSign, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { Pagination } from '@/components/common/pagination'
@@ -31,8 +32,17 @@ interface Match {
   mentor_id: string
   mentor_role: 'primary' | 'secondary'
   status: 'assigned' | 'in_progress' | 'review' | 'completed' | 'cancelled'
+  unit_price: number
   project: { id: string; name: string }
   mentor: { id: string; name: string; email: string }
+}
+
+function formatKRW(amount: number): string {
+  return new Intl.NumberFormat('ko-KR', {
+    style: 'currency',
+    currency: 'KRW',
+    maximumFractionDigits: 0,
+  }).format(amount)
 }
 
 interface SelectOption {
@@ -71,8 +81,11 @@ export default function InstitutionMatchesPage() {
   const [selectedProjectId, setSelectedProjectId] = useState('')
   const [selectedMentorId, setSelectedMentorId] = useState('')
   const [selectedRole, setSelectedRole] = useState<'primary' | 'secondary'>('primary')
+  const [selectedUnitPrice, setSelectedUnitPrice] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [sortField, setSortField] = useState<'project' | 'mentor' | null>(null)
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   const fetchMatches = async () => {
     setIsLoading(true)
@@ -141,6 +154,7 @@ export default function InstitutionMatchesPage() {
     setSelectedProjectId('')
     setSelectedMentorId('')
     setSelectedRole('primary')
+    setSelectedUnitPrice('200,000')
     setIsModalOpen(true)
   }
 
@@ -150,6 +164,7 @@ export default function InstitutionMatchesPage() {
     setSelectedProjectId(match.project_id)
     setSelectedMentorId(match.mentor_id)
     setSelectedRole(match.mentor_role)
+    setSelectedUnitPrice(match.unit_price.toLocaleString())
     setIsModalOpen(true)
   }
 
@@ -158,6 +173,8 @@ export default function InstitutionMatchesPage() {
 
     setIsSaving(true)
     try {
+      const unitPriceNum = parseInt(selectedUnitPrice.replace(/[^0-9]/g, ''), 10) || 0
+
       if (editingMatch) {
         // Update
         const response = await fetch(`/api/institution/matches/${editingMatch.id}`, {
@@ -166,6 +183,7 @@ export default function InstitutionMatchesPage() {
           body: JSON.stringify({
             mentor_id: selectedMentorId !== editingMatch.mentor_id ? selectedMentorId : undefined,
             mentor_role: selectedRole !== editingMatch.mentor_role ? selectedRole : undefined,
+            unit_price: unitPriceNum !== editingMatch.unit_price ? unitPriceNum : undefined,
           }),
         })
         const result = await response.json()
@@ -253,6 +271,39 @@ export default function InstitutionMatchesPage() {
     return labels[status] || status
   }
 
+  const toggleSort = (field: 'project' | 'mentor') => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc')
+      } else {
+        setSortField(null)
+        setSortDirection('asc')
+      }
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  const sortedMatches = [...matches].sort((a, b) => {
+    if (!sortField) return 0
+    const aVal = sortField === 'project'
+      ? (a.project?.name || '').toLowerCase()
+      : (a.mentor?.name || '').toLowerCase()
+    const bVal = sortField === 'project'
+      ? (b.project?.name || '').toLowerCase()
+      : (b.mentor?.name || '').toLowerCase()
+    const cmp = aVal.localeCompare(bVal, 'ko')
+    return sortDirection === 'asc' ? cmp : -cmp
+  })
+
+  const SortIcon = ({ field }: { field: 'project' | 'mentor' }) => {
+    if (sortField !== field) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />
+    return sortDirection === 'asc'
+      ? <ArrowUp className="ml-1 h-3 w-3" />
+      : <ArrowDown className="ml-1 h-3 w-3" />
+  }
+
   const getRoleLabel = (role: string) => {
     const labels: Record<string, string> = {
       primary: t('institution.matches.rolePrimary'),
@@ -293,73 +344,96 @@ export default function InstitutionMatchesPage() {
           </CardContent>
         </Card>
       ) : (
-        <>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {matches.map((match) => (
-              <Card key={match.id}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center justify-between text-base">
-                    <span className="truncate">{match.project?.name || '-'}</span>
-                    <Badge
-                      variant="outline"
-                      className={
-                        match.mentor_role === 'primary'
-                          ? 'border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-300'
-                          : 'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300'
-                      }
-                    >
-                      {getRoleLabel(match.mentor_role)}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <p className="text-sm font-medium">{match.mentor?.name || '-'}</p>
-                    <p className="text-xs text-muted-foreground">{match.mentor?.email || '-'}</p>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Badge className={`${STATUS_COLORS[match.status]} text-white`}>
-                      {getStatusLabel(match.status)}
-                    </Badge>
-                    <Select
-                      value={match.status}
-                      onValueChange={(v) => handleStatusChange(match.id, v)}
-                    >
-                      <SelectTrigger className="h-8 w-32 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUSES.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {getStatusLabel(s)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex justify-end gap-2 border-t pt-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEditModal(match)}
-                    >
-                      <Pencil className="mr-1 h-3 w-3" />
-                      {t('common.edit')}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => setDeleteConfirmId(match.id)}
-                    >
-                      <Trash2 className="mr-1 h-3 w-3" />
-                      {t('common.delete')}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        <div className="space-y-2">
+          {/* Table Header */}
+          <div className="hidden rounded-lg bg-muted px-4 py-3 text-sm font-medium text-muted-foreground md:grid md:grid-cols-12 md:gap-4 md:items-center">
+            <button className="col-span-3 flex items-center hover:text-foreground transition-colors text-left" onClick={() => toggleSort('project')}>
+              {t('institution.matches.project')}<SortIcon field="project" />
+            </button>
+            <button className="col-span-2 flex items-center hover:text-foreground transition-colors text-left" onClick={() => toggleSort('mentor')}>
+              {t('institution.matches.mentor')}<SortIcon field="mentor" />
+            </button>
+            <div className="col-span-1">{t('institution.matches.role')}</div>
+            <div className="col-span-2">{t('institution.matches.unitPrice')}</div>
+            <div className="col-span-2">{t('institution.matches.status')}</div>
+            <div className="col-span-2">{t('institution.matches.actions')}</div>
           </div>
+
+          {/* Match Rows */}
+          {sortedMatches.map((match) => (
+            <Card key={match.id}>
+              <CardContent className="flex flex-col gap-3 px-4 py-3 md:grid md:grid-cols-12 md:items-center md:gap-4">
+                {/* Project */}
+                <div className="col-span-3 min-w-0">
+                  <p className="truncate text-sm font-medium">{match.project?.name || '-'}</p>
+                </div>
+
+                {/* Mentor */}
+                <div className="col-span-2 min-w-0">
+                  <p className="truncate text-sm">{match.mentor?.name || '-'}</p>
+                  <p className="truncate text-xs text-muted-foreground md:block hidden">{match.mentor?.email || ''}</p>
+                </div>
+
+                {/* Role */}
+                <div className="col-span-1">
+                  <Badge
+                    variant="outline"
+                    className={
+                      match.mentor_role === 'primary'
+                        ? 'border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-300'
+                        : 'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300'
+                    }
+                  >
+                    {getRoleLabel(match.mentor_role)}
+                  </Badge>
+                </div>
+
+                {/* Unit Price */}
+                <div className="col-span-2">
+                  <span className="text-sm font-medium">{formatKRW(match.unit_price)}</span>
+                </div>
+
+                {/* Status */}
+                <div className="col-span-2">
+                  <Select
+                    value={match.status}
+                    onValueChange={(v) => handleStatusChange(match.id, v)}
+                  >
+                    <SelectTrigger className="h-8 w-full text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {getStatusLabel(s)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Actions */}
+                <div className="col-span-2 flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => openEditModal(match)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => setDeleteConfirmId(match.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
 
           {totalPages > 1 && (
             <Pagination
@@ -368,7 +442,7 @@ export default function InstitutionMatchesPage() {
               onPageChange={setCurrentPage}
             />
           )}
-        </>
+        </div>
       )}
 
       {/* Create/Edit match modal */}
@@ -432,6 +506,22 @@ export default function InstitutionMatchesPage() {
                   </SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('institution.matches.unitPrice')}</Label>
+              <div className="relative">
+                <Input
+                  value={selectedUnitPrice}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^0-9]/g, '')
+                    setSelectedUnitPrice(raw ? parseInt(raw).toLocaleString() : '')
+                  }}
+                  className="pr-8"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  {t('institution.matches.unitPriceCurrency')}
+                </span>
+              </div>
             </div>
           </div>
           <DialogFooter>

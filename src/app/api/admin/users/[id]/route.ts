@@ -2,9 +2,49 @@ import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/auth/guards'
 import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
+import { z } from 'zod'
+
+const updateRoleSchema = z.object({
+  role: z.enum(['user', 'mentor', 'institution', 'admin']),
+})
 
 interface RouteContext {
   params: Promise<{ id: string }>
+}
+
+// PATCH: 역할 변경
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  try {
+    const admin = await requireAdmin()
+    const { id } = await context.params
+
+    if (admin.id === id) {
+      return errorResponse('자기 자신의 역할은 변경할 수 없습니다.', 400)
+    }
+
+    const body = await request.json()
+    const parsed = updateRoleSchema.safeParse(body)
+    if (!parsed.success) {
+      return errorResponse('유효하지 않은 역할입니다.', 400)
+    }
+
+    const supabase = createServiceClient()
+
+    const { data, error } = await supabase
+      .from('bi_users')
+      .update({ role: parsed.data.role })
+      .eq('id', id)
+      .select('id, role')
+      .single()
+
+    if (error) {
+      return errorResponse('역할 변경에 실패했습니다.', 500)
+    }
+
+    return successResponse(data)
+  } catch (error) {
+    return handleApiError(error)
+  }
 }
 
 // DELETE: 사용자 삭제 (참조무결성 처리)

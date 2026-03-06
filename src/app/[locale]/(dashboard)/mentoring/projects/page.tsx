@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { FolderOpen, User, Briefcase, ArrowRight } from 'lucide-react'
+import { FolderOpen, User, Briefcase, Building2, ArrowRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,11 @@ interface MatchInfo {
   status: string
 }
 
+interface InstitutionInfo {
+  id: string
+  name: string
+}
+
 interface MentorProject {
   id: string
   name: string
@@ -29,6 +34,7 @@ interface MentorProject {
   created_at: string
   user: ProjectUser
   match: MatchInfo
+  institution: InstitutionInfo | null
 }
 
 interface PaginationInfo {
@@ -188,6 +194,12 @@ export default function MentorProjectsPage() {
                         {project.user?.name || project.user?.email || '-'}
                       </span>
                     </div>
+                    {project.institution && (
+                      <div className="flex items-center gap-1.5">
+                        <Building2 className="h-4 w-4" />
+                        <span>{project.institution.name}</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-1.5">
                       <Briefcase className="h-4 w-4" />
                       <span>

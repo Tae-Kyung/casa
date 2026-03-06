@@ -101,6 +101,15 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient()
 
+    // 기관 기본 단가 조회
+    const { data: institution } = await supabase
+      .from('bi_institutions')
+      .select('session_unit_price')
+      .eq('id', institutionId)
+      .single()
+
+    const unitPrice = institution?.session_unit_price ?? 200000
+
     const { data, error } = await supabase
       .from('bi_mentor_matches')
       .insert({
@@ -109,6 +118,7 @@ export async function POST(request: NextRequest) {
         mentor_role: validatedData.mentor_role as MentorMatchRole,
         institution_id: institutionId,
         matched_by: user.id,
+        unit_price: unitPrice,
       })
       .select()
       .single()
@@ -121,12 +131,20 @@ export async function POST(request: NextRequest) {
       return errorResponse('매칭 생성에 실패했습니다.', 500)
     }
 
-    // 멘토에게 알림
+    // 프로젝트 이름 조회 후 멘토에게 알림
+    const { data: project } = await supabase
+      .from('bi_projects')
+      .select('name')
+      .eq('id', validatedData.project_id)
+      .single()
+
+    const projectName = project?.name || '프로젝트'
+
     await createNotification({
       userId: validatedData.mentor_id,
       type: 'match',
-      title: '새로운 프로젝트가 배정되었습니다.',
-      link: '/dashboard',
+      title: `새로운 프로젝트가 배정되었습니다: ${projectName}`,
+      link: `/projects/${validatedData.project_id}`,
     })
 
     return successResponse(data, 201)

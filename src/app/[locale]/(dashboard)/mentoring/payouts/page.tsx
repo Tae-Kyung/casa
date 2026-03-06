@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { DollarSign, RefreshCw } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DollarSign, RefreshCw, FolderKanban } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,6 +17,15 @@ import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { Pagination } from '@/components/common/pagination'
 import { toast } from 'sonner'
 
+interface MentoringProject {
+  matchId: string
+  projectId: string
+  projectName: string
+  unitPrice: number
+  status: string
+  role: string
+}
+
 interface PayoutSummary {
   totalAmount: number
   paidAmount: number
@@ -24,6 +33,7 @@ interface PayoutSummary {
   totalCount: number
   paidCount: number
   pendingCount: number
+  mentoringProjects: MentoringProject[]
 }
 
 interface PayoutItem {
@@ -128,51 +138,60 @@ export default function MentorPayoutsPage() {
     fetchPayouts()
   }
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<
-      string,
-      { className: string; label: string }
-    > = {
+  const getPayoutStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { className: string; label: string }> = {
       pending: {
-        className:
-          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+        className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
         label: t('mentor.payouts.statusPending'),
       },
       approved: {
-        className:
-          'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+        className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
         label: t('mentor.payouts.statusApproved'),
       },
       processing: {
-        className:
-          'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+        className: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
         label: t('mentor.payouts.statusProcessing'),
       },
       paid: {
-        className:
-          'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+        className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
         label: t('mentor.payouts.statusPaid'),
       },
       cancelled: {
-        className:
-          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+        className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
         label: t('mentor.payouts.statusCancelled'),
       },
     }
 
     const config = statusConfig[status] || {
-      className:
-        'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
       label: status,
     }
 
     return (
-      <span
-        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${config.className}`}
-      >
+      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${config.className}`}>
         {config.label}
       </span>
     )
+  }
+
+  const getMatchStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      assigned: t('mentor.payouts.statusAssigned'),
+      in_progress: t('mentor.payouts.statusInProgress'),
+      review: t('mentor.payouts.statusReview'),
+      completed: t('mentor.payouts.statusCompleted'),
+    }
+    return labels[status] || status
+  }
+
+  const getMatchStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      assigned: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      in_progress: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      review: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    }
+    return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
   }
 
   return (
@@ -180,12 +199,8 @@ export default function MentorPayoutsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">
-            {t('mentor.payouts.title')}
-          </h1>
-          <p className="text-muted-foreground">
-            {t('mentor.payouts.description')}
-          </p>
+          <h1 className="text-3xl font-bold">{t('mentor.payouts.title')}</h1>
+          <p className="text-muted-foreground">{t('mentor.payouts.description')}</p>
         </div>
         <Button variant="outline" size="sm" onClick={handleRefresh}>
           <RefreshCw className="mr-2 h-4 w-4" />
@@ -193,102 +208,130 @@ export default function MentorPayoutsPage() {
         </Button>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards - 3 columns */}
       {isLoadingSummary ? (
         <div className="flex justify-center py-8">
           <LoadingSpinner size="md" />
         </div>
       ) : summary ? (
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {t('mentor.payouts.totalAmount')}
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatKRW(summary.totalAmount)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {t('mentor.payouts.totalCountLabel', {
-                  count: summary.totalCount,
-                })}
-              </p>
-            </CardContent>
-          </Card>
+        <>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {t('mentor.payouts.totalAmount')}
+                </CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatKRW(summary.mentoringProjects.reduce((sum, p) => sum + p.unitPrice, 0))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {summary.mentoringProjects.length}{t('mentor.payouts.projectCount')}
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {t('mentor.payouts.paidAmount')}
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {formatKRW(summary.paidAmount)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {t('mentor.payouts.paidCountLabel', {
-                  count: summary.paidCount,
-                })}
-              </p>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {t('mentor.payouts.paidAmount')}
+                </CardTitle>
+                <DollarSign className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {formatKRW(summary.paidAmount)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t('mentor.payouts.paidCountLabel', { count: summary.paidCount })}
+                </p>
+              </CardContent>
+            </Card>
 
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {t('mentor.payouts.pendingAmount')}
+                </CardTitle>
+                <DollarSign className="h-4 w-4 text-yellow-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                  {formatKRW(summary.pendingAmount)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t('mentor.payouts.pendingCountLabel', { count: summary.pendingCount })}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Mentoring Projects List */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {t('mentor.payouts.pendingAmount')}
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FolderKanban className="h-5 w-5" />
+                {t('mentor.payouts.mentoringProjects')}
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-yellow-500" />
+              <CardDescription>{t('mentor.payouts.mentoringProjectsDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                {formatKRW(summary.pendingAmount)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {t('mentor.payouts.pendingCountLabel', {
-                  count: summary.pendingCount,
-                })}
-              </p>
+              {summary.mentoringProjects.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">
+                  {t('mentor.payouts.noProjects')}
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {summary.mentoringProjects.map((project) => (
+                    <div
+                      key={project.matchId}
+                      className="flex items-center justify-between rounded-lg border p-4 dark:border-gray-700"
+                    >
+                      <div className="flex flex-col gap-1">
+                        <p className="font-medium">{project.projectName}</p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {project.role === 'primary'
+                              ? t('mentor.payouts.rolePrimary')
+                              : t('mentor.payouts.roleSecondary')}
+                          </Badge>
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getMatchStatusColor(project.status)}`}>
+                            {getMatchStatusLabel(project.status)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold">{formatKRW(project.unitPrice)}</p>
+                        <p className="text-xs text-muted-foreground">{t('mentor.payouts.perSession')}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
-        </div>
+        </>
       ) : null}
 
-      {/* Filter */}
+      {/* Payout History */}
       <div className="flex items-center gap-4">
         <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder={t('mentor.payouts.filterAll')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">
-              {t('mentor.payouts.filterAll')}
-            </SelectItem>
-            <SelectItem value="pending">
-              {t('mentor.payouts.statusPending')}
-            </SelectItem>
-            <SelectItem value="approved">
-              {t('mentor.payouts.statusApproved')}
-            </SelectItem>
-            <SelectItem value="processing">
-              {t('mentor.payouts.statusProcessing')}
-            </SelectItem>
-            <SelectItem value="paid">
-              {t('mentor.payouts.statusPaid')}
-            </SelectItem>
-            <SelectItem value="cancelled">
-              {t('mentor.payouts.statusCancelled')}
-            </SelectItem>
+            <SelectItem value="all">{t('mentor.payouts.filterAll')}</SelectItem>
+            <SelectItem value="pending">{t('mentor.payouts.statusPending')}</SelectItem>
+            <SelectItem value="approved">{t('mentor.payouts.statusApproved')}</SelectItem>
+            <SelectItem value="processing">{t('mentor.payouts.statusProcessing')}</SelectItem>
+            <SelectItem value="paid">{t('mentor.payouts.statusPaid')}</SelectItem>
+            <SelectItem value="cancelled">{t('mentor.payouts.statusCancelled')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Payouts Table */}
       {isLoadingList ? (
         <div className="flex justify-center py-12">
           <LoadingSpinner size="lg" />
@@ -297,12 +340,8 @@ export default function MentorPayoutsPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <DollarSign className="mb-4 h-12 w-12 text-muted-foreground" />
-            <h3 className="text-lg font-semibold">
-              {t('mentor.payouts.noPayouts')}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {t('mentor.payouts.noPayoutsDesc')}
-            </p>
+            <h3 className="text-lg font-semibold">{t('mentor.payouts.noPayouts')}</h3>
+            <p className="text-sm text-muted-foreground">{t('mentor.payouts.noPayoutsDesc')}</p>
           </CardContent>
         </Card>
       ) : (
@@ -344,15 +383,9 @@ export default function MentorPayoutsPage() {
                       <td className="px-4 py-3 text-right font-semibold">
                         {formatKRW(payout.amount)}
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        {payout.sessions}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {payout.hours}h
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {getStatusBadge(payout.status)}
-                      </td>
+                      <td className="px-4 py-3 text-center">{payout.sessions}</td>
+                      <td className="px-4 py-3 text-center">{payout.hours}h</td>
+                      <td className="px-4 py-3 text-center">{getPayoutStatusBadge(payout.status)}</td>
                       <td className="px-4 py-3 text-right text-muted-foreground">
                         {new Date(payout.created_at).toLocaleDateString()}
                       </td>
@@ -365,7 +398,6 @@ export default function MentorPayoutsPage() {
         </Card>
       )}
 
-      {/* Pagination */}
       {pagination && pagination.totalPages > 1 && (
         <Pagination
           currentPage={currentPage}

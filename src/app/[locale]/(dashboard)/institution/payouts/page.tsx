@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { DollarSign, RefreshCw, CheckCircle, Download, FileText, ChevronDown, ChevronUp, ExternalLink, AlertCircle, Check } from 'lucide-react'
+import { DollarSign, RefreshCw, CheckCircle, Download, FileText, ChevronDown, ChevronUp, ExternalLink, AlertCircle, Check, Settings, Save } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { Pagination } from '@/components/common/pagination'
 import { toast } from 'sonner'
@@ -93,6 +95,61 @@ export default function InstitutionPayoutsPage() {
   const [showMentorDocs, setShowMentorDocs] = useState(false)
   const [mentorDocs, setMentorDocs] = useState<MentorDocument[]>([])
   const [isLoadingDocs, setIsLoadingDocs] = useState(false)
+
+  // Unit price state
+  const [unitPrice, setUnitPrice] = useState<number>(200000)
+  const [unitPriceInput, setUnitPriceInput] = useState('')
+  const [isLoadingPrice, setIsLoadingPrice] = useState(true)
+  const [isSavingPrice, setIsSavingPrice] = useState(false)
+
+  const fetchUnitPrice = useCallback(async () => {
+    setIsLoadingPrice(true)
+    try {
+      const response = await fetch('/api/institution/unit-price')
+      const result = await response.json()
+      if (result.success) {
+        setUnitPrice(result.data.session_unit_price)
+        setUnitPriceInput(result.data.session_unit_price.toLocaleString())
+      }
+    } catch {
+      // use default
+    } finally {
+      setIsLoadingPrice(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchUnitPrice()
+  }, [fetchUnitPrice])
+
+  const handleSaveUnitPrice = async () => {
+    const numericValue = parseInt(unitPriceInput.replace(/[^0-9]/g, ''), 10)
+    if (isNaN(numericValue) || numericValue < 0) {
+      toast.error(t('institution.payouts.invalidPrice'))
+      return
+    }
+
+    setIsSavingPrice(true)
+    try {
+      const response = await fetch('/api/institution/unit-price', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_unit_price: numericValue }),
+      })
+      const result = await response.json()
+      if (result.success) {
+        setUnitPrice(numericValue)
+        setUnitPriceInput(numericValue.toLocaleString())
+        toast.success(t('institution.payouts.priceSaved'))
+      } else {
+        toast.error(result.error || t('institution.payouts.priceSaveFailed'))
+      }
+    } catch {
+      toast.error(t('institution.payouts.priceSaveFailed'))
+    } finally {
+      setIsSavingPrice(false)
+    }
+  }
 
   const fetchPayouts = async () => {
     setIsLoading(true)
@@ -246,6 +303,60 @@ export default function InstitutionPayoutsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Unit Price Setting */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Settings className="h-4 w-4" />
+            {t('institution.payouts.unitPriceTitle')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-end gap-3">
+            <div className="flex-1 max-w-xs">
+              <Label className="text-sm text-muted-foreground">
+                {t('institution.payouts.unitPriceLabel')}
+              </Label>
+              {isLoadingPrice ? (
+                <div className="flex items-center h-10">
+                  <LoadingSpinner size="sm" />
+                </div>
+              ) : (
+                <div className="relative">
+                  <Input
+                    value={unitPriceInput}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^0-9]/g, '')
+                      setUnitPriceInput(raw ? parseInt(raw).toLocaleString() : '')
+                    }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveUnitPrice() }}
+                    className="pr-8"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                    {t('institution.payouts.unitPriceCurrency')}
+                  </span>
+                </div>
+              )}
+            </div>
+            <Button
+              onClick={handleSaveUnitPrice}
+              disabled={isSavingPrice || isLoadingPrice}
+              size="sm"
+            >
+              {isSavingPrice ? (
+                <LoadingSpinner size="sm" className="mr-2" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              {t('common.save')}
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t('institution.payouts.unitPriceDesc')}
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Filters and Bulk Actions */}
       <Card>

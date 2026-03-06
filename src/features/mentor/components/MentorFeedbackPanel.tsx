@@ -343,7 +343,7 @@ export function MentorFeedbackPanel({ projectId, stage, mentorRole, readOnly = f
                             <span className="font-medium text-foreground">
                               {fb.author?.name || fb.author?.email || '-'}
                             </span>
-                            <span>{new Date(fb.created_at).toLocaleDateString()}</span>
+                            <span>{new Date(fb.created_at).toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${typeBadgeClass(fb.feedback_type)}`}>

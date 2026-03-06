@@ -9,7 +9,8 @@ const updateMatchSchema = z.object({
   status: z.enum(['assigned', 'in_progress', 'review', 'completed', 'cancelled']).optional(),
   mentor_id: z.string().uuid().optional(),
   mentor_role: z.enum(['primary', 'secondary']).optional(),
-}).refine(data => data.status || data.mentor_id || data.mentor_role, {
+  unit_price: z.number().int().min(0).max(10000000).optional(),
+}).refine(data => data.status || data.mentor_id || data.mentor_role || data.unit_price !== undefined, {
   message: '변경할 항목이 없습니다.',
 })
 
@@ -32,6 +33,7 @@ export async function PATCH(
     if (validated.status) updateData.status = validated.status as MentorMatchStatus
     if (validated.mentor_id) updateData.mentor_id = validated.mentor_id
     if (validated.mentor_role) updateData.mentor_role = validated.mentor_role as MentorMatchRole
+    if (validated.unit_price !== undefined) updateData.unit_price = validated.unit_price
 
     const { data, error } = await supabase
       .from('bi_mentor_matches')

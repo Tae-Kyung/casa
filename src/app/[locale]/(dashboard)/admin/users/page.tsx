@@ -77,6 +77,7 @@ export default function AdminUsersPage() {
   const [processingUserId, setProcessingUserId] = useState<string | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [changingRoleId, setChangingRoleId] = useState<string | null>(null)
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true)
@@ -150,6 +151,28 @@ export default function AdminUsersPage() {
     }
   }
 
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    setChangingRoleId(userId)
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('admin.users.roleChangeSuccess'))
+        fetchUsers()
+      } else {
+        toast.error(result.error || t('admin.users.roleChangeFailed'))
+      }
+    } catch {
+      toast.error(t('admin.users.roleChangeFailed'))
+    } finally {
+      setChangingRoleId(null)
+    }
+  }
+
   const handleDelete = async (id: string) => {
     setDeletingId(id)
     try {
@@ -168,17 +191,6 @@ export default function AdminUsersPage() {
     } finally {
       setDeletingId(null)
     }
-  }
-
-  const getRoleBadge = (role: string) => {
-    const config: Record<string, { variant: 'default' | 'secondary' | 'outline'; label: string }> = {
-      admin: { variant: 'default', label: t('admin.users.roleAdmin') },
-      mentor: { variant: 'secondary', label: t('admin.users.roleMentor') },
-      institution: { variant: 'secondary', label: t('admin.users.roleInstitution') },
-      user: { variant: 'outline', label: t('admin.users.roleUser') },
-    }
-    const c = config[role] || config.user
-    return <Badge variant={c.variant}>{c.label}</Badge>
   }
 
   const getStageBadge = (stage: string) => {
@@ -311,8 +323,22 @@ export default function AdminUsersPage() {
                     <div className="col-span-3 hidden min-w-0 md:block">
                       <p className="truncate text-sm">{user.email}</p>
                     </div>
-                    <div className="col-span-2 flex items-center gap-1">
-                      {getRoleBadge(user.role)}
+                    <div className="col-span-2 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={user.role}
+                        onValueChange={(value) => handleRoleChange(user.id, value)}
+                        disabled={changingRoleId === user.id}
+                      >
+                        <SelectTrigger className="h-7 w-24 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">{t('admin.users.roleUser')}</SelectItem>
+                          <SelectItem value="mentor">{t('admin.users.roleMentor')}</SelectItem>
+                          <SelectItem value="institution">{t('admin.users.roleInstitution')}</SelectItem>
+                          <SelectItem value="admin">{t('admin.users.roleAdmin')}</SelectItem>
+                        </SelectContent>
+                      </Select>
                       {!user.is_approved && (
                         <Badge variant="outline" className="border-yellow-500 text-yellow-600 dark:text-yellow-400 gap-0.5">
                           <Clock className="h-3 w-3" />
