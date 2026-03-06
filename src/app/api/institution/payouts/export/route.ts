@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireInstitutionAccess } from '@/lib/auth/institution'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { handleApiError } from '@/lib/utils/api-response'
 
 // GET: 수당 CSV 내보내기
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const { institutionId } = await requireInstitutionAccess(searchParams.get('institution_id'))
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { data: payoutRows } = await supabase
       .from('bi_mentor_payouts')

@@ -11,6 +11,10 @@ import {
   ExternalLink,
   RefreshCw,
   Users,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -25,6 +29,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 
 interface UserProject {
@@ -40,6 +51,7 @@ interface UserWithProjects {
   name: string | null
   email: string
   role: string
+  is_approved: boolean
   created_at: string
   projects: UserProject[]
 }
@@ -62,6 +74,9 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set())
+  const [processingUserId, setProcessingUserId] = useState<string | null>(null)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true)
@@ -113,10 +128,53 @@ export default function AdminUsersPage() {
     })
   }
 
+  const handleApproval = async (userId: string, action: 'approve' | 'reject') => {
+    setProcessingUserId(userId)
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(action === 'approve' ? t('admin.users.approveSuccess') : t('admin.users.rejectSuccess'))
+        fetchUsers()
+      } else {
+        toast.error(result.error || t('admin.users.actionFailed'))
+      }
+    } catch {
+      toast.error(t('admin.users.actionFailed'))
+    } finally {
+      setProcessingUserId(null)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id)
+    try {
+      const response = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' })
+      const result = await response.json()
+
+      if (result.success) {
+        toast.success(t('admin.users.deleted'))
+        setDeleteConfirmId(null)
+        fetchUsers()
+      } else {
+        toast.error(result.error || t('admin.users.deleteFailed'))
+      }
+    } catch {
+      toast.error(t('admin.users.deleteFailed'))
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   const getRoleBadge = (role: string) => {
     const config: Record<string, { variant: 'default' | 'secondary' | 'outline'; label: string }> = {
       admin: { variant: 'default', label: t('admin.users.roleAdmin') },
       mentor: { variant: 'secondary', label: t('admin.users.roleMentor') },
+      institution: { variant: 'secondary', label: t('admin.users.roleInstitution') },
       user: { variant: 'outline', label: t('admin.users.roleUser') },
     }
     const c = config[role] || config.user
@@ -180,8 +238,10 @@ export default function AdminUsersPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('common.all')}</SelectItem>
+                <SelectItem value="pending">{t('admin.users.filterPending')}</SelectItem>
                 <SelectItem value="user">{t('admin.users.roleUser')}</SelectItem>
                 <SelectItem value="mentor">{t('admin.users.roleMentor')}</SelectItem>
+                <SelectItem value="institution">{t('admin.users.roleInstitution')}</SelectItem>
                 <SelectItem value="admin">{t('admin.users.roleAdmin')}</SelectItem>
               </SelectContent>
             </Select>
@@ -222,9 +282,12 @@ export default function AdminUsersPage() {
               <Card key={user.id}>
                 <CardContent className="p-0">
                   {/* 사용자 행 */}
-                  <button
-                    className="flex w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-accent/50 md:grid md:grid-cols-12"
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="flex w-full cursor-pointer items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-accent/50 md:grid md:grid-cols-12"
                     onClick={() => toggleExpanded(user.id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleExpanded(user.id) }}
                   >
                     <div className="col-span-1 flex items-center">
                       {user.projects.length > 0 ? (
@@ -248,18 +311,59 @@ export default function AdminUsersPage() {
                     <div className="col-span-3 hidden min-w-0 md:block">
                       <p className="truncate text-sm">{user.email}</p>
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-2 flex items-center gap-1">
                       {getRoleBadge(user.role)}
+                      {!user.is_approved && (
+                        <Badge variant="outline" className="border-yellow-500 text-yellow-600 dark:text-yellow-400 gap-0.5">
+                          <Clock className="h-3 w-3" />
+                          {t('admin.users.pendingApproval')}
+                        </Badge>
+                      )}
                     </div>
                     <div className="col-span-1">
                       <span className="text-sm">{user.projects.length}</span>
                     </div>
-                    <div className="col-span-2 hidden md:block">
+                    <div className="col-span-2 hidden items-center justify-between md:flex">
                       <span className="text-sm text-muted-foreground">
                         {new Date(user.created_at).toLocaleDateString()}
                       </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(user.id) }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </button>
+                  </div>
+
+                  {/* 승인 대기 중인 경우 승인/거절 버튼 */}
+                  {!user.is_approved && (
+                    <div className="flex items-center gap-2 border-t px-4 py-2 bg-yellow-50 dark:bg-yellow-950/20">
+                      <Clock className="h-4 w-4 text-yellow-500" />
+                      <span className="text-sm text-muted-foreground flex-1">
+                        {t('admin.users.pendingApproval')}
+                      </span>
+                      <Button
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); handleApproval(user.id, 'approve') }}
+                        disabled={processingUserId === user.id}
+                      >
+                        <CheckCircle className="mr-1 h-3.5 w-3.5" />
+                        {t('admin.users.approveUser')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={(e) => { e.stopPropagation(); handleApproval(user.id, 'reject') }}
+                        disabled={processingUserId === user.id}
+                      >
+                        <XCircle className="mr-1 h-3.5 w-3.5" />
+                        {t('admin.users.rejectUser')}
+                      </Button>
+                    </div>
+                  )}
 
                   {/* 프로젝트 목록 (펼침) */}
                   {isExpanded && user.projects.length > 0 && (
@@ -314,6 +418,31 @@ export default function AdminUsersPage() {
           )}
         </div>
       )}
+
+      {/* 삭제 확인 모달 */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('admin.users.deleteConfirmTitle')}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t('admin.users.deleteConfirmMessage')}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
+              disabled={!!deletingId}
+            >
+              {deletingId ? <LoadingSpinner size="sm" className="mr-2" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              {t('common.delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

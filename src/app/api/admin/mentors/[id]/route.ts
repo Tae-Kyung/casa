@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 
 interface RouteContext {
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     await requireAdmin()
     const { id } = await context.params
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { data: profile, error } = await supabase
       .from('bi_mentor_profiles')

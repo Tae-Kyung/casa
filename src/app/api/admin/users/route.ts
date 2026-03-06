@@ -20,13 +20,15 @@ export async function GET(request: NextRequest) {
     // 사용자 목록 쿼리
     let query = supabase
       .from('bi_users')
-      .select('id, name, email, role, created_at', { count: 'exact' })
+      .select('id, name, email, role, is_approved, created_at', { count: 'exact' })
 
     if (search) {
       query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`)
     }
 
-    if (role !== 'all') {
+    if (role === 'pending') {
+      query = query.eq('is_approved', false)
+    } else if (role !== 'all') {
       query = query.eq('role', role as UserRole)
     }
 

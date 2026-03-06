@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { requireInstitutionAccess } from '@/lib/auth/institution'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 
 const bulkMessageSchema = z.object({
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     const sanitizedBody = msgBody.replace(/<[^>]*>/g, '')
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 대상 사용자 ID 수집
     let recipientIds: string[] = []

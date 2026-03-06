@@ -4,7 +4,7 @@ import createMiddleware from 'next-intl/middleware'
 import { routing } from './i18n/routing'
 
 // 인증이 필요 없는 경로
-const publicPaths = ['/login', '/signup', '/auth/callback', '/forgot-password', '/showcase']
+const publicPaths = ['/login', '/signup', '/auth/callback', '/forgot-password', '/showcase', '/pending-approval']
 
 // 관리자만 접근 가능한 경로
 const adminPaths = ['/admin']
@@ -14,6 +14,21 @@ const institutionPaths = ['/institution']
 
 // 승인 대기 페이지
 const pendingApprovalPath = '/pending-approval'
+
+// 리다이렉트 응답 생성 시 Supabase 세션 쿠키를 유지하기 위한 헬퍼
+function createRedirect(url: URL, response: NextResponse): NextResponse {
+  const redirect = NextResponse.redirect(url)
+  // i18n 응답에 설정된 Supabase 세션 쿠키를 리다이렉트 응답에 복사
+  response.cookies.getAll().forEach((cookie) => {
+    redirect.cookies.set(cookie.name, cookie.value, {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    })
+  })
+  return redirect
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -68,7 +83,7 @@ export async function middleware(request: NextRequest) {
     const locale = pathname.split('/')[1] || 'ko'
     const url = request.nextUrl.clone()
     url.pathname = `/${locale}/login`
-    return NextResponse.redirect(url)
+    return createRedirect(url, response)
   }
 
   // 인증된 사용자 정보 조회 (한 번만)
@@ -91,7 +106,7 @@ export async function middleware(request: NextRequest) {
     // 미승인 사용자는 승인 대기 페이지로
     if (userData && !userData.is_approved) {
       url.pathname = `/${locale}${pendingApprovalPath}`
-      return NextResponse.redirect(url)
+      return createRedirect(url, response)
     }
 
     // 역할별 리다이렉트
@@ -102,7 +117,7 @@ export async function middleware(request: NextRequest) {
     } else {
       url.pathname = `/${locale}/dashboard`
     }
-    return NextResponse.redirect(url)
+    return createRedirect(url, response)
   }
 
   // 미승인 사용자: 승인 대기 페이지 외 접근 차단
@@ -111,7 +126,7 @@ export async function middleware(request: NextRequest) {
       const locale = pathname.split('/')[1] || 'ko'
       const url = request.nextUrl.clone()
       url.pathname = `/${locale}${pendingApprovalPath}`
-      return NextResponse.redirect(url)
+      return createRedirect(url, response)
     }
   }
 
@@ -121,7 +136,7 @@ export async function middleware(request: NextRequest) {
       const locale = pathname.split('/')[1] || 'ko'
       const url = request.nextUrl.clone()
       url.pathname = `/${locale}/dashboard`
-      return NextResponse.redirect(url)
+      return createRedirect(url, response)
     }
   }
 
@@ -131,7 +146,7 @@ export async function middleware(request: NextRequest) {
       const locale = pathname.split('/')[1] || 'ko'
       const url = request.nextUrl.clone()
       url.pathname = `/${locale}/dashboard`
-      return NextResponse.redirect(url)
+      return createRedirect(url, response)
     }
   }
 
@@ -139,5 +154,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api|share|.*\\..*).*)'],
 }

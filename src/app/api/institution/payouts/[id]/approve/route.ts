@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireInstitutionAccess } from '@/lib/auth/institution'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { logAudit, extractRequestInfo } from '@/lib/security/audit'
 import { createNotification } from '@/lib/notifications'
@@ -15,7 +15,7 @@ export async function POST(
     const { user } = await requireInstitutionAccess(searchParams.get('institution_id'))
     const { id } = await context.params
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 낙관적 잠금: pending 상태에서만 승인 가능
     const { data, error } = await supabase

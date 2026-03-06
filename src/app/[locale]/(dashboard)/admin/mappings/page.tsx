@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { RefreshCw, Link2, Plus } from 'lucide-react'
+import { RefreshCw, Link2, Plus, Search, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -38,6 +38,13 @@ interface SelectOption {
   name: string
 }
 
+interface ProjectOption {
+  id: string
+  name: string
+  current_stage: string
+  owner_name: string
+}
+
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-500',
   approved: 'bg-green-500',
@@ -55,13 +62,21 @@ export default function MappingsPage() {
 
   // 모달 상태
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [projects, setProjects] = useState<SelectOption[]>([])
   const [institutions, setInstitutions] = useState<SelectOption[]>([])
   const [programs, setPrograms] = useState<SelectOption[]>([])
   const [selectedProjectId, setSelectedProjectId] = useState('')
+  const [selectedProjectName, setSelectedProjectName] = useState('')
   const [selectedInstitutionId, setSelectedInstitutionId] = useState('')
   const [selectedProgramId, setSelectedProgramId] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+
+  // 프로젝트 검색 상태
+  const [projectQuery, setProjectQuery] = useState('')
+  const [projectResults, setProjectResults] = useState<ProjectOption[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const fetchMappings = async () => {
     setIsLoading(true)
@@ -105,11 +120,65 @@ export default function MappingsPage() {
     }
   }
 
+  const searchProjects = useCallback(async (query: string) => {
+    setIsSearching(true)
+    try {
+      const params = new URLSearchParams({ q: query, limit: '20' })
+      const response = await fetch(`/api/admin/projects?${params}`)
+      const result = await response.json()
+      if (result.success) {
+        setProjectResults(result.data)
+      }
+    } catch {
+      // silent
+    } finally {
+      setIsSearching(false)
+    }
+  }, [])
+
+  const handleProjectQueryChange = (value: string) => {
+    setProjectQuery(value)
+    setShowProjectDropdown(true)
+    // 선택이 해제된 경우 ID 초기화
+    if (selectedProjectId && value !== selectedProjectName) {
+      setSelectedProjectId('')
+      setSelectedProjectName('')
+    }
+    // 디바운스 검색
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    searchTimeoutRef.current = setTimeout(() => {
+      searchProjects(value)
+    }, 300)
+  }
+
+  const selectProject = (project: ProjectOption) => {
+    setSelectedProjectId(project.id)
+    setSelectedProjectName(project.name)
+    setProjectQuery(project.name)
+    setShowProjectDropdown(false)
+  }
+
+  // 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowProjectDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   const openCreateModal = async () => {
     await fetchSelectOptions()
     setSelectedProjectId('')
+    setSelectedProjectName('')
+    setProjectQuery('')
+    setProjectResults([])
     setSelectedInstitutionId('')
     setSelectedProgramId('')
+    // 초기 프로젝트 목록 로드
+    searchProjects('')
     setIsModalOpen(true)
   }
 
@@ -281,16 +350,56 @@ export default function MappingsPage() {
             <DialogTitle>{t('admin.mappings.createMapping')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
+            <div ref={dropdownRef} className="relative">
               <label className="mb-1 block text-sm font-medium">{t('admin.mappings.project')}</label>
-              <input
-                type="text"
-                className="w-full rounded-md border px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700"
-                placeholder={t('admin.mappings.selectProject')}
-                value={selectedProjectId}
-                onChange={(e) => setSelectedProjectId(e.target.value)}
-              />
-              <p className="mt-1 text-xs text-muted-foreground">Project UUID</p>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  className="w-full rounded-md border pl-9 pr-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700"
+                  placeholder={t('admin.mappings.searchProject')}
+                  value={projectQuery}
+                  onChange={(e) => handleProjectQueryChange(e.target.value)}
+                  onFocus={() => setShowProjectDropdown(true)}
+                />
+                {isSearching && (
+                  <LoadingSpinner size="sm" className="absolute right-3 top-1/2 -translate-y-1/2" />
+                )}
+              </div>
+              {selectedProjectId && (
+                <p className="mt-1 text-xs text-green-600 dark:text-green-400">
+                  {selectedProjectName}
+                </p>
+              )}
+              {showProjectDropdown && (
+                <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border bg-popover shadow-md">
+                  {projectResults.length === 0 ? (
+                    <p className="px-3 py-4 text-center text-sm text-muted-foreground">
+                      {isSearching ? t('common.loading') : t('admin.mappings.noProjectsFound')}
+                    </p>
+                  ) : (
+                    projectResults.map((project) => (
+                      <button
+                        key={project.id}
+                        className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent ${
+                          selectedProjectId === project.id ? 'bg-accent' : ''
+                        }`}
+                        onClick={() => selectProject(project)}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-medium">{project.name}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {project.owner_name} · {project.current_stage}
+                          </p>
+                        </div>
+                        {selectedProjectId === project.id && (
+                          <Check className="ml-2 h-4 w-4 shrink-0 text-green-600" />
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">{t('admin.mappings.institution')}</label>

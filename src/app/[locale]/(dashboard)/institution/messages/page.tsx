@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Mail,
@@ -34,14 +34,20 @@ import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { Pagination } from '@/components/common/pagination'
 import { toast } from 'sonner'
 
+interface UserRef {
+  id: string
+  name: string | null
+  email: string
+}
+
 interface Message {
   id: string
   sender_id: string
-  sender_name: string
   recipient_id: string
-  recipient_name: string
-  subject: string
-  body: string
+  sender: UserRef
+  recipient: UserRef
+  subject: string | null
+  content: string
   is_read: boolean
   created_at: string
 }
@@ -53,15 +59,15 @@ interface MessageDetail extends Message {
 interface Reply {
   id: string
   sender_id: string
-  sender_name: string
-  body: string
+  sender: UserRef
+  content: string
   created_at: string
 }
 
 interface MessagesResponse {
   success: boolean
   data: {
-    messages: Message[]
+    items: Message[]
     total: number
     page: number
     totalPages: number
@@ -103,6 +109,10 @@ export default function InstitutionMessagesPage() {
   // New message dialog state
   const [newMessageOpen, setNewMessageOpen] = useState(false)
   const [newRecipientId, setNewRecipientId] = useState('')
+  const [newRecipientLabel, setNewRecipientLabel] = useState('')
+  const [recipientSearch, setRecipientSearch] = useState('')
+  const [recipientResults, setRecipientResults] = useState<Array<{ id: string; name: string | null; email: string; role: string }>>([])
+  const [recipientDropdownOpen, setRecipientDropdownOpen] = useState(false)
   const [newSubject, setNewSubject] = useState('')
   const [newBody, setNewBody] = useState('')
   const [newMessageSending, setNewMessageSending] = useState(false)
@@ -113,6 +123,39 @@ export default function InstitutionMessagesPage() {
   const [bulkBody, setBulkBody] = useState('')
   const [bulkSending, setBulkSending] = useState(false)
 
+  // Recipient search with debounce
+  const recipientDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (recipientSearch.trim().length < 2) {
+      setRecipientResults([])
+      return
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(recipientSearch.trim())}&limit=10`)
+        const result = await res.json()
+        if (result.success) {
+          setRecipientResults(result.data)
+          setRecipientDropdownOpen(true)
+        }
+      } catch {
+        // ignore
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [recipientSearch])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (recipientDropdownRef.current && !recipientDropdownRef.current.contains(e.target as Node)) {
+        setRecipientDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   // Fetch inbox messages
   const fetchInbox = async (page: number = inboxPage) => {
     setInboxLoading(true)
@@ -120,7 +163,7 @@ export default function InstitutionMessagesPage() {
       const response = await fetch(`/api/messages?folder=inbox&page=${page}&limit=${LIMIT}`)
       const result: MessagesResponse = await response.json()
       if (result.success) {
-        setInboxMessages(result.data.messages)
+        setInboxMessages(result.data.items || [])
         setInboxTotalPages(result.data.totalPages)
         setInboxPage(result.data.page)
       } else {
@@ -140,7 +183,7 @@ export default function InstitutionMessagesPage() {
       const response = await fetch(`/api/messages?folder=sent&page=${page}&limit=${LIMIT}`)
       const result: MessagesResponse = await response.json()
       if (result.success) {
-        setSentMessages(result.data.messages)
+        setSentMessages(result.data.items || [])
         setSentTotalPages(result.data.totalPages)
         setSentPage(result.data.page)
       } else {
@@ -316,6 +359,10 @@ export default function InstitutionMessagesPage() {
     setNewMessageOpen(open)
     if (!open) {
       setNewRecipientId('')
+      setNewRecipientLabel('')
+      setRecipientSearch('')
+      setRecipientResults([])
+      setRecipientDropdownOpen(false)
       setNewSubject('')
       setNewBody('')
     }
@@ -323,8 +370,11 @@ export default function InstitutionMessagesPage() {
 
   // Render message list item
   const renderMessageItem = (message: Message, folder: 'inbox' | 'sent') => {
-    const displayName = folder === 'inbox' ? message.sender_name : message.recipient_name
-    const preview = message.body.length > 80 ? message.body.slice(0, 80) + '...' : message.body
+    const senderName = message.sender?.name || message.sender?.email || ''
+    const recipientName = message.recipient?.name || message.recipient?.email || ''
+    const displayName = folder === 'inbox' ? senderName : recipientName
+    const body = message.content || ''
+    const preview = body.length > 80 ? body.slice(0, 80) + '...' : body
 
     return (
       <div
@@ -586,7 +636,7 @@ export default function InstitutionMessagesPage() {
                     <span className="text-muted-foreground">
                       {t('institution.messages.from')}:
                     </span>{' '}
-                    <span className="font-medium">{selectedMessage.sender_name}</span>
+                    <span className="font-medium">{selectedMessage.sender?.name || selectedMessage.sender?.email}</span>
                   </div>
                   <span className="text-xs text-muted-foreground">
                     {formatDate(selectedMessage.created_at)}
@@ -596,10 +646,10 @@ export default function InstitutionMessagesPage() {
                   <span className="text-muted-foreground">
                     {t('institution.messages.to')}:
                   </span>{' '}
-                  <span className="font-medium">{selectedMessage.recipient_name}</span>
+                  <span className="font-medium">{selectedMessage.recipient?.name || selectedMessage.recipient?.email}</span>
                 </div>
                 <div className="pt-2 border-t">
-                  <p className="text-sm whitespace-pre-wrap">{selectedMessage.body}</p>
+                  <p className="text-sm whitespace-pre-wrap">{selectedMessage.content}</p>
                 </div>
               </div>
 
@@ -615,12 +665,12 @@ export default function InstitutionMessagesPage() {
                       className="rounded-lg border bg-muted/30 p-3 space-y-1"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{reply.sender_name}</span>
+                        <span className="text-sm font-medium">{reply.sender?.name || reply.sender?.email || ''}</span>
                         <span className="text-xs text-muted-foreground">
                           {formatDate(reply.created_at)}
                         </span>
                       </div>
-                      <p className="text-sm whitespace-pre-wrap">{reply.body}</p>
+                      <p className="text-sm whitespace-pre-wrap">{reply.content}</p>
                     </div>
                   ))}
                 </div>
@@ -671,12 +721,58 @@ export default function InstitutionMessagesPage() {
               <Label htmlFor="new-recipient">
                 {t('institution.messages.recipient')}
               </Label>
-              <Input
-                id="new-recipient"
-                value={newRecipientId}
-                onChange={(e) => setNewRecipientId(e.target.value)}
-                placeholder={t('institution.messages.recipientPlaceholder')}
-              />
+              <div className="relative" ref={recipientDropdownRef}>
+                {newRecipientId ? (
+                  <div className="flex items-center gap-2 rounded-md border px-3 py-2">
+                    <span className="flex-1 text-sm">{newRecipientLabel}</span>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground text-sm"
+                      onClick={() => {
+                        setNewRecipientId('')
+                        setNewRecipientLabel('')
+                        setRecipientSearch('')
+                      }}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ) : (
+                  <Input
+                    id="new-recipient"
+                    value={recipientSearch}
+                    onChange={(e) => setRecipientSearch(e.target.value)}
+                    onFocus={() => recipientResults.length > 0 && setRecipientDropdownOpen(true)}
+                    placeholder={t('institution.messages.searchRecipient')}
+                    autoComplete="off"
+                  />
+                )}
+                {recipientDropdownOpen && recipientResults.length > 0 && (
+                  <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg max-h-48 overflow-y-auto">
+                    {recipientResults.map((u) => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors"
+                        onClick={() => {
+                          setNewRecipientId(u.id)
+                          setNewRecipientLabel(`${u.name || u.email} (${u.email})`)
+                          setRecipientSearch('')
+                          setRecipientDropdownOpen(false)
+                        }}
+                      >
+                        <div className="font-medium">{u.name || u.email}</div>
+                        <div className="text-xs text-muted-foreground">{u.email} · {u.role}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {recipientDropdownOpen && recipientSearch.trim().length >= 2 && recipientResults.length === 0 && (
+                  <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg p-3 text-sm text-muted-foreground">
+                    {t('institution.messages.noUsersFound')}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Subject */}

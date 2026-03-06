@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireMessageAccess } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, handleApiError } from '@/lib/utils/api-response'
 
 // GET: 메시지 상세 (쓰레드 포함)
@@ -12,7 +12,7 @@ export async function GET(
     const { id } = await context.params
     await requireMessageAccess(id)
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 원본 메시지
     const { data: message } = await supabase

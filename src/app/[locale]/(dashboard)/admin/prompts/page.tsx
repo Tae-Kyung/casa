@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Plus, Search, RefreshCw, Settings2, Lightbulb, Building2 } from 'lucide-react'
+import { Plus, Search, RefreshCw, Settings2, Lightbulb, Building2, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,9 +27,10 @@ const categoryColors: Record<PromptCategory, string> = {
   document: 'bg-purple-500',
   marketing: 'bg-orange-500',
   startup: 'bg-emerald-500',
+  mentoring: 'bg-violet-500',
 }
 
-type Track = 'all' | 'pre_startup' | 'startup'
+type Track = 'all' | 'pre_startup' | 'startup' | 'mentoring'
 
 export default function PromptsPage() {
   const t = useTranslations()
@@ -40,6 +41,7 @@ export default function PromptsPage() {
     document: t('admin.prompts.categoryDocument'),
     marketing: t('admin.prompts.categoryMarketing'),
     startup: t('admin.prompts.categoryStartup'),
+    mentoring: t('admin.prompts.categoryMentoring'),
   }
 
   const [prompts, setPrompts] = useState<Prompt[]>([])
@@ -116,11 +118,13 @@ export default function PromptsPage() {
   // 트랙에 따른 카테고리 옵션
   const preStartupCategories: PromptCategory[] = ['ideation', 'evaluation', 'document', 'marketing']
   const startupCategories: PromptCategory[] = ['startup']
+  const mentoringCategories: PromptCategory[] = ['mentoring']
 
   const visibleCategories =
     track === 'pre_startup' ? preStartupCategories :
     track === 'startup' ? startupCategories :
-    [...preStartupCategories, ...startupCategories]
+    track === 'mentoring' ? mentoringCategories :
+    [...preStartupCategories, ...startupCategories, ...mentoringCategories]
 
   return (
     <div className="space-y-6">
@@ -166,6 +170,15 @@ export default function PromptsPage() {
         >
           <Building2 className="mr-1.5 h-4 w-4" />
           {t('project.startup')}
+        </Button>
+        <Button
+          variant={track === 'mentoring' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleTrackChange('mentoring')}
+          className={track === 'mentoring' ? 'bg-purple-600 hover:bg-purple-700' : ''}
+        >
+          <Users className="mr-1.5 h-4 w-4" />
+          {t('admin.prompts.categoryMentoring')}
         </Button>
       </div>
 

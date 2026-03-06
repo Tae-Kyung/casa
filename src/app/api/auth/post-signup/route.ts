@@ -69,6 +69,44 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 4. 기관 담당자인 경우 기관 + 멤버십 생성
+    if (role === 'institution') {
+      const institutionName = metadata?.institution_name || metadata?.name || authUser.user.email?.split('@')[0] || 'My Institution'
+
+      // 기관 생성
+      const { data: institution, error: instError } = await supabase
+        .from('bi_institutions')
+        .insert({
+          name: institutionName,
+          region: metadata?.region || '미지정',
+          type: 'center',
+          contact_email: authUser.user.email,
+          is_approved: true,
+          approved_at: new Date().toISOString(),
+        })
+        .select('id')
+        .single()
+
+      if (instError) {
+        console.error('Failed to create institution:', instError)
+      } else if (institution) {
+        // 멤버십 생성 (manager + approved)
+        const { error: memberError } = await supabase
+          .from('bi_institution_members')
+          .insert({
+            user_id: userId,
+            institution_id: institution.id,
+            role_in_institution: 'manager',
+            is_approved: true,
+            approved_at: new Date().toISOString(),
+          })
+
+        if (memberError) {
+          console.error('Failed to create institution membership:', memberError)
+        }
+      }
+    }
+
     return successResponse({ role, updated: true })
   } catch (error) {
     return handleApiError(error)

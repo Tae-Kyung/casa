@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireMentorMatch } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { z } from 'zod'
 
@@ -23,7 +23,7 @@ export async function GET(
     const { id } = await context.params
     const user = await requireMentorMatch(id)
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 해당 프로젝트의 매칭 정보 조회
     const { data: match, error: matchError } = await supabase
@@ -61,7 +61,7 @@ export async function POST(
     const { id } = await context.params
     const user = await requireMentorMatch(id)
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 해당 프로젝트의 매칭 정보 조회
     const { data: match, error: matchError } = await supabase

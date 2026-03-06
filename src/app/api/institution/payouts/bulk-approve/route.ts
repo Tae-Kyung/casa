@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { requireInstitutionAccess } from '@/lib/auth/institution'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { logAudit, extractRequestInfo } from '@/lib/security/audit'
 
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { payout_ids } = bulkApproveSchema.parse(body)
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { data, error } = await supabase
       .from('bi_mentor_payouts')

@@ -53,12 +53,15 @@ interface NavSection {
 interface DashboardLayoutProps {
   children: React.ReactNode
   userRole?: 'user' | 'mentor' | 'institution' | 'admin'
+  userName?: string | null
+  institutionName?: string
 }
 
 function getSectionsForRole(
   userRole: 'user' | 'mentor' | 'institution' | 'admin',
   t: ReturnType<typeof useTranslations>,
-  pendingCount: number
+  pendingCount: number,
+  unreadMessages: number
 ): NavSection[] {
   if (userRole === 'admin') {
     return [
@@ -105,7 +108,7 @@ function getSectionsForRole(
           { href: '/institution/matches', label: t('nav.matches'), icon: <Link2 className="h-5 w-5" /> },
           { href: '/institution/reports', label: t('nav.reports'), icon: <FileText className="h-5 w-5" /> },
           { href: '/institution/payouts', label: t('nav.payouts'), icon: <DollarSign className="h-5 w-5" /> },
-          { href: '/institution/messages', label: t('nav.messages'), icon: <Mail className="h-5 w-5" /> },
+          { href: '/institution/messages', label: t('nav.messages'), icon: <Mail className="h-5 w-5" />, badge: unreadMessages > 0 ? unreadMessages : undefined },
         ],
       },
       {
@@ -137,7 +140,7 @@ function getSectionsForRole(
       },
       {
         items: [
-          { href: '/institution/messages', label: t('nav.messages'), icon: <Mail className="h-5 w-5" /> },
+          { href: '/messages', label: t('nav.messages'), icon: <Mail className="h-5 w-5" />, badge: unreadMessages > 0 ? unreadMessages : undefined },
           { href: '/notifications', label: t('nav.notifications'), icon: <Bell className="h-5 w-5" /> },
           { href: '/showcase', label: t('nav.showcase'), icon: <Award className="h-5 w-5" /> },
           { href: '/settings', label: t('nav.settings'), icon: <Settings className="h-5 w-5" /> },
@@ -158,7 +161,7 @@ function getSectionsForRole(
     },
     {
       items: [
-        { href: '/institution/messages', label: t('nav.messages'), icon: <Mail className="h-5 w-5" /> },
+        { href: '/messages', label: t('nav.messages'), icon: <Mail className="h-5 w-5" />, badge: unreadMessages > 0 ? unreadMessages : undefined },
         { href: '/notifications', label: t('nav.notifications'), icon: <Bell className="h-5 w-5" /> },
         { href: '/settings', label: t('nav.settings'), icon: <Settings className="h-5 w-5" /> },
       ],
@@ -166,7 +169,7 @@ function getSectionsForRole(
   ]
 }
 
-export function DashboardLayout({ children, userRole = 'user' }: DashboardLayoutProps) {
+export function DashboardLayout({ children, userRole = 'user', userName, institutionName }: DashboardLayoutProps) {
   const t = useTranslations()
   const tAuth = useTranslations('auth')
   const tCredits = useTranslations('credits')
@@ -175,6 +178,7 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [credits, setCredits] = useState<number | null>(null)
   const [pendingCount, setPendingCount] = useState(0)
+  const [unreadMessages, setUnreadMessages] = useState(0)
 
   useEffect(() => {
     fetch('/api/credits')
@@ -182,6 +186,18 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
       .then(result => {
         if (result.success) {
           setCredits(result.data.credits)
+        }
+      })
+      .catch(() => {})
+  }, [pathname])
+
+  // 읽지 않은 메시지 수 조회
+  useEffect(() => {
+    fetch('/api/messages/unread-count')
+      .then(res => res.json())
+      .then(result => {
+        if (result.success) {
+          setUnreadMessages(result.data.count || 0)
         }
       })
       .catch(() => {})
@@ -201,7 +217,7 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
     }
   }, [userRole])
 
-  const sections = getSectionsForRole(userRole, t, pendingCount)
+  const sections = getSectionsForRole(userRole, t, pendingCount, unreadMessages)
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -216,12 +232,24 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
     if (exactMatch) {
       return pathWithoutLocale === href
     }
+    // /mentoring/projects에서 /projects/:id로 이동한 경우
+    // 개인 /projects 메뉴가 활성화되지 않도록 처리
+    if (href === '/projects' && userRole === 'mentor') {
+      // /projects 정확 매칭 또는 /projects/new만 활성화
+      return pathWithoutLocale === '/projects' || pathWithoutLocale === '/projects/new'
+    }
+    // /mentoring/projects는 /projects/:id 하위경로도 활성화
+    if (href === '/mentoring/projects') {
+      return pathWithoutLocale === href ||
+        pathWithoutLocale.startsWith(`${href}/`) ||
+        (pathWithoutLocale.startsWith('/projects/') && pathWithoutLocale !== '/projects/new')
+    }
     return pathWithoutLocale === href || pathWithoutLocale.startsWith(`${href}/`)
   }
 
   const logoHref = userRole === 'admin' ? '/admin' : userRole === 'institution' ? '/institution/dashboard' : '/dashboard'
 
-  const NavContent = () => (
+  const navContent = (
     <nav className="flex flex-col gap-1">
       {sections.map((section, sIdx) => (
         <div key={sIdx}>
@@ -272,10 +300,30 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
               </Badge>
             )}
           </Link>
+          {userRole === 'institution' && institutionName && (
+            <div className="mt-2 flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
+              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{institutionName}</p>
+                {userName && (
+                  <p className="text-xs text-muted-foreground truncate">{userName}</p>
+                )}
+              </div>
+            </div>
+          )}
+          {userRole === 'mentor' && (
+            <div className="mt-2 flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
+              <Users className="h-4 w-4 text-blue-500 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{userName || t('nav.mentor')}</p>
+                <p className="text-xs text-muted-foreground truncate">{t('nav.mentor')}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex-1">
-          <NavContent />
+          {navContent}
         </div>
 
         <div className="mt-auto space-y-4">
@@ -310,11 +358,11 @@ export function DashboardLayout({ children, userRole = 'user' }: DashboardLayout
       <MobileDrawer
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
-        title={userRole === 'admin' ? 'CASA Admin' : 'CASA'}
+        title={userRole === 'admin' ? 'CASA Admin' : userRole === 'institution' && institutionName ? `CASA · ${institutionName}` : 'CASA'}
       >
         <div className="flex h-full flex-col">
           <div className="flex-1">
-            <NavContent />
+            {navContent}
           </div>
           <div className="mt-auto space-y-4">
             {credits !== null && (

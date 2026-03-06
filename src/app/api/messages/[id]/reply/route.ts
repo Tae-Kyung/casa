@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 
 const replySchema = z.object({
@@ -22,7 +22,7 @@ export async function POST(
 
     const sanitizedBody = replyBody.replace(/<[^>]*>/g, '')
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 원본 메시지에서 수신자 결정
     const { data: original } = await supabase

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireInstitutionAccess } from '@/lib/auth/institution'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { handleApiError, paginatedResponse } from '@/lib/utils/api-response'
 import { parsePagination } from '@/lib/security/pagination'
 
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const { page, limit } = parsePagination(searchParams)
     const offset = (page - 1) * limit
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { count } = await supabase
       .from('bi_mentor_institution_pool')

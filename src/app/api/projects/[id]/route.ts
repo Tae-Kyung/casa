@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { requireAuth, requireProjectOwner } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 
 // 프로젝트 업데이트 스키마
@@ -20,13 +21,13 @@ export async function GET(
   context: RouteContext
 ) {
   try {
-    await requireAuth()
+    const user = await requireAuth()
 
     const { id } = await context.params
-    const supabase = await createClient()
+    const serviceClient = createServiceClient()
 
-    // 프로젝트와 관련 데이터 조회
-    const { data: project, error } = await supabase
+    // 프로젝트와 관련 데이터 조회 (serviceClient로 RLS bypass)
+    const { data: project, error } = await serviceClient
       .from('bi_projects')
       .select('*')
       .eq('id', id)
@@ -36,8 +37,37 @@ export async function GET(
       return errorResponse('프로젝트를 찾을 수 없습니다.', 404)
     }
 
+    // 접근 권한 확인: 프로젝트 소유자 또는 배정된 멘토
+    const isOwner = project.user_id === user.id
+    let mentorRole: string | null = null
+
+    if (!isOwner) {
+      const { data: match } = await serviceClient
+        .from('bi_mentor_matches')
+        .select('mentor_role')
+        .eq('project_id', id)
+        .eq('mentor_id', user.id)
+        .limit(1)
+        .single()
+
+      if (!match) {
+        // 관리자인지 확인
+        const { data: biUser } = await serviceClient
+          .from('bi_users')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        if (biUser?.role !== 'admin') {
+          return errorResponse('프로젝트에 대한 접근 권한이 없습니다.', 403)
+        }
+      } else {
+        mentorRole = match.mentor_role
+      }
+    }
+
     // 아이디어 카드 조회
-    const { data: ideaCard } = await supabase
+    const { data: ideaCard } = await serviceClient
       .from('bi_idea_cards')
       .select('*')
       .eq('project_id', id)
@@ -46,7 +76,7 @@ export async function GET(
       .single()
 
     // 평가 조회
-    const { data: evaluation } = await supabase
+    const { data: evaluation } = await serviceClient
       .from('bi_evaluations')
       .select('*')
       .eq('project_id', id)
@@ -55,7 +85,7 @@ export async function GET(
       .single()
 
     // 문서 조회
-    const { data: documents } = await supabase
+    const { data: documents } = await serviceClient
       .from('bi_documents')
       .select('*')
       .eq('project_id', id)
@@ -64,7 +94,7 @@ export async function GET(
     // 창업자 트랙: 비즈니스 리뷰 조회
     let businessReview = null
     if (project.project_type === 'startup') {
-      const { data: review } = await supabase
+      const { data: review } = await serviceClient
         .from('bi_business_reviews')
         .select('*')
         .eq('project_id', id)
@@ -79,6 +109,8 @@ export async function GET(
       evaluation: evaluation || null,
       documents: documents || [],
       businessReview,
+      mentorRole,
+      isOwner,
     })
   } catch (error) {
     return handleApiError(error)

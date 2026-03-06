@@ -2,23 +2,19 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
-import { useParams } from 'next/navigation'
-import { FileText, Save, Send, Sparkles, Star } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
+import { Save, Send, Undo2, Sparkles, Star, ArrowLeft, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
+import { useSSE } from '@/hooks/useSSE'
+import { MarkdownContent } from '@/components/common/markdown-content'
 import { toast } from 'sonner'
 
 interface MentoringReport {
   id: string
   project_id: string
-  mentor_opinion: string
-  strengths: string
-  improvements: string
   overall_rating: number
   ai_generated_report: string
   status: 'draft' | 'submitted' | 'confirmed' | 'rejected'
@@ -26,44 +22,93 @@ interface MentoringReport {
   updated_at: string
 }
 
+interface FeedbackItem {
+  id: string
+  stage: string
+  feedback_type: string
+  comment: string
+  created_at: string
+}
+
+const STAGE_ORDER = ['idea', 'evaluation', 'document', 'deploy', 'done']
+
 export default function MentoringReportPage() {
   const t = useTranslations()
   const params = useParams()
+  const router = useRouter()
   const projectId = params.id as string
 
   const [report, setReport] = useState<MentoringReport | null>(null)
+  const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isGeneratingAI, setIsGeneratingAI] = useState(false)
+  const [feedbackExpanded, setFeedbackExpanded] = useState(true)
 
-  const [mentorOpinion, setMentorOpinion] = useState('')
-  const [strengths, setStrengths] = useState('')
-  const [improvements, setImprovements] = useState('')
   const [overallRating, setOverallRating] = useState(3)
   const [aiReport, setAiReport] = useState('')
   const [hoveredStar, setHoveredStar] = useState(0)
 
   const aiReportRef = useRef<HTMLDivElement>(null)
 
-  const fetchOrCreateReport = useCallback(async () => {
+  const sseErrorRef = useRef(false)
+
+  const sse = useSSE({
+    onDone: () => {
+      if (!sseErrorRef.current) {
+        toast.success(t('mentor.reports.aiGenerated'))
+      }
+      sseErrorRef.current = false
+    },
+    onError: (err) => {
+      console.error('SSE error:', err)
+      sseErrorRef.current = true
+      toast.error(t('mentor.reports.aiGenerateFailed'))
+    },
+  })
+
+  const stageLabels: Record<string, string> = {
+    idea: t('mentor.reports.stageIdea'),
+    evaluation: t('mentor.reports.stageEvaluation'),
+    document: t('mentor.reports.stageDocument'),
+    deploy: t('mentor.reports.stageDeploy'),
+    done: t('mentor.reports.stageDone'),
+  }
+
+  const feedbackTypeLabels: Record<string, string> = {
+    comment: t('mentor.workstation.fbComment'),
+    approval: t('mentor.workstation.fbApproval'),
+    rejection: t('mentor.workstation.fbRejection'),
+    revision_request: t('mentor.workstation.fbRevision'),
+  }
+
+  const feedbackTypeBadgeClass: Record<string, string> = {
+    comment: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    approval: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+    rejection: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+    revision_request: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+  }
+
+  const fetchData = useCallback(async () => {
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/mentor/projects/${projectId}/report`, {
-        method: 'POST',
-      })
-      const result = await response.json()
+      const [reportRes, feedbackRes] = await Promise.all([
+        fetch(`/api/mentor/projects/${projectId}/report`, { method: 'POST' }),
+        fetch(`/api/mentor/projects/${projectId}/feedbacks`),
+      ])
 
-      if (result.success) {
-        const data = result.data as MentoringReport
+      const reportResult = await reportRes.json()
+      if (reportResult.success) {
+        const data = reportResult.data as MentoringReport
         setReport(data)
-        setMentorOpinion(data.mentor_opinion || '')
-        setStrengths(data.strengths || '')
-        setImprovements(data.improvements || '')
         setOverallRating(data.overall_rating || 3)
         setAiReport(data.ai_generated_report || '')
       } else {
         toast.error(t('mentor.reports.fetchFailed'))
+      }
+
+      const feedbackResult = await feedbackRes.json()
+      if (feedbackResult.success) {
+        setFeedbacks(feedbackResult.data.filter((f: FeedbackItem & { is_mine: boolean }) => f.is_mine))
       }
     } catch {
       toast.error(t('mentor.reports.fetchFailed'))
@@ -73,25 +118,36 @@ export default function MentoringReportPage() {
   }, [projectId, t])
 
   useEffect(() => {
-    fetchOrCreateReport()
-  }, [fetchOrCreateReport])
+    fetchData()
+  }, [fetchData])
 
-  const handleSaveDraft = async () => {
+  // SSE 스트리밍 중 자동 스크롤
+  useEffect(() => {
+    if (sse.data && aiReportRef.current) {
+      aiReportRef.current.scrollTop = aiReportRef.current.scrollHeight
+    }
+  }, [sse.data])
+
+  // SSE 데이터가 있으면 우선 사용 (스트리밍 중이거나 방금 생성된 경우)
+  const displayReport = sse.data || aiReport
+  const isGeneratingAI = sse.isLoading
+
+  // 단계별 피드백 그룹핑
+  const feedbacksByStage: Record<string, FeedbackItem[]> = {}
+  for (const fb of feedbacks) {
+    if (!feedbacksByStage[fb.stage]) feedbacksByStage[fb.stage] = []
+    feedbacksByStage[fb.stage].push(fb)
+  }
+
+  const handleSaveRating = async () => {
     if (!report) return
-    setIsSaving(true)
     try {
       const response = await fetch(`/api/mentor/reports/${report.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mentor_opinion: mentorOpinion,
-          strengths,
-          improvements,
-          overall_rating: overallRating,
-        }),
+        body: JSON.stringify({ overall_rating: overallRating }),
       })
       const result = await response.json()
-
       if (result.success) {
         setReport(result.data)
         toast.success(t('mentor.reports.savedDraft'))
@@ -100,15 +156,26 @@ export default function MentoringReportPage() {
       }
     } catch {
       toast.error(t('mentor.reports.saveFailed'))
-    } finally {
-      setIsSaving(false)
     }
   }
 
   const handleSubmit = async () => {
     if (!report) return
+
+    if (!displayReport) {
+      toast.error(t('mentor.reports.generateFirst'))
+      return
+    }
+
     setIsSubmitting(true)
     try {
+      // 평점 저장 후 제출
+      await fetch(`/api/mentor/reports/${report.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overall_rating: overallRating }),
+      })
+
       const response = await fetch(`/api/mentor/reports/${report.id}/submit`, {
         method: 'POST',
       })
@@ -127,106 +194,67 @@ export default function MentoringReportPage() {
     }
   }
 
-  const handleGenerateAI = async () => {
+  const handleUnsubmit = async () => {
     if (!report) return
-    setIsGeneratingAI(true)
-    setAiReport('')
-
+    setIsSubmitting(true)
     try {
-      const response = await fetch(
-        `/api/mentor/reports/${report.id}/generate-ai`,
-        { method: 'POST' }
-      )
-
-      if (!response.ok) {
-        throw new Error('Failed to generate AI report')
+      const response = await fetch(`/api/mentor/reports/${report.id}/unsubmit`, {
+        method: 'POST',
+      })
+      const result = await response.json()
+      if (result.success) {
+        setReport(result.data)
+        toast.success(t('mentor.reports.unsubmitted'))
+      } else {
+        toast.error(result.error || t('mentor.reports.unsubmitFailed'))
       }
-
-      const reader = response.body?.getReader()
-      if (!reader) {
-        throw new Error('No readable stream')
-      }
-
-      const decoder = new TextDecoder()
-      let accumulated = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n')
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            if (data === '[DONE]') continue
-
-            try {
-              const parsed = JSON.parse(data)
-              if (parsed.content) {
-                accumulated += parsed.content
-                setAiReport(accumulated)
-
-                if (aiReportRef.current) {
-                  aiReportRef.current.scrollTop =
-                    aiReportRef.current.scrollHeight
-                }
-              }
-            } catch {
-              // Non-JSON data chunk, append directly
-              accumulated += data
-              setAiReport(accumulated)
-            }
-          }
-        }
-      }
-
-      toast.success(t('mentor.reports.aiGenerated'))
     } catch {
-      toast.error(t('mentor.reports.aiGenerateFailed'))
+      toast.error(t('mentor.reports.unsubmitFailed'))
     } finally {
-      setIsGeneratingAI(false)
+      setIsSubmitting(false)
     }
   }
 
+  const handleGenerateAI = async () => {
+    if (!report) return
+
+    if (feedbacks.length === 0) {
+      toast.error(t('mentor.reports.noFeedbacksToGenerate'))
+      return
+    }
+
+    setAiReport('')
+    sseErrorRef.current = false
+    await sse.start(`/api/mentor/reports/${report.id}/generate-ai`)
+  }
+
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<
-      string,
-      { className: string; label: string }
-    > = {
+    const statusConfig: Record<string, { className: string; label: string }> = {
       draft: {
-        className:
-          'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+        className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
         label: t('mentor.reports.statusDraft'),
       },
       submitted: {
-        className:
-          'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+        className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
         label: t('mentor.reports.statusSubmitted'),
       },
       confirmed: {
-        className:
-          'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+        className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
         label: t('mentor.reports.statusConfirmed'),
       },
       rejected: {
-        className:
-          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+        className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
         label: t('mentor.reports.statusRejected'),
       },
     }
 
     const config = statusConfig[status] || {
-      className:
-        'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
       label: status,
     }
 
     return (
-      <span
-        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${config.className}`}
-      >
+      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${config.className}`}>
         {config.label}
       </span>
     )
@@ -246,89 +274,78 @@ export default function MentoringReportPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">
-            {t('mentor.reports.title')}
-          </h1>
-          <p className="text-muted-foreground">
-            {t('mentor.reports.description')}
-          </p>
-        </div>
-        {report && (
-          <div className="flex items-center gap-3">
-            {getStatusBadge(report.status)}
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.push(`/projects/${projectId}`)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">{t('mentor.reports.title')}</h1>
+            <p className="text-muted-foreground">{t('mentor.reports.description')}</p>
           </div>
-        )}
+        </div>
+        {report && getStatusBadge(report.status)}
       </div>
 
-      {/* Report Form */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Left Column: Form Fields */}
+      {/* 단계별 멘토 피드백 (보고서 기초 자료) */}
+      <Card>
+        <CardHeader className="cursor-pointer" onClick={() => setFeedbackExpanded(!feedbackExpanded)}>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              {t('mentor.reports.stageFeedbacks')}
+              <Badge variant="secondary">{feedbacks.length}{t('mentor.reports.feedbackCount')}</Badge>
+            </CardTitle>
+            {feedbackExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </div>
+        </CardHeader>
+        {feedbackExpanded && (
+          <CardContent>
+            {feedbacks.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">
+                {t('mentor.reports.noFeedbacks')}
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {STAGE_ORDER.map((stage) => {
+                  const stageFbs = feedbacksByStage[stage]
+                  if (!stageFbs || stageFbs.length === 0) return null
+                  return (
+                    <div key={stage}>
+                      <h4 className="mb-2 text-sm font-semibold text-muted-foreground">
+                        {stageLabels[stage] || stage}
+                      </h4>
+                      <div className="space-y-2 pl-3 border-l-2 border-blue-200 dark:border-blue-800">
+                        {stageFbs.map((fb) => (
+                          <div key={fb.id} className="rounded-lg bg-muted/30 p-3">
+                            <div className="mb-1 flex items-center gap-2">
+                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${feedbackTypeBadgeClass[fb.feedback_type] || ''}`}>
+                                {feedbackTypeLabels[fb.feedback_type] || fb.feedback_type}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(fb.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="whitespace-pre-wrap text-sm">{fb.comment}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
+
+      {/* 종합 평점 + AI 보고서 */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left: 평점 + 액션 */}
         <div className="space-y-6">
-          {/* Mentor Opinion */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <FileText className="h-5 w-5" />
-                {t('mentor.reports.mentorOpinion')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={mentorOpinion}
-                onChange={(e) => setMentorOpinion(e.target.value)}
-                placeholder={t('mentor.reports.mentorOpinionPlaceholder')}
-                rows={6}
-                disabled={!isEditable}
-                className="resize-none"
-              />
-            </CardContent>
-          </Card>
-
-          {/* Strengths */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {t('mentor.reports.strengths')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={strengths}
-                onChange={(e) => setStrengths(e.target.value)}
-                placeholder={t('mentor.reports.strengthsPlaceholder')}
-                rows={4}
-                disabled={!isEditable}
-                className="resize-none"
-              />
-            </CardContent>
-          </Card>
-
-          {/* Improvements */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {t('mentor.reports.improvements')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={improvements}
-                onChange={(e) => setImprovements(e.target.value)}
-                placeholder={t('mentor.reports.improvementsPlaceholder')}
-                rows={4}
-                disabled={!isEditable}
-                className="resize-none"
-              />
-            </CardContent>
-          </Card>
-
           {/* Overall Rating */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">
-                {t('mentor.reports.overallRating')}
-              </CardTitle>
+              <CardTitle className="text-lg">{t('mentor.reports.overallRating')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -352,109 +369,45 @@ export default function MentoringReportPage() {
                       />
                     </button>
                   ))}
-                  <span className="ml-3 text-lg font-semibold text-muted-foreground">
-                    {overallRating} / 5
-                  </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="rating-input" className="text-sm text-muted-foreground">
-                    {t('mentor.reports.ratingDirect')}
-                  </Label>
-                  <Input
-                    id="rating-input"
-                    type="number"
-                    min={1}
-                    max={5}
-                    value={overallRating}
-                    onChange={(e) => {
-                      const val = Math.min(5, Math.max(1, Number(e.target.value)))
-                      setOverallRating(val)
-                    }}
-                    disabled={!isEditable}
-                    className="w-20"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column: AI Report */}
-        <div className="space-y-6">
-          <Card className="h-fit">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Sparkles className="h-5 w-5 text-purple-500" />
-                  {t('mentor.reports.aiReport')}
-                </CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGenerateAI}
-                  disabled={isGeneratingAI || !isEditable}
-                >
-                  {isGeneratingAI ? (
-                    <>
-                      <LoadingSpinner size="sm" className="mr-2" />
-                      {t('mentor.reports.generating')}
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      {t('mentor.reports.generateAI')}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div
-                ref={aiReportRef}
-                className="min-h-[300px] max-h-[500px] overflow-y-auto rounded-md border bg-muted/50 p-4 text-sm leading-relaxed whitespace-pre-wrap dark:bg-muted/20"
-              >
-                {aiReport ? (
-                  aiReport
-                ) : (
-                  <p className="text-muted-foreground italic">
-                    {t('mentor.reports.aiReportPlaceholder')}
-                  </p>
+                <p className="text-lg font-semibold text-muted-foreground">
+                  {overallRating} / 5
+                </p>
+                {isEditable && (
+                  <Button variant="outline" size="sm" onClick={handleSaveRating}>
+                    <Save className="mr-2 h-3 w-3" />
+                    {t('mentor.reports.saveRating')}
+                  </Button>
                 )}
               </div>
-              {isGeneratingAI && (
-                <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                  <LoadingSpinner size="sm" />
-                  {t('mentor.reports.aiStreaming')}
-                </div>
-              )}
             </CardContent>
           </Card>
 
-          {/* Action Buttons */}
+          {/* Actions */}
           <Card>
             <CardContent className="flex flex-col gap-3 pt-6">
               <Button
-                variant="outline"
-                onClick={handleSaveDraft}
-                disabled={isSaving || !isEditable}
+                onClick={handleGenerateAI}
+                disabled={isGeneratingAI || !isEditable}
                 className="w-full"
+                variant={displayReport ? 'outline' : 'default'}
               >
-                {isSaving ? (
+                {isGeneratingAI ? (
                   <>
                     <LoadingSpinner size="sm" className="mr-2" />
-                    {t('mentor.reports.saving')}
+                    {t('mentor.reports.generating')}
                   </>
                 ) : (
                   <>
-                    <Save className="mr-2 h-4 w-4" />
-                    {t('mentor.reports.saveDraft')}
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    {displayReport ? t('mentor.reports.regenerateAI') : t('mentor.reports.generateAI')}
                   </>
                 )}
               </Button>
 
               <Button
                 onClick={handleSubmit}
-                disabled={isSubmitting || !isEditable}
+                disabled={isSubmitting || !isEditable || !displayReport}
                 className="w-full"
               >
                 {isSubmitting ? (
@@ -471,15 +424,23 @@ export default function MentoringReportPage() {
               </Button>
 
               {report?.status === 'submitted' && (
-                <p className="text-center text-sm text-muted-foreground">
-                  {t('mentor.reports.submittedNote')}
-                </p>
+                <>
+                  <Button
+                    onClick={handleUnsubmit}
+                    disabled={isSubmitting}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Undo2 className="mr-2 h-4 w-4" />
+                    {t('mentor.reports.unsubmit')}
+                  </Button>
+                  <p className="text-center text-sm text-muted-foreground">
+                    {t('mentor.reports.submittedNote')}
+                  </p>
+                </>
               )}
               {report?.status === 'confirmed' && (
-                <Badge
-                  variant="outline"
-                  className="mx-auto border-green-500 text-green-600 dark:text-green-400"
-                >
+                <Badge variant="outline" className="mx-auto border-green-500 text-green-600 dark:text-green-400">
                   {t('mentor.reports.confirmedNote')}
                 </Badge>
               )}
@@ -487,6 +448,55 @@ export default function MentoringReportPage() {
                 <p className="text-center text-sm text-red-600 dark:text-red-400">
                   {t('mentor.reports.rejectedNote')}
                 </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right: AI Report (2/3 width) */}
+        <div className="lg:col-span-2">
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Sparkles className="h-5 w-5 text-purple-500" />
+                {t('mentor.reports.aiReport')}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {t('mentor.reports.aiReportHint')}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div
+                ref={aiReportRef}
+                className="min-h-[400px] max-h-[600px] overflow-y-auto rounded-md border bg-muted/50 p-4 dark:bg-muted/20"
+              >
+                {displayReport ? (
+                  <MarkdownContent content={displayReport} />
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                    <Sparkles className="mb-4 h-12 w-12 opacity-30" />
+                    <p className="text-center">
+                      {t('mentor.reports.aiReportPlaceholder')}
+                    </p>
+                    {feedbacks.length > 0 && isEditable && (
+                      <Button
+                        variant="outline"
+                        className="mt-4"
+                        onClick={handleGenerateAI}
+                        disabled={isGeneratingAI}
+                      >
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        {t('mentor.reports.generateAI')}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+              {isGeneratingAI && (
+                <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                  <LoadingSpinner size="sm" />
+                  {t('mentor.reports.aiStreaming')}
+                </div>
               )}
             </CardContent>
           </Card>

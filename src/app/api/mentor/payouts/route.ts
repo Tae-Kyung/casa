@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireMentor } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { handleApiError, paginatedResponse } from '@/lib/utils/api-response'
 import { parsePagination } from '@/lib/security/pagination'
 import type { PayoutStatus } from '@/types/database'
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const offset = (page - 1) * limit
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 카운트 쿼리
     let countQuery = supabase

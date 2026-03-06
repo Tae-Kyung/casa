@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { DollarSign, RefreshCw, CheckCircle, Download } from 'lucide-react'
+import { DollarSign, RefreshCw, CheckCircle, Download, FileText, ChevronDown, ChevronUp, ExternalLink, AlertCircle, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,16 @@ import {
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { Pagination } from '@/components/common/pagination'
 import { toast } from 'sonner'
+
+interface MentorDocument {
+  mentor_id: string
+  name: string | null
+  email: string
+  resume_url: string | null
+  bank_account_url: string | null
+  privacy_consent_url: string | null
+  documents_complete: boolean
+}
 
 interface Mentor {
   id: string
@@ -80,6 +90,9 @@ export default function InstitutionPayoutsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isApproving, setIsApproving] = useState(false)
   const [isBulkApproving, setIsBulkApproving] = useState(false)
+  const [showMentorDocs, setShowMentorDocs] = useState(false)
+  const [mentorDocs, setMentorDocs] = useState<MentorDocument[]>([])
+  const [isLoadingDocs, setIsLoadingDocs] = useState(false)
 
   const fetchPayouts = async () => {
     setIsLoading(true)
@@ -164,6 +177,27 @@ export default function InstitutionPayoutsPage() {
   const handleExportCSV = () => {
     window.open('/api/institution/payouts/export', '_blank')
   }
+
+  const fetchMentorDocs = useCallback(async () => {
+    setIsLoadingDocs(true)
+    try {
+      const response = await fetch('/api/institution/mentors/documents')
+      const result = await response.json()
+      if (result.success) {
+        setMentorDocs(result.data)
+      }
+    } catch {
+      toast.error(t('institution.payouts.docsFetchFailed'))
+    } finally {
+      setIsLoadingDocs(false)
+    }
+  }, [t])
+
+  useEffect(() => {
+    if (showMentorDocs && mentorDocs.length === 0) {
+      fetchMentorDocs()
+    }
+  }, [showMentorDocs, fetchMentorDocs])
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -388,6 +422,107 @@ export default function InstitutionPayoutsPage() {
           )}
         </div>
       )}
+
+      {/* 멘토 증빙서류 섹션 */}
+      <Card>
+        <CardHeader
+          className="cursor-pointer"
+          onClick={() => setShowMentorDocs(!showMentorDocs)}
+        >
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileText className="h-5 w-5" />
+              {t('institution.payouts.mentorDocuments')}
+            </CardTitle>
+            {showMentorDocs ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </div>
+        </CardHeader>
+        {showMentorDocs && (
+          <CardContent>
+            {isLoadingDocs ? (
+              <div className="flex justify-center py-4">
+                <LoadingSpinner size="sm" />
+              </div>
+            ) : mentorDocs.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                {t('institution.payouts.noMentorDocs')}
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  {t('institution.payouts.mentorDocsDesc')}
+                </p>
+                {/* Table header */}
+                <div className="hidden rounded-lg bg-muted px-4 py-2 text-xs font-medium text-muted-foreground md:grid md:grid-cols-6 md:gap-4">
+                  <div className="col-span-2">{t('institution.payouts.mentorName')}</div>
+                  <div>{t('institution.payouts.docResume')}</div>
+                  <div>{t('institution.payouts.docBankAccount')}</div>
+                  <div>{t('institution.payouts.docPrivacyConsent')}</div>
+                  <div>{t('institution.payouts.docStatus')}</div>
+                </div>
+                {mentorDocs.map((doc) => (
+                  <div
+                    key={doc.mentor_id}
+                    className="flex flex-col gap-2 rounded-lg border p-3 md:grid md:grid-cols-6 md:items-center md:gap-4"
+                  >
+                    <div className="col-span-2 min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {doc.name || '-'}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {doc.email}
+                      </p>
+                    </div>
+                    <div>
+                      {doc.resume_url ? (
+                        <a href={doc.resume_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400">
+                          <ExternalLink className="h-3 w-3" />
+                          {t('institution.payouts.download')}
+                        </a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </div>
+                    <div>
+                      {doc.bank_account_url ? (
+                        <a href={doc.bank_account_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400">
+                          <ExternalLink className="h-3 w-3" />
+                          {t('institution.payouts.download')}
+                        </a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </div>
+                    <div>
+                      {doc.privacy_consent_url ? (
+                        <a href={doc.privacy_consent_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400">
+                          <ExternalLink className="h-3 w-3" />
+                          {t('institution.payouts.download')}
+                        </a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </div>
+                    <div>
+                      {doc.documents_complete ? (
+                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                          <Check className="mr-1 h-3 w-3" />
+                          {t('institution.payouts.docComplete')}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-yellow-500 text-yellow-700 dark:text-yellow-300">
+                          <AlertCircle className="mr-1 h-3 w-3" />
+                          {t('institution.payouts.docIncomplete')}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
     </div>
   )
 }

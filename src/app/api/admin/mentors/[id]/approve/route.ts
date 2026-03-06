@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { logAudit, extractRequestInfo } from '@/lib/security/audit'
 
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const admin = await requireAdmin()
     const { id } = await context.params
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 멘토 프로필 승인
     const { error: profileError } = await supabase

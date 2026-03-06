@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { Plus, RefreshCw, Building2, Edit2, CheckCircle } from 'lucide-react'
+import { Plus, RefreshCw, Building2, Edit2, CheckCircle, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -68,6 +68,8 @@ export default function InstitutionsPage() {
     max_projects: 200,
   })
   const [isSaving, setIsSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   const fetchInstitutions = async () => {
     setIsLoading(true)
@@ -174,6 +176,26 @@ export default function InstitutionsPage() {
     }
   }
 
+  const handleDelete = async (id: string) => {
+    setDeletingId(id)
+    try {
+      const response = await fetch(`/api/admin/institutions/${id}`, { method: 'DELETE' })
+      const result = await response.json()
+
+      if (result.success) {
+        toast.success(t('admin.institutions.deleted'))
+        setDeleteConfirmId(null)
+        fetchInstitutions()
+      } else {
+        toast.error(result.error || t('admin.institutions.deleteFailed'))
+      }
+    } catch {
+      toast.error(t('admin.institutions.deleteFailed'))
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   const typeLabels: Record<string, string> = {
     center: t('admin.institutions.typeCenter'),
     university: t('admin.institutions.typeUniversity'),
@@ -264,6 +286,14 @@ export default function InstitutionsPage() {
                       <Button variant="ghost" size="icon" onClick={() => openEditModal(inst)}>
                         <Edit2 className="h-4 w-4" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setDeleteConfirmId(inst.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </CardHeader>
@@ -283,6 +313,31 @@ export default function InstitutionsPage() {
           )}
         </>
       )}
+
+      {/* 삭제 확인 모달 */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('admin.institutions.deleteConfirmTitle')}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t('admin.institutions.deleteConfirmMessage')}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
+              disabled={!!deletingId}
+            >
+              {deletingId ? <LoadingSpinner size="sm" className="mr-2" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              {t('admin.institutions.delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 생성/수정 모달 */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

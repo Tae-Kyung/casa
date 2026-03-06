@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { useParams } from 'next/navigation'
-import { FileText, MessageSquare, Plus, Send, Save } from 'lucide-react'
+import { FileText, MessageSquare, Plus, Send, Save, ChevronDown, ChevronUp, Download, Eye } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -17,8 +17,13 @@ interface IdeaCard {
   id: string
   problem: string | null
   solution: string | null
-  target_market: string | null
-  value_proposition: string | null
+  target: string | null
+  differentiation: string | null
+  uvp: string | null
+  channels: string | null
+  revenue_streams: string | null
+  cost_structure: string | null
+  key_metrics: string | null
   is_confirmed: boolean
 }
 
@@ -32,9 +37,12 @@ interface EvaluationItem {
 
 interface DocumentItem {
   id: string
-  doc_type: string
-  title: string | null
-  status: string
+  type: string
+  title: string
+  content: string | null
+  storage_path: string | null
+  file_name: string | null
+  is_confirmed: boolean
 }
 
 interface ProjectDetail {
@@ -54,6 +62,17 @@ interface Session {
   status: string
   session_date: string | null
   duration_minutes: number | null
+}
+
+interface FeedbackItem {
+  id: string
+  stage: string
+  feedback_type: string
+  comment: string
+  is_resolved: boolean
+  created_at: string
+  author: { id: string; name: string | null; email: string } | null
+  is_mine: boolean
 }
 
 const statusColor: Record<string, string> = {
@@ -76,6 +95,15 @@ export default function MentoringWorkstationPage() {
   const [savingSessionId, setSavingSessionId] = useState<string | null>(null)
   const [submittingSessionId, setSubmittingSessionId] = useState<string | null>(null)
   const [creatingSession, setCreatingSession] = useState(false)
+
+  // Feedback state
+  const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([])
+  const [feedbackStage, setFeedbackStage] = useState<string | null>(null)
+  const [feedbackComment, setFeedbackComment] = useState('')
+  const [feedbackType, setFeedbackType] = useState<string>('comment')
+  const [submittingFeedback, setSubmittingFeedback] = useState(false)
+  const [expandedFeedbackStage, setExpandedFeedbackStage] = useState<string | null>(null)
+  const [expandedDocId, setExpandedDocId] = useState<string | null>(null)
 
   const fetchProject = async () => {
     try {
@@ -103,10 +131,22 @@ export default function MentoringWorkstationPage() {
     }
   }
 
+  const fetchFeedbacks = async () => {
+    try {
+      const response = await fetch(`/api/mentor/projects/${id}/feedbacks`)
+      const result = await response.json()
+      if (result.success) {
+        setFeedbacks(result.data)
+      }
+    } catch {
+      // silent fail
+    }
+  }
+
   useEffect(() => {
     const load = async () => {
       setIsLoading(true)
-      await Promise.all([fetchProject(), fetchSessions()])
+      await Promise.all([fetchProject(), fetchSessions(), fetchFeedbacks()])
       setIsLoading(false)
     }
     load()
@@ -174,6 +214,60 @@ export default function MentoringWorkstationPage() {
     }
   }
 
+  const handleSubmitFeedback = async (stage: string) => {
+    if (!feedbackComment.trim()) return
+
+    setSubmittingFeedback(true)
+    try {
+      const response = await fetch(`/api/mentor/projects/${id}/feedbacks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stage,
+          feedback_type: feedbackType,
+          comment: feedbackComment,
+        }),
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('mentor.workstation.feedbackSaved'))
+        setFeedbackComment('')
+        setFeedbackType('comment')
+        setFeedbackStage(null)
+        await fetchFeedbacks()
+      } else {
+        toast.error(result.error || t('mentor.workstation.feedbackFailed'))
+      }
+    } catch {
+      toast.error(t('mentor.workstation.feedbackFailed'))
+    } finally {
+      setSubmittingFeedback(false)
+    }
+  }
+
+  const getFeedbacksForStage = (stage: string) =>
+    feedbacks.filter((f) => f.stage === stage)
+
+  const feedbackTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      comment: t('mentor.workstation.fbComment'),
+      approval: t('mentor.workstation.fbApproval'),
+      rejection: t('mentor.workstation.fbRejection'),
+      revision_request: t('mentor.workstation.fbRevision'),
+    }
+    return labels[type] || type
+  }
+
+  const feedbackTypeBadgeClass = (type: string) => {
+    const classes: Record<string, string> = {
+      comment: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+      approval: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+      rejection: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+      revision_request: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+    }
+    return classes[type] || ''
+  }
+
   const toggleSession = (session: Session) => {
     if (expandedSessionId === session.id) {
       setExpandedSessionId(null)
@@ -189,6 +283,123 @@ export default function MentoringWorkstationPage() {
         setEditingComments((prev) => ({ ...prev, [session.id]: commentsText }))
       }
     }
+  }
+
+  const renderFeedbackSection = (stage: string) => {
+    const stageFeedbacks = getFeedbacksForStage(stage)
+    const isExpanded = expandedFeedbackStage === stage
+    const isWriting = feedbackStage === stage
+
+    return (
+      <div className="border-t pt-4">
+        {/* Feedback toggle header */}
+        <button
+          className="flex w-full items-center justify-between text-sm font-medium text-muted-foreground hover:text-foreground"
+          onClick={() => setExpandedFeedbackStage(isExpanded ? null : stage)}
+        >
+          <span className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            {t('mentor.workstation.mentorFeedback')}
+            {stageFeedbacks.length > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {stageFeedbacks.length}
+              </Badge>
+            )}
+          </span>
+          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+
+        {isExpanded && (
+          <div className="mt-3 space-y-3">
+            {/* Existing feedbacks */}
+            {stageFeedbacks.map((fb) => (
+              <div
+                key={fb.id}
+                className="rounded-lg border bg-muted/30 p-3"
+              >
+                <div className="mb-1 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      {fb.author?.name || fb.author?.email || '-'}
+                    </span>
+                    <span>{new Date(fb.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${feedbackTypeBadgeClass(fb.feedback_type)}`}>
+                    {feedbackTypeLabel(fb.feedback_type)}
+                  </span>
+                </div>
+                <p className="whitespace-pre-wrap text-sm">{fb.comment}</p>
+              </div>
+            ))}
+
+            {/* Write feedback */}
+            {isWriting ? (
+              <div className="space-y-3 rounded-lg border p-3">
+                <div className="flex gap-2">
+                  {(['comment', 'approval', 'revision_request', 'rejection'] as const).map((type) => (
+                    <button
+                      key={type}
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                        feedbackType === type
+                          ? feedbackTypeBadgeClass(type)
+                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                      }`}
+                      onClick={() => setFeedbackType(type)}
+                    >
+                      {feedbackTypeLabel(type)}
+                    </button>
+                  ))}
+                </div>
+                <Textarea
+                  value={feedbackComment}
+                  onChange={(e) => setFeedbackComment(e.target.value)}
+                  placeholder={t('mentor.workstation.feedbackPlaceholder')}
+                  rows={3}
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setFeedbackStage(null)
+                      setFeedbackComment('')
+                      setFeedbackType('comment')
+                    }}
+                  >
+                    {t('common.cancel')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleSubmitFeedback(stage)}
+                    disabled={submittingFeedback || !feedbackComment.trim()}
+                  >
+                    {submittingFeedback ? (
+                      <LoadingSpinner size="sm" className="mr-2" />
+                    ) : (
+                      <Send className="mr-2 h-3 w-3" />
+                    )}
+                    {t('mentor.workstation.submitFeedback')}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setFeedbackStage(stage)
+                  setFeedbackComment('')
+                  setFeedbackType('comment')
+                }}
+              >
+                <Plus className="mr-2 h-3 w-3" />
+                {t('mentor.workstation.writeFeedback')}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+    )
   }
 
   if (isLoading) {
@@ -245,39 +456,82 @@ export default function MentoringWorkstationPage() {
             </CardHeader>
             <CardContent>
               {ideaCard ? (
-                <div className="space-y-3 text-sm">
-                  {ideaCard.problem && (
-                    <div>
-                      <span className="font-medium text-muted-foreground">
-                        {t('mentor.workstation.problem')}:
-                      </span>
-                      <p className="mt-1">{ideaCard.problem}</p>
-                    </div>
-                  )}
-                  {ideaCard.solution && (
-                    <div>
-                      <span className="font-medium text-muted-foreground">
-                        {t('mentor.workstation.solution')}:
-                      </span>
-                      <p className="mt-1">{ideaCard.solution}</p>
-                    </div>
-                  )}
-                  {ideaCard.target_market && (
-                    <div>
-                      <span className="font-medium text-muted-foreground">
-                        {t('mentor.workstation.targetMarket')}:
-                      </span>
-                      <p className="mt-1">{ideaCard.target_market}</p>
-                    </div>
-                  )}
-                  {ideaCard.value_proposition && (
-                    <div>
-                      <span className="font-medium text-muted-foreground">
-                        {t('mentor.workstation.valueProp')}:
-                      </span>
-                      <p className="mt-1">{ideaCard.value_proposition}</p>
-                    </div>
-                  )}
+                <div className="space-y-4 text-sm">
+                  {/* 린캔버스 그리드 */}
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {ideaCard.problem && (
+                      <div className="rounded-lg border p-3">
+                        <span className="text-xs font-semibold uppercase text-muted-foreground">
+                          {t('mentor.workstation.problem')}
+                        </span>
+                        <p className="mt-1 whitespace-pre-wrap">{ideaCard.problem}</p>
+                      </div>
+                    )}
+                    {ideaCard.solution && (
+                      <div className="rounded-lg border p-3">
+                        <span className="text-xs font-semibold uppercase text-muted-foreground">
+                          {t('mentor.workstation.solution')}
+                        </span>
+                        <p className="mt-1 whitespace-pre-wrap">{ideaCard.solution}</p>
+                      </div>
+                    )}
+                    {ideaCard.target && (
+                      <div className="rounded-lg border p-3">
+                        <span className="text-xs font-semibold uppercase text-muted-foreground">
+                          {t('mentor.workstation.targetMarket')}
+                        </span>
+                        <p className="mt-1 whitespace-pre-wrap">{ideaCard.target}</p>
+                      </div>
+                    )}
+                    {ideaCard.uvp && (
+                      <div className="rounded-lg border p-3">
+                        <span className="text-xs font-semibold uppercase text-muted-foreground">
+                          {t('mentor.workstation.uvp')}
+                        </span>
+                        <p className="mt-1 whitespace-pre-wrap">{ideaCard.uvp}</p>
+                      </div>
+                    )}
+                    {ideaCard.differentiation && (
+                      <div className="rounded-lg border p-3">
+                        <span className="text-xs font-semibold uppercase text-muted-foreground">
+                          {t('mentor.workstation.differentiation')}
+                        </span>
+                        <p className="mt-1 whitespace-pre-wrap">{ideaCard.differentiation}</p>
+                      </div>
+                    )}
+                    {ideaCard.channels && (
+                      <div className="rounded-lg border p-3">
+                        <span className="text-xs font-semibold uppercase text-muted-foreground">
+                          {t('mentor.workstation.channels')}
+                        </span>
+                        <p className="mt-1 whitespace-pre-wrap">{ideaCard.channels}</p>
+                      </div>
+                    )}
+                    {ideaCard.revenue_streams && (
+                      <div className="rounded-lg border p-3">
+                        <span className="text-xs font-semibold uppercase text-muted-foreground">
+                          {t('mentor.workstation.revenueStreams')}
+                        </span>
+                        <p className="mt-1 whitespace-pre-wrap">{ideaCard.revenue_streams}</p>
+                      </div>
+                    )}
+                    {ideaCard.cost_structure && (
+                      <div className="rounded-lg border p-3">
+                        <span className="text-xs font-semibold uppercase text-muted-foreground">
+                          {t('mentor.workstation.costStructure')}
+                        </span>
+                        <p className="mt-1 whitespace-pre-wrap">{ideaCard.cost_structure}</p>
+                      </div>
+                    )}
+                    {ideaCard.key_metrics && (
+                      <div className="rounded-lg border p-3">
+                        <span className="text-xs font-semibold uppercase text-muted-foreground">
+                          {t('mentor.workstation.keyMetrics')}
+                        </span>
+                        <p className="mt-1 whitespace-pre-wrap">{ideaCard.key_metrics}</p>
+                      </div>
+                    )}
+                  </div>
                   <Badge variant={ideaCard.is_confirmed ? 'default' : 'secondary'}>
                     {ideaCard.is_confirmed
                       ? t('mentor.workstation.confirmed')
@@ -289,6 +543,7 @@ export default function MentoringWorkstationPage() {
                   {t('mentor.workstation.noIdeaCard')}
                 </p>
               )}
+              {renderFeedbackSection('idea')}
             </CardContent>
           </Card>
 
@@ -327,6 +582,7 @@ export default function MentoringWorkstationPage() {
                   {t('mentor.workstation.noEvaluations')}
                 </p>
               )}
+              {renderFeedbackSection('evaluation')}
             </CardContent>
           </Card>
 
@@ -337,22 +593,49 @@ export default function MentoringWorkstationPage() {
             </CardHeader>
             <CardContent>
               {project.documents.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {project.documents.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
-                    >
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          {doc.title || doc.doc_type}
-                        </span>
+                    <div key={doc.id} className="rounded-lg border">
+                      <div
+                        className="flex cursor-pointer items-center justify-between p-3 hover:bg-accent/50"
+                        onClick={() => setExpandedDocId(expandedDocId === doc.id ? null : doc.id)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">
+                            {doc.title || doc.type}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{doc.type}</Badge>
+                          <Badge variant={doc.is_confirmed ? 'default' : 'secondary'}>
+                            {doc.is_confirmed ? t('mentor.workstation.confirmed') : t('mentor.workstation.draft')}
+                          </Badge>
+                          {doc.storage_path && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                window.open(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${doc.storage_path}`, '_blank')
+                              }}
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {doc.content ? (
+                            expandedDocId === doc.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          ) : null}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{doc.doc_type}</Badge>
-                        <Badge variant="secondary">{doc.status}</Badge>
-                      </div>
+                      {expandedDocId === doc.id && doc.content && (
+                        <div className="border-t p-4">
+                          <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                            {doc.content}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -361,6 +644,7 @@ export default function MentoringWorkstationPage() {
                   {t('mentor.workstation.noDocuments')}
                 </p>
               )}
+              {renderFeedbackSection('document')}
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireMentorMatch } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 
 interface RouteContext {
@@ -16,7 +16,7 @@ export async function GET(
     const { id } = await context.params
     await requireMentorMatch(id)
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 프로젝트 기본 정보
     const { data: project, error } = await supabase

@@ -9,6 +9,11 @@ import {
   ChevronDown,
   ChevronRight,
   Filter,
+  FileText,
+  Star,
+  CheckCircle,
+  XCircle,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,12 +21,22 @@ import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { Pagination } from '@/components/common/pagination'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { MarkdownContent } from '@/components/common/markdown-content'
 import { toast } from 'sonner'
 
 interface ProjectUser {
@@ -30,11 +45,20 @@ interface ProjectUser {
   email: string
 }
 
+interface MatchReport {
+  id: string
+  status: string
+  overall_rating: number | null
+  submitted_at: string | null
+}
+
 interface ProjectMentor {
   id: string
-  name: string | null
-  email: string
-  role: string
+  mentor_id: string
+  mentor_role: string
+  mentor: { id: string; name: string | null; email: string } | null
+  profile: { specialty: string[]; career_summary: string | null } | null
+  report: MatchReport | null
 }
 
 interface Project {
@@ -44,6 +68,20 @@ interface Project {
   status: string
   created_at: string
   user: ProjectUser
+}
+
+interface ReportDetail {
+  id: string
+  ai_generated_report: string | null
+  overall_rating: number | null
+  status: string
+  submitted_at: string | null
+  confirmed_at: string | null
+  rejection_reason: string | null
+  match: {
+    mentor: { id: string; name: string | null; email: string } | null
+    project: { id: string; name: string } | null
+  }
 }
 
 interface PaginationInfo {
@@ -64,6 +102,13 @@ export default function InstitutionProjectsPage() {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
   const [mentorsMap, setMentorsMap] = useState<Record<string, ProjectMentor[]>>({})
   const [loadingMentors, setLoadingMentors] = useState<Set<string>>(new Set())
+
+  // Report dialog state
+  const [reportDetail, setReportDetail] = useState<ReportDetail | null>(null)
+  const [isLoadingReport, setIsLoadingReport] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [rejectMode, setRejectMode] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
 
   const fetchProjects = useCallback(async () => {
     setIsLoading(true)
@@ -110,7 +155,7 @@ export default function InstitutionProjectsPage() {
       const result = await response.json()
 
       if (result.success) {
-        setMentorsMap((prev) => ({ ...prev, [projectId]: result.data.mentors }))
+        setMentorsMap((prev) => ({ ...prev, [projectId]: result.data }))
       } else {
         toast.error(t('institution.projects.mentorsFetchFailed'))
       }
@@ -136,6 +181,74 @@ export default function InstitutionProjectsPage() {
       }
       return next
     })
+  }
+
+  const openReport = async (reportId: string) => {
+    setIsLoadingReport(true)
+    setReportDetail(null)
+    setRejectMode(false)
+    setRejectReason('')
+    try {
+      const response = await fetch(`/api/institution/reports/${reportId}`)
+      const result = await response.json()
+      if (result.success) {
+        setReportDetail(result.data)
+      } else {
+        toast.error(t('institution.projects.reportFetchFailed'))
+      }
+    } catch {
+      toast.error(t('institution.projects.reportFetchFailed'))
+    } finally {
+      setIsLoadingReport(false)
+    }
+  }
+
+  const handleConfirm = async () => {
+    if (!reportDetail) return
+    setIsProcessing(true)
+    try {
+      const response = await fetch(`/api/institution/reports/${reportDetail.id}/confirm`, {
+        method: 'POST',
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('institution.reports.confirmSuccess'))
+        setReportDetail({ ...reportDetail, status: 'confirmed' })
+        // 멘토 목록 캐시 초기화
+        setMentorsMap({})
+      } else {
+        toast.error(result.error || t('institution.reports.confirmFailed'))
+      }
+    } catch {
+      toast.error(t('institution.reports.confirmFailed'))
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleReject = async () => {
+    if (!reportDetail || !rejectReason.trim()) return
+    setIsProcessing(true)
+    try {
+      const response = await fetch(`/api/institution/reports/${reportDetail.id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: rejectReason }),
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('institution.reports.rejectSuccess'))
+        setReportDetail({ ...reportDetail, status: 'rejected', rejection_reason: rejectReason })
+        setRejectMode(false)
+        setMentorsMap({})
+      } else {
+        toast.error(result.error || t('institution.reports.rejectFailed'))
+      }
+    } catch {
+      toast.error(t('institution.reports.rejectFailed'))
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   const getStatusBadge = (status: string) => {
@@ -167,6 +280,21 @@ export default function InstitutionProjectsPage() {
     return (
       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${stageColors[stage] || ''}`}>
         {stageLabels[stage] || stage}
+      </span>
+    )
+  }
+
+  const getReportStatusBadge = (status: string) => {
+    const config: Record<string, { className: string; label: string }> = {
+      draft: { className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200', label: t('institution.projects.reportDraft') },
+      submitted: { className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200', label: t('institution.projects.reportSubmitted') },
+      confirmed: { className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200', label: t('institution.projects.reportConfirmed') },
+      rejected: { className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200', label: t('institution.projects.reportRejected') },
+    }
+    const c = config[status] || { className: '', label: status }
+    return (
+      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${c.className}`}>
+        {c.label}
       </span>
     )
   }
@@ -260,7 +388,6 @@ export default function InstitutionProjectsPage() {
                     </div>
                     <div className="col-span-3 min-w-0">
                       <p className="truncate text-sm font-medium">{project.name}</p>
-                      {/* Mobile: show user info below project name */}
                       <p className="truncate text-xs text-muted-foreground md:hidden">
                         {project.user.name || project.user.email}
                       </p>
@@ -298,23 +425,44 @@ export default function InstitutionProjectsPage() {
                         </div>
                       ) : mentors && mentors.length > 0 ? (
                         <div className="space-y-2">
-                          {mentors.map((mentor) => (
+                          {mentors.map((match) => (
                             <div
-                              key={mentor.id}
+                              key={match.id}
                               className="flex items-center justify-between rounded-lg bg-background px-3 py-2"
                             >
                               <div className="flex items-center gap-3">
                                 <Users className="h-4 w-4 text-muted-foreground" />
                                 <div>
                                   <p className="text-sm font-medium">
-                                    {mentor.name || '-'}
+                                    {match.mentor?.name || '-'}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    {mentor.email}
+                                    {match.mentor?.email}
                                   </p>
                                 </div>
                               </div>
-                              <Badge variant="outline">{mentor.role}</Badge>
+                              <div className="flex items-center gap-2">
+                                {match.report ? (
+                                  <>
+                                    {getReportStatusBadge(match.report.status)}
+                                    {(match.report.status === 'submitted' || match.report.status === 'confirmed' || match.report.status === 'rejected') && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          openReport(match.report!.id)
+                                        }}
+                                      >
+                                        <FileText className="mr-1 h-3 w-3" />
+                                        {t('institution.projects.viewReport')}
+                                      </Button>
+                                    )}
+                                  </>
+                                ) : (
+                                  <Badge variant="outline">{match.mentor_role}</Badge>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -339,6 +487,131 @@ export default function InstitutionProjectsPage() {
           )}
         </div>
       )}
+
+      {/* Report Detail Dialog */}
+      <Dialog
+        open={!!reportDetail || isLoadingReport}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReportDetail(null)
+            setRejectMode(false)
+            setRejectReason('')
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {t('institution.projects.reportTitle')}
+            </DialogTitle>
+            {reportDetail && (
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <span>{t('institution.projects.mentorLabel')}: {reportDetail.match.mentor?.name || '-'}</span>
+                <span>|</span>
+                <span>{t('institution.projects.projectLabel')}: {reportDetail.match.project?.name || '-'}</span>
+                <span>|</span>
+                {getReportStatusBadge(reportDetail.status)}
+              </div>
+            )}
+          </DialogHeader>
+          {isLoadingReport ? (
+            <div className="flex justify-center py-12">
+              <LoadingSpinner size="lg" />
+            </div>
+          ) : reportDetail ? (
+            <>
+              {/* Rating */}
+              {reportDetail.overall_rating && (
+                <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
+                  <span className="text-sm text-muted-foreground">{t('institution.projects.overallRating')}:</span>
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`h-4 w-4 ${
+                          star <= reportDetail.overall_rating!
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : 'text-gray-300 dark:text-gray-600'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm font-medium">{reportDetail.overall_rating}/5</span>
+                </div>
+              )}
+
+              {/* AI Report Content */}
+              {reportDetail.ai_generated_report ? (
+                <div className="rounded-md border bg-muted/30 p-4 dark:bg-muted/10">
+                  <MarkdownContent content={reportDetail.ai_generated_report} />
+                </div>
+              ) : (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  {t('institution.projects.noReportContent')}
+                </p>
+              )}
+
+              {/* Rejection reason */}
+              {reportDetail.status === 'rejected' && reportDetail.rejection_reason && (
+                <div className="rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950">
+                  <p className="text-xs font-medium text-red-800 dark:text-red-300">{t('institution.projects.rejectionReason')}</p>
+                  <p className="mt-1 text-sm text-red-700 dark:text-red-400">{reportDetail.rejection_reason}</p>
+                </div>
+              )}
+
+              {/* Reject form */}
+              {rejectMode && (
+                <div className="space-y-3 rounded-md border p-3">
+                  <Label htmlFor="reject-reason">{t('institution.reports.rejectReasonLabel')}</Label>
+                  <Textarea
+                    id="reject-reason"
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder={t('institution.reports.rejectReasonPlaceholder')}
+                    rows={3}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleReject}
+                      disabled={isProcessing || !rejectReason.trim()}
+                    >
+                      {isProcessing ? <LoadingSpinner size="sm" className="mr-2" /> : <XCircle className="mr-1 h-3 w-3" />}
+                      {t('institution.reports.reject')}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setRejectMode(false)}>
+                      {t('common.cancel')}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Actions for submitted reports */}
+              {reportDetail.status === 'submitted' && !rejectMode && (
+                <DialogFooter>
+                  <Button
+                    onClick={handleConfirm}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? <LoadingSpinner size="sm" className="mr-2" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                    {t('institution.reports.confirm')}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setRejectMode(true)}
+                    disabled={isProcessing}
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    {t('institution.reports.reject')}
+                  </Button>
+                </DialogFooter>
+              )}
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

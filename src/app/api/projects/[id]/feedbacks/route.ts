@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { requireAuth, requireProjectAccess } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { z } from 'zod'
 
@@ -22,9 +23,10 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params
-    await requireProjectAccess(id)
+    const user = await requireProjectAccess(id)
 
     const supabase = await createClient()
+    const serviceClient = createServiceClient()
 
     const { data: feedbacks, error } = await supabase
       .from('bi_feedbacks')
@@ -37,7 +39,43 @@ export async function GET(
 
     if (error) throw error
 
-    return successResponse(feedbacks || [])
+    const feedbackList = feedbacks || []
+    const feedbackIds = feedbackList.map((f) => f.id)
+
+    // 좋아요 수 및 본인 좋아요 여부 조회
+    let likeCountMap: Record<string, number> = {}
+    let myLikeSet = new Set<string>()
+
+    if (feedbackIds.length > 0) {
+      // bi_feedback_likes is not in generated types yet, use type assertion
+      const likesTable = 'bi_feedback_likes' as unknown as 'bi_feedbacks'
+      const [{ data: allLikes }, { data: myLikes }] = await Promise.all([
+        serviceClient
+          .from(likesTable)
+          .select('feedback_id')
+          .in('feedback_id', feedbackIds),
+        serviceClient
+          .from(likesTable)
+          .select('feedback_id')
+          .in('feedback_id', feedbackIds)
+          .eq('user_id', user.id),
+      ])
+
+      for (const like of (allLikes || []) as unknown as { feedback_id: string }[]) {
+        likeCountMap[like.feedback_id] = (likeCountMap[like.feedback_id] || 0) + 1
+      }
+      for (const like of (myLikes || []) as unknown as { feedback_id: string }[]) {
+        myLikeSet.add(like.feedback_id)
+      }
+    }
+
+    const enriched = feedbackList.map((f) => ({
+      ...f,
+      like_count: likeCountMap[f.id] || 0,
+      is_liked: myLikeSet.has(f.id),
+    }))
+
+    return successResponse(enriched)
   } catch (error) {
     return handleApiError(error)
   }

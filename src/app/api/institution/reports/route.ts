@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireInstitutionAccess } from '@/lib/auth/institution'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { handleApiError, paginatedResponse } from '@/lib/utils/api-response'
 import { parsePagination } from '@/lib/security/pagination'
 import type { ReportStatus } from '@/types/database'
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const offset = (page - 1) * limit
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 기관 소속 멘토 매칭 기반 보고서 조회
     const { data: matches } = await supabase

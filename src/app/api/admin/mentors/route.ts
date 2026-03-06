@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError, paginatedResponse } from '@/lib/utils/api-response'
 import { parsePagination } from '@/lib/security/pagination'
 
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const approved = searchParams.get('approved')
     const offset = (page - 1) * limit
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     let countQuery = supabase
       .from('bi_mentor_profiles')

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError, paginatedResponse } from '@/lib/utils/api-response'
 import { parsePagination } from '@/lib/security/pagination'
 import type { MappingStatus } from '@/types/database'
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const offset = (page - 1) * limit
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     let countQuery = supabase
       .from('bi_project_institution_maps')
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = createMappingSchema.parse(body)
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { data, error } = await supabase
       .from('bi_project_institution_maps')

@@ -1,19 +1,11 @@
 import { NextRequest } from 'next/server'
-import { z } from 'zod'
 import { requireMentorMatch } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 
 interface RouteContext {
   params: Promise<{ id: string }>
 }
-
-const reportSchema = z.object({
-  mentor_opinion: z.string().optional(),
-  strengths: z.string().optional(),
-  improvements: z.string().optional(),
-  overall_rating: z.number().min(1).max(5).optional(),
-})
 
 // POST: 보고서 생성 또는 기존 보고서 반환
 export async function POST(
@@ -24,7 +16,7 @@ export async function POST(
     const { id } = await context.params
     const user = await requireMentorMatch(id)
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 매칭 정보 조회
     const { data: match, error: matchError } = await supabase
@@ -51,18 +43,11 @@ export async function POST(
       return successResponse(existingReport)
     }
 
-    // 새 보고서 생성
-    const body = await request.json()
-    const validatedData = reportSchema.parse(body)
-
+    // 새 보고서 생성 (빈 상태로)
     const { data: report, error: insertError } = await supabase
       .from('bi_mentoring_reports')
       .insert({
         match_id: match.id,
-        mentor_opinion: validatedData.mentor_opinion || null,
-        strengths: validatedData.strengths || null,
-        improvements: validatedData.improvements || null,
-        overall_rating: validatedData.overall_rating || null,
         status: 'draft',
       })
       .select()
@@ -75,9 +60,6 @@ export async function POST(
 
     return successResponse(report, 201)
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return errorResponse(error.issues[0]?.message || '유효성 검사 오류', 400, 'VALIDATION_ERROR')
-    }
     return handleApiError(error)
   }
 }
@@ -91,7 +73,7 @@ export async function GET(
     const { id } = await context.params
     const user = await requireMentorMatch(id)
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 매칭 정보 조회
     const { data: match, error: matchError } = await supabase

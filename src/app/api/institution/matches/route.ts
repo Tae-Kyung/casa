@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { requireInstitutionAccess } from '@/lib/auth/institution'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError, paginatedResponse } from '@/lib/utils/api-response'
 import { parsePagination } from '@/lib/security/pagination'
 import { createNotification } from '@/lib/notifications'
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const { page, limit } = parsePagination(searchParams)
     const offset = (page - 1) * limit
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 기관에 매핑된 프로젝트 ID
     const { data: mappings } = await supabase
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = createMatchSchema.parse(body)
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { data, error } = await supabase
       .from('bi_mentor_matches')

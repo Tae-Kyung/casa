@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Trash2 } from 'lucide-react'
+import { ArrowLeft, Trash2, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -19,6 +19,8 @@ import { ReviewStage } from '@/features/review'
 import { DiagnosisStage } from '@/features/diagnosis'
 import { StrategyStage } from '@/features/strategy'
 import { ReportStage } from '@/features/report'
+import { MentorFeedbackPanel } from '@/features/mentor/components/MentorFeedbackPanel'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import type { Project, IdeaCard, Evaluation, Document as DocType, ProjectType, BusinessReview } from '@/types/database'
 
@@ -31,6 +33,8 @@ interface ProjectWithRelations extends Project {
   evaluation: Evaluation | null
   documents: DocType[]
   businessReview: BusinessReview | null
+  mentorRole: string | null
+  isOwner: boolean
 }
 
 const stageToTab: Record<string, string> = {
@@ -101,6 +105,8 @@ export default function ProjectDetailPage({ params }: PageProps) {
   const isStartup = projectType === 'startup'
   const stageLabels = getStageLabels(t, projectType)
   const tabLabels = getTabLabels(t, projectType)
+  const isMentor = !!project?.mentorRole
+  const isOwner = project?.isOwner ?? true
 
   const fetchProject = async () => {
     try {
@@ -165,7 +171,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/projects')}>
+          <Button variant="ghost" size="icon" onClick={() => router.push(isMentor ? '/mentoring/projects' : '/projects')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -187,13 +193,28 @@ export default function ProjectDetailPage({ params }: PageProps) {
             </p>
           </div>
         </div>
-        <Button
-          variant="destructive"
-          onClick={() => setShowDeleteConfirm(true)}
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          {t('common.delete')}
-        </Button>
+        {isOwner && (
+          <Button
+            variant="destructive"
+            onClick={() => setShowDeleteConfirm(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {t('common.delete')}
+          </Button>
+        )}
+        {isMentor && (
+          <div className="flex items-center gap-3">
+            <Link href={`/projects/${id}/mentoring/report`}>
+              <Button variant="outline">
+                <FileText className="mr-2 h-4 w-4" />
+                {t('mentor.reports.writeReport')}
+              </Button>
+            </Link>
+            <Badge variant="outline" className="border-blue-300 px-3 py-1 text-blue-700 dark:border-blue-700 dark:text-blue-300">
+              {project.mentorRole === 'primary' ? t('mentor.workstation.rolePrimary') : t('mentor.workstation.roleSecondary')}
+            </Badge>
+          </div>
+        )}
       </div>
 
       {/* 진행 상태 */}
@@ -241,25 +262,25 @@ export default function ProjectDetailPage({ params }: PageProps) {
           <TabsTrigger value="idea">{tabLabels.idea}</TabsTrigger>
           <TabsTrigger
             value="evaluation"
-            disabled={stageToIndex[project.current_stage] < 1}
+            disabled={!isMentor && stageToIndex[project.current_stage] < 1}
           >
             {tabLabels.evaluation}
           </TabsTrigger>
           <TabsTrigger
             value="document"
-            disabled={stageToIndex[project.current_stage] < 2}
+            disabled={!isMentor && stageToIndex[project.current_stage] < 2}
           >
             {tabLabels.document}
           </TabsTrigger>
           <TabsTrigger
             value="deploy"
-            disabled={stageToIndex[project.current_stage] < 3}
+            disabled={!isMentor && stageToIndex[project.current_stage] < 3}
           >
             {tabLabels.deploy}
           </TabsTrigger>
           <TabsTrigger
             value="done"
-            disabled={stageToIndex[project.current_stage] < 4}
+            disabled={!isMentor && stageToIndex[project.current_stage] < 4}
           >
             {tabLabels.done}
           </TabsTrigger>
@@ -268,7 +289,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
         {isStartup ? (
           <>
             {/* 창업자 트랙 */}
-            <TabsContent value="idea" className="mt-6">
+            <TabsContent value="idea" className="mt-6 space-y-6">
               <ReviewStage
                 projectId={id}
                 review={project.businessReview}
@@ -276,9 +297,11 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 canCancelConfirm={!!project.gate_1_passed_at && !project.gate_2_passed_at}
                 onUpdate={handleProjectUpdate}
               />
+              {isMentor && <MentorFeedbackPanel projectId={id} stage="idea" mentorRole={project.mentorRole!} />}
+              {isOwner && !isMentor && <MentorFeedbackPanel projectId={id} stage="idea" readOnly />}
             </TabsContent>
 
-            <TabsContent value="evaluation" className="mt-6">
+            <TabsContent value="evaluation" className="mt-6 space-y-6">
               <DiagnosisStage
                 projectId={id}
                 review={project.businessReview}
@@ -287,9 +310,11 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 canCancelConfirm={!!project.gate_2_passed_at && !project.gate_3_passed_at}
                 onUpdate={handleProjectUpdate}
               />
+              {isMentor && <MentorFeedbackPanel projectId={id} stage="evaluation" mentorRole={project.mentorRole!} />}
+              {isOwner && !isMentor && <MentorFeedbackPanel projectId={id} stage="evaluation" readOnly />}
             </TabsContent>
 
-            <TabsContent value="document" className="mt-6">
+            <TabsContent value="document" className="mt-6 space-y-6">
               <StrategyStage
                 projectId={id}
                 review={project.businessReview}
@@ -298,30 +323,36 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 canCancelConfirm={!!project.gate_3_passed_at && !project.gate_4_passed_at}
                 onUpdate={handleProjectUpdate}
               />
+              {isMentor && <MentorFeedbackPanel projectId={id} stage="document" mentorRole={project.mentorRole!} />}
+              {isOwner && !isMentor && <MentorFeedbackPanel projectId={id} stage="document" readOnly />}
             </TabsContent>
 
-            <TabsContent value="deploy" className="mt-6">
+            <TabsContent value="deploy" className="mt-6 space-y-6">
               <ReportStage
                 projectId={id}
                 review={project.businessReview}
                 canGenerate={!!project.gate_3_passed_at}
                 onUpdate={handleProjectUpdate}
               />
+              {isMentor && <MentorFeedbackPanel projectId={id} stage="deploy" mentorRole={project.mentorRole!} />}
+              {isOwner && !isMentor && <MentorFeedbackPanel projectId={id} stage="deploy" readOnly />}
             </TabsContent>
 
-            <TabsContent value="done" className="mt-6">
+            <TabsContent value="done" className="mt-6 space-y-6">
               <ReportStage
                 projectId={id}
                 review={project.businessReview}
                 canGenerate={!!project.gate_3_passed_at}
                 onUpdate={handleProjectUpdate}
               />
+              {isMentor && <MentorFeedbackPanel projectId={id} stage="done" mentorRole={project.mentorRole!} />}
+              {isOwner && !isMentor && <MentorFeedbackPanel projectId={id} stage="done" readOnly />}
             </TabsContent>
           </>
         ) : (
           <>
             {/* 예비창업자 트랙 */}
-            <TabsContent value="idea" className="mt-6">
+            <TabsContent value="idea" className="mt-6 space-y-6">
               <IdeaStage
                 projectId={id}
                 ideaCard={project.ideaCard}
@@ -329,9 +360,11 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 canCancelConfirm={!!project.gate_1_passed_at && !project.gate_2_passed_at}
                 onUpdate={handleProjectUpdate}
               />
+              {isMentor && <MentorFeedbackPanel projectId={id} stage="idea" mentorRole={project.mentorRole!} />}
+              {isOwner && !isMentor && <MentorFeedbackPanel projectId={id} stage="idea" readOnly />}
             </TabsContent>
 
-            <TabsContent value="evaluation" className="mt-6">
+            <TabsContent value="evaluation" className="mt-6 space-y-6">
               <EvaluationStage
                 projectId={id}
                 evaluation={project.evaluation}
@@ -339,9 +372,11 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 canEvaluate={!!project.gate_1_passed_at}
                 onUpdate={handleProjectUpdate}
               />
+              {isMentor && <MentorFeedbackPanel projectId={id} stage="evaluation" mentorRole={project.mentorRole!} />}
+              {isOwner && !isMentor && <MentorFeedbackPanel projectId={id} stage="evaluation" readOnly />}
             </TabsContent>
 
-            <TabsContent value="document" className="mt-6">
+            <TabsContent value="document" className="mt-6 space-y-6">
               <DocumentStage
                 projectId={id}
                 documents={project.documents}
@@ -349,9 +384,11 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 canGenerate={!!project.gate_2_passed_at}
                 onUpdate={handleProjectUpdate}
               />
+              {isMentor && <MentorFeedbackPanel projectId={id} stage="document" mentorRole={project.mentorRole!} />}
+              {isOwner && !isMentor && <MentorFeedbackPanel projectId={id} stage="document" readOnly />}
             </TabsContent>
 
-            <TabsContent value="deploy" className="mt-6">
+            <TabsContent value="deploy" className="mt-6 space-y-6">
               <DeployStage
                 project={project}
                 ideaCard={project.ideaCard}
@@ -360,9 +397,11 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 canDeploy={!!project.gate_3_passed_at}
                 onUpdate={handleProjectUpdate}
               />
+              {isMentor && <MentorFeedbackPanel projectId={id} stage="deploy" mentorRole={project.mentorRole!} />}
+              {isOwner && !isMentor && <MentorFeedbackPanel projectId={id} stage="deploy" readOnly />}
             </TabsContent>
 
-            <TabsContent value="done" className="mt-6">
+            <TabsContent value="done" className="mt-6 space-y-6">
               <DeployStage
                 project={project}
                 ideaCard={project.ideaCard}
@@ -371,6 +410,8 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 canDeploy={!!project.gate_3_passed_at}
                 onUpdate={handleProjectUpdate}
               />
+              {isMentor && <MentorFeedbackPanel projectId={id} stage="done" mentorRole={project.mentorRole!} />}
+              {isOwner && !isMentor && <MentorFeedbackPanel projectId={id} stage="done" readOnly />}
             </TabsContent>
           </>
         )}

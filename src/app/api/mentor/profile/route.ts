@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { requireMentor } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 
 // 프로필 업데이트 스키마
@@ -16,7 +16,7 @@ const updateProfileSchema = z.object({
 export async function GET() {
   try {
     const user = await requireMentor()
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { data: profile, error } = await supabase
       .from('bi_mentor_profiles')
@@ -47,7 +47,7 @@ export async function PATCH(request: NextRequest) {
       return errorResponse('수정할 항목이 없습니다.', 400)
     }
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { data, error } = await supabase
       .from('bi_mentor_profiles')

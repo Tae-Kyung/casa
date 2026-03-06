@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { requireInstitutionAccess } from '@/lib/auth/institution'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 
 interface RouteContext {
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     await requireInstitutionAccess(searchParams.get('institution_id'))
     const { mentorId } = await context.params
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { data: profile, error } = await supabase
       .from('bi_mentor_profiles')
@@ -65,7 +65,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const body = await request.json()
     const { status } = updatePoolSchema.parse(body)
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { error } = await supabase
       .from('bi_mentor_institution_pool')
@@ -94,7 +94,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     const { institutionId } = await requireInstitutionAccess(searchParams.get('institution_id'))
     const { mentorId } = await context.params
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { error } = await supabase
       .from('bi_mentor_institution_pool')

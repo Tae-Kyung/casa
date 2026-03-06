@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { logAudit, extractRequestInfo } from '@/lib/security/audit'
 
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { project_ids, institution_id, program_id } = bulkMappingSchema.parse(body)
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const mappings = project_ids.map((project_id) => ({
       project_id,

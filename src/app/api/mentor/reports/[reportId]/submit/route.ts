@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireMentor } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 
 interface RouteContext {
@@ -16,7 +16,7 @@ export async function POST(
     const { reportId } = await context.params
     const user = await requireMentor()
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 보고서 조회
     const { data: report, error: reportError } = await supabase

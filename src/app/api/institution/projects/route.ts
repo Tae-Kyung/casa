@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireInstitutionAccess } from '@/lib/auth/institution'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { handleApiError, paginatedResponse } from '@/lib/utils/api-response'
 import { parsePagination } from '@/lib/security/pagination'
 import type { MappingStatus } from '@/types/database'
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const offset = (page - 1) * limit
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 매핑된 프로젝트 ID 조회
     let mappingQuery = supabase

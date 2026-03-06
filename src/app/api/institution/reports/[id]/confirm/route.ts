@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireInstitutionAccess } from '@/lib/auth/institution'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 
 // POST: 보고서 확인(승인)
@@ -13,7 +13,7 @@ export async function POST(
     const { user } = await requireInstitutionAccess(searchParams.get('institution_id'))
     const { id } = await context.params
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { error } = await supabase
       .from('bi_mentoring_reports')

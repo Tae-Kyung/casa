@@ -10,7 +10,7 @@ const createPromptSchema = z.object({
   key: z.string().min(1).max(100),
   name: z.string().min(1).max(200),
   description: z.string().optional(),
-  category: z.enum(['ideation', 'evaluation', 'document', 'marketing', 'startup'] as const),
+  category: z.enum(['ideation', 'evaluation', 'document', 'marketing', 'startup', 'mentoring'] as const),
   system_prompt: z.string().min(1),
   user_prompt_template: z.string().min(1),
   model: z.string().default('claude-sonnet-4-20250514'),

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { Link2, RefreshCw, Plus } from 'lucide-react'
+import { Link2, RefreshCw, Plus, Pencil, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -63,14 +63,16 @@ export default function InstitutionMatchesPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
 
-  // Create modal state
+  // Create/Edit modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingMatch, setEditingMatch] = useState<Match | null>(null)
   const [projects, setProjects] = useState<SelectOption[]>([])
   const [mentors, setMentors] = useState<MentorOption[]>([])
   const [selectedProjectId, setSelectedProjectId] = useState('')
   const [selectedMentorId, setSelectedMentorId] = useState('')
   const [selectedRole, setSelectedRole] = useState<'primary' | 'secondary'>('primary')
   const [isSaving, setIsSaving] = useState(false)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   const fetchMatches = async () => {
     setIsLoading(true)
@@ -119,11 +121,13 @@ export default function InstitutionMatchesPage() {
       }
       if (mentorsData.success) {
         setMentors(
-          mentorsData.data.items.map((m: { id: string; name: string; email: string }) => ({
-            id: m.id,
-            name: m.name,
-            email: m.email,
-          }))
+          mentorsData.data.items
+            .filter((m: { mentor_id: string; mentor?: { id: string; name: string | null; email: string } }) => m.mentor)
+            .map((m: { mentor_id: string; mentor: { id: string; name: string | null; email: string } }) => ({
+              id: m.mentor_id,
+              name: m.mentor?.name || m.mentor?.email || '-',
+              email: m.mentor?.email || '',
+            }))
         )
       }
     } catch {
@@ -133,40 +137,88 @@ export default function InstitutionMatchesPage() {
 
   const openCreateModal = async () => {
     await fetchSelectOptions()
+    setEditingMatch(null)
     setSelectedProjectId('')
     setSelectedMentorId('')
     setSelectedRole('primary')
     setIsModalOpen(true)
   }
 
-  const handleCreateMatch = async () => {
+  const openEditModal = async (match: Match) => {
+    await fetchSelectOptions()
+    setEditingMatch(match)
+    setSelectedProjectId(match.project_id)
+    setSelectedMentorId(match.mentor_id)
+    setSelectedRole(match.mentor_role)
+    setIsModalOpen(true)
+  }
+
+  const handleSaveMatch = async () => {
     if (!selectedProjectId || !selectedMentorId) return
 
     setIsSaving(true)
     try {
-      const response = await fetch('/api/institution/matches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project_id: selectedProjectId,
-          mentor_id: selectedMentorId,
-          mentor_role: selectedRole,
-        }),
-      })
-
-      const result = await response.json()
-
-      if (result.success) {
-        toast.success(t('institution.matches.createSuccess'))
-        setIsModalOpen(false)
-        fetchMatches()
+      if (editingMatch) {
+        // Update
+        const response = await fetch(`/api/institution/matches/${editingMatch.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mentor_id: selectedMentorId !== editingMatch.mentor_id ? selectedMentorId : undefined,
+            mentor_role: selectedRole !== editingMatch.mentor_role ? selectedRole : undefined,
+          }),
+        })
+        const result = await response.json()
+        if (result.success) {
+          toast.success(t('institution.matches.updateSuccess'))
+          setIsModalOpen(false)
+          fetchMatches()
+        } else {
+          toast.error(result.error || t('institution.matches.updateFailed'))
+        }
       } else {
-        toast.error(result.error || t('institution.matches.createFailed'))
+        // Create
+        const response = await fetch('/api/institution/matches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            project_id: selectedProjectId,
+            mentor_id: selectedMentorId,
+            mentor_role: selectedRole,
+          }),
+        })
+        const result = await response.json()
+        if (result.success) {
+          toast.success(t('institution.matches.createSuccess'))
+          setIsModalOpen(false)
+          fetchMatches()
+        } else {
+          toast.error(result.error || t('institution.matches.createFailed'))
+        }
       }
     } catch {
-      toast.error(t('institution.matches.createFailed'))
+      toast.error(editingMatch ? t('institution.matches.updateFailed') : t('institution.matches.createFailed'))
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleDeleteMatch = async (id: string) => {
+    try {
+      const response = await fetch(`/api/institution/matches/${id}`, {
+        method: 'DELETE',
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('institution.matches.deleteSuccess'))
+        fetchMatches()
+      } else {
+        toast.error(result.error || t('institution.matches.deleteFailed'))
+      }
+    } catch {
+      toast.error(t('institution.matches.deleteFailed'))
+    } finally {
+      setDeleteConfirmId(null)
     }
   }
 
@@ -285,6 +337,25 @@ export default function InstitutionMatchesPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="flex justify-end gap-2 border-t pt-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEditModal(match)}
+                    >
+                      <Pencil className="mr-1 h-3 w-3" />
+                      {t('common.edit')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setDeleteConfirmId(match.id)}
+                    >
+                      <Trash2 className="mr-1 h-3 w-3" />
+                      {t('common.delete')}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -300,16 +371,22 @@ export default function InstitutionMatchesPage() {
         </>
       )}
 
-      {/* Create match modal */}
+      {/* Create/Edit match modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('institution.matches.createMatch')}</DialogTitle>
+            <DialogTitle>
+              {editingMatch ? t('institution.matches.editMatch') : t('institution.matches.createMatch')}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>{t('institution.matches.project')}</Label>
-              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+              <Select
+                value={selectedProjectId}
+                onValueChange={setSelectedProjectId}
+                disabled={!!editingMatch}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder={t('institution.matches.selectProject')} />
                 </SelectTrigger>
@@ -362,11 +439,34 @@ export default function InstitutionMatchesPage() {
               {t('common.cancel')}
             </Button>
             <Button
-              onClick={handleCreateMatch}
+              onClick={handleSaveMatch}
               disabled={isSaving || !selectedProjectId || !selectedMentorId}
             >
               {isSaving ? <LoadingSpinner size="sm" className="mr-2" /> : null}
               {t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('institution.matches.deleteConfirmTitle')}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t('institution.matches.deleteConfirmMessage')}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteConfirmId && handleDeleteMatch(deleteConfirmId)}
+            >
+              {t('common.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

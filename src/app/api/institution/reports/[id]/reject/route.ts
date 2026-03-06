@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { requireInstitutionAccess } from '@/lib/auth/institution'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { createNotification } from '@/lib/notifications'
 
@@ -22,7 +22,7 @@ export async function POST(
     const body = await request.json()
     const { reason } = rejectSchema.parse(body)
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 보고서 조회 (멘토 알림용)
     const { data: report } = await supabase

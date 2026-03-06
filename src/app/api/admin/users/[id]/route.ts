@@ -1,0 +1,118 @@
+import { NextRequest } from 'next/server'
+import { requireAdmin } from '@/lib/auth/guards'
+import { createServiceClient } from '@/lib/supabase/service'
+import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
+
+interface RouteContext {
+  params: Promise<{ id: string }>
+}
+
+// DELETE: 사용자 삭제 (참조무결성 처리)
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  try {
+    const admin = await requireAdmin()
+    const { id } = await context.params
+
+    // 자기 자신은 삭제 불가
+    if (admin.id === id) {
+      return errorResponse('자기 자신은 삭제할 수 없습니다.', 400)
+    }
+
+    const supabase = createServiceClient()
+
+    // 사용자 존재 확인
+    const { data: user, error: userError } = await supabase
+      .from('bi_users')
+      .select('id, role, email')
+      .eq('id', id)
+      .single()
+
+    if (userError || !user) {
+      return errorResponse('사용자를 찾을 수 없습니다.', 404)
+    }
+
+    // === NO CASCADE FK 처리 ===
+
+    // 1. 멘토 매칭 관련 (mentor_id → bi_mentor_matches)
+    const { data: matches } = await supabase
+      .from('bi_mentor_matches')
+      .select('id')
+      .eq('mentor_id', id)
+
+    const matchIds = (matches || []).map((m) => m.id)
+
+    if (matchIds.length > 0) {
+      // 세션에 연결된 피드백 해제
+      const { data: sessions } = await supabase
+        .from('bi_mentoring_sessions')
+        .select('id')
+        .in('match_id', matchIds)
+
+      const sessionIds = (sessions || []).map((s) => s.id)
+      if (sessionIds.length > 0) {
+        await supabase.from('bi_feedbacks').update({ session_id: null }).in('session_id', sessionIds)
+      }
+
+      // 수당 삭제
+      await supabase.from('bi_mentor_payouts').delete().eq('mentor_id', id)
+
+      // 매칭 삭제 (CASCADE로 sessions, reports 자동 삭제)
+      await supabase.from('bi_mentor_matches').delete().eq('mentor_id', id)
+    }
+
+    // 2. 메시지 관련 (sender_id, recipient_id)
+    await supabase.from('bi_messages').delete().eq('sender_id', id)
+    await supabase.from('bi_messages').delete().eq('recipient_id', id)
+    await supabase.from('bi_message_batches').delete().eq('sender_id', id)
+
+    // 3. Nullable FK → SET NULL 처리
+    // approved_by, matched_by, mapped_by, confirmed_by, registered_by, created_by 등
+    await supabase.from('bi_approvals').update({ approved_by: null }).eq('approved_by', id)
+    await supabase.from('bi_approvals').delete().eq('requested_by', id)
+    await supabase.from('bi_projects').update({ assigned_mentor_id: null }).eq('assigned_mentor_id', id)
+    await supabase.from('bi_institutions').update({ approved_by: null }).eq('approved_by', id)
+    await supabase.from('bi_mentor_institution_pool').update({ registered_by: null }).eq('registered_by', id)
+    await supabase.from('bi_project_institution_maps').update({ mapped_by: null }).eq('mapped_by', id)
+    await supabase.from('bi_project_institution_maps').update({ approved_by: null }).eq('approved_by', id)
+    await supabase.from('bi_mentor_matches').update({ matched_by: null }).eq('matched_by', id)
+    // bi_mentoring_sessions.confirmed_by 는 타입에 없을 수 있으므로 raw query 대신 스킵
+    // (세션은 매칭 삭제 시 CASCADE로 삭제됨)
+    await supabase.from('bi_mentor_payouts').update({ approved_by: null }).eq('approved_by', id)
+    await supabase.from('bi_audit_logs').update({ user_id: null }).eq('user_id', id)
+    await supabase.from('bi_prompts').update({ created_by: null }).eq('created_by', id)
+    await supabase.from('bi_prompts').update({ updated_by: null }).eq('updated_by', id)
+    await supabase.from('bi_prompt_versions').update({ changed_by: null }).eq('changed_by', id)
+    await supabase.from('bi_idea_cards').update({ confirmed_by: null }).eq('confirmed_by', id)
+    await supabase.from('bi_evaluations').update({ confirmed_by: null }).eq('confirmed_by', id)
+    await supabase.from('bi_documents').update({ confirmed_by: null }).eq('confirmed_by', id)
+
+    // 4. bi_feedbacks.user_id (NO CASCADE)
+    await supabase.from('bi_feedbacks').delete().eq('user_id', id)
+
+    // === CASCADE FK는 bi_users 삭제 시 자동 처리 ===
+    // bi_projects, bi_credit_transactions, bi_institution_members,
+    // bi_mentor_profiles, bi_mentor_institution_pool, bi_notifications
+
+    // 5. bi_users 삭제
+    const { error: deleteError } = await supabase
+      .from('bi_users')
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) {
+      console.error('User delete error:', deleteError.message)
+      return errorResponse('사용자 삭제에 실패했습니다.', 500)
+    }
+
+    // 6. Supabase Auth 사용자 삭제
+    const { error: authError } = await supabase.auth.admin.deleteUser(id)
+    if (authError) {
+      console.error('Auth user delete error:', authError.message)
+      // DB에서는 삭제됐으므로 경고만 로깅
+    }
+
+    return successResponse({ message: '사용자가 삭제되었습니다.' })
+  } catch (error) {
+    return handleApiError(error)
+  }
+}

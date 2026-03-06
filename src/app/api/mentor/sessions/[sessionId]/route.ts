@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireAuth } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { z } from 'zod'
 
@@ -24,7 +24,7 @@ export async function PATCH(
     const { sessionId } = await context.params
     const user = await requireAuth()
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 세션 조회
     const { data: session, error: sessionError } = await supabase

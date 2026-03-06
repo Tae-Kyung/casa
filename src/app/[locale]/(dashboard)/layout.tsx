@@ -25,11 +25,29 @@ export default async function DashboardLayoutWrapper({
   // 사용자 역할 조회
   const { data: userProfile } = await supabase
     .from('bi_users')
-    .select('role')
+    .select('role, name')
     .eq('id', user.id)
     .single()
 
-  const userRole = (userProfile?.role as 'user' | 'mentor' | 'admin') || 'user'
+  const userRole = (userProfile?.role as 'user' | 'mentor' | 'institution' | 'admin') || 'user'
 
-  return <DashboardLayout userRole={userRole}>{children}</DashboardLayout>
+  // 기관 담당자인 경우 기관명 조회
+  let institutionName: string | undefined
+  if (userRole === 'institution') {
+    const { data: membership } = await supabase
+      .from('bi_institution_members')
+      .select('institution:institution_id(name)')
+      .eq('user_id', user.id)
+      .eq('is_approved', true)
+      .limit(1)
+      .single()
+
+    institutionName = (membership?.institution as { name: string } | null)?.name || undefined
+  }
+
+  return (
+    <DashboardLayout userRole={userRole} userName={userProfile?.name} institutionName={institutionName}>
+      {children}
+    </DashboardLayout>
+  )
 }

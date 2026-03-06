@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError, paginatedResponse } from '@/lib/utils/api-response'
 import { parsePagination } from '@/lib/security/pagination'
 
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
     const folder = searchParams.get('folder') || 'inbox'
     const offset = (page - 1) * limit
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const column = folder === 'sent' ? 'sender_id' : 'recipient_id'
 

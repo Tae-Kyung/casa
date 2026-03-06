@@ -66,16 +66,23 @@ export default function AdminDashboardPage() {
   const t = useTranslations()
   const [data, setData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchDashboard = async () => {
     setIsLoading(true)
+    setError(null)
     try {
       const response = await fetch('/api/admin/dashboard')
       const result = await response.json()
       if (result.success) {
         setData(result.data)
+      } else {
+        setError(result.error || `API error: ${response.status}`)
+        console.error('Dashboard API error:', result)
       }
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      setError(msg)
       toast.error(t('admin.dashboard.fetchFailed'))
     } finally {
       setIsLoading(false)
@@ -88,13 +95,37 @@ export default function AdminDashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-12">
+      <div className="flex flex-col items-center justify-center py-12 gap-2">
         <LoadingSpinner size="lg" />
+        <p className="text-xs text-muted-foreground">Loading dashboard...</p>
       </div>
     )
   }
 
-  if (!data) return null
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-4">
+        <p className="text-destructive font-medium">Dashboard Error</p>
+        <p className="text-sm text-muted-foreground">{error}</p>
+        <Button variant="outline" onClick={fetchDashboard}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          {t('common.refresh')}
+        </Button>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-4">
+        <p className="text-muted-foreground">No data returned</p>
+        <Button variant="outline" onClick={fetchDashboard}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          {t('common.refresh')}
+        </Button>
+      </div>
+    )
+  }
 
   const stageLabels: Record<string, string> = {
     idea: t('project.idea'),

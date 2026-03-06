@@ -1,12 +1,12 @@
 import { requireMentor } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, handleApiError } from '@/lib/utils/api-response'
 
 // GET: 멘토 수당 요약 조회
 export async function GET() {
   try {
     const user = await requireMentor()
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 전체 수당 내역 조회
     const { data: payouts, error } = await supabase

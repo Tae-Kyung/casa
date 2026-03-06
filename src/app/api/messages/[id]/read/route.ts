@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireAuth } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, handleApiError } from '@/lib/utils/api-response'
 
 // PATCH: 메시지 읽음 처리
@@ -12,7 +12,7 @@ export async function PATCH(
     const user = await requireAuth()
     const { id } = await context.params
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     await supabase
       .from('bi_messages')

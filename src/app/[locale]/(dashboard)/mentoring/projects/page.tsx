@@ -185,7 +185,7 @@ export default function MentorProjectsPage() {
                     <div className="flex items-center gap-1.5">
                       <User className="h-4 w-4" />
                       <span>
-                        {project.user.name || project.user.email}
+                        {project.user?.name || project.user?.email || '-'}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -195,7 +195,7 @@ export default function MentorProjectsPage() {
                       </span>
                     </div>
                   </div>
-                  <Link href={`/projects/${project.id}/mentoring`}>
+                  <Link href={`/projects/${project.id}`}>
                     <Button variant="outline" size="sm">
                       {t('mentor.projects.startMentoring')}
                       <ArrowRight className="ml-1.5 h-4 w-4" />
