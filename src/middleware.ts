@@ -9,6 +9,12 @@ const publicPaths = ['/login', '/signup', '/auth/callback', '/forgot-password', 
 // 관리자만 접근 가능한 경로
 const adminPaths = ['/admin']
 
+// 기관 담당자 경로
+const institutionPaths = ['/institution']
+
+// 승인 대기 페이지
+const pendingApprovalPath = '/pending-approval'
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -65,31 +71,63 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // 인증된 사용자 정보 조회 (한 번만)
+  let userData: { role: string; is_approved: boolean } | null = null
+  if (user) {
+    const { data } = await supabase
+      .from('bi_users')
+      .select('role, is_approved')
+      .eq('id', user.id)
+      .single()
+    userData = data
+  }
+
   // 인증된 사용자가 로그인/회원가입 페이지 접근 시 (showcase는 제외)
   const isAuthOnlyPath = ['/login', '/signup'].some((p) => pathWithoutLocale.startsWith(p))
   if (user && isAuthOnlyPath) {
     const locale = pathname.split('/')[1] || 'ko'
     const url = request.nextUrl.clone()
-    const { data: userData } = await supabase
-      .from('bi_users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    url.pathname = userData?.role === 'admin'
-      ? `/${locale}/admin`
-      : `/${locale}/dashboard`
+
+    // 미승인 사용자는 승인 대기 페이지로
+    if (userData && !userData.is_approved) {
+      url.pathname = `/${locale}${pendingApprovalPath}`
+      return NextResponse.redirect(url)
+    }
+
+    // 역할별 리다이렉트
+    if (userData?.role === 'admin') {
+      url.pathname = `/${locale}/admin/overview`
+    } else if (userData?.role === 'institution') {
+      url.pathname = `/${locale}/institution/dashboard`
+    } else {
+      url.pathname = `/${locale}/dashboard`
+    }
     return NextResponse.redirect(url)
   }
 
-  // 관리자 경로 체크 - bi_users에서 역할 검증
-  if (user && adminPaths.some((p) => pathWithoutLocale.startsWith(p))) {
-    const { data: userData } = await supabase
-      .from('bi_users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+  // 미승인 사용자: 승인 대기 페이지 외 접근 차단
+  if (user && userData && !userData.is_approved) {
+    if (pathWithoutLocale !== pendingApprovalPath && !isPublicPath && pathWithoutLocale !== '/') {
+      const locale = pathname.split('/')[1] || 'ko'
+      const url = request.nextUrl.clone()
+      url.pathname = `/${locale}${pendingApprovalPath}`
+      return NextResponse.redirect(url)
+    }
+  }
 
+  // 관리자 경로 체크
+  if (user && adminPaths.some((p) => pathWithoutLocale.startsWith(p))) {
     if (!userData || (userData.role !== 'admin' && userData.role !== 'mentor')) {
+      const locale = pathname.split('/')[1] || 'ko'
+      const url = request.nextUrl.clone()
+      url.pathname = `/${locale}/dashboard`
+      return NextResponse.redirect(url)
+    }
+  }
+
+  // 기관 담당자 경로 체크
+  if (user && institutionPaths.some((p) => pathWithoutLocale.startsWith(p))) {
+    if (!userData || (userData.role !== 'institution' && userData.role !== 'admin')) {
       const locale = pathname.split('/')[1] || 'ko'
       const url = request.nextUrl.clone()
       url.pathname = `/${locale}/dashboard`

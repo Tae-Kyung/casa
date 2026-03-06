@@ -6,11 +6,25 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type UserRole = 'user' | 'mentor' | 'admin'
+export type UserRole = 'user' | 'mentor' | 'institution' | 'admin'
 export type Locale = 'ko' | 'en' | 'ja' | 'zh'
 export type Theme = 'light' | 'dark' | 'system'
 export type ProjectStatus = 'draft' | 'in_progress' | 'completed' | 'archived'
 export type ProjectType = 'pre_startup' | 'startup'
+export type SupportType = 'personal' | 'institutional'
+export type ProgramStatus = 'preparing' | 'active' | 'completed' | 'archived'
+export type InstitutionType = 'center' | 'university' | 'other'
+export type InstitutionRole = 'manager' | 'staff'
+export type MentorPoolStatus = 'active' | 'inactive'
+export type MappingStatus = 'pending' | 'approved' | 'rejected' | 'completed'
+export type MentorMatchRole = 'primary' | 'secondary'
+export type MentorMatchStatus = 'assigned' | 'in_progress' | 'review' | 'completed' | 'cancelled'
+export type SessionType = 'review' | 'feedback' | 'revision' | 'final'
+export type SessionStatus = 'draft' | 'submitted' | 'acknowledged'
+export type ReportStatus = 'draft' | 'submitted' | 'confirmed' | 'rejected'
+export type PayoutStatus = 'pending' | 'approved' | 'processing' | 'paid' | 'cancelled'
+export type FeedbackSource = 'general' | 'mentoring' | 'institution'
+export type MessageRecipientType = 'mentors' | 'applicants' | 'all' | 'custom'
 export type ProjectStage = 'idea' | 'evaluation' | 'document' | 'deploy' | 'done'
 export type GateStatus = 'gate_1' | 'gate_2' | 'gate_3' | 'gate_4' | 'completed'
 export type DocumentType = 'business_plan' | 'pitch' | 'landing' | 'ppt' | 'ppt_image' | 'leaflet' | 'infographic' | 'gtm_checklist' | 'startup_application'
@@ -30,6 +44,8 @@ export interface Database {
           locale: Locale
           theme: Theme
           ai_credits: number
+          is_approved: boolean
+          approved_at: string | null
           created_at: string
           updated_at: string
         }
@@ -41,6 +57,8 @@ export interface Database {
           locale?: Locale
           theme?: Theme
           ai_credits?: number
+          is_approved?: boolean
+          approved_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -52,6 +70,8 @@ export interface Database {
           locale?: Locale
           theme?: Theme
           ai_credits?: number
+          is_approved?: boolean
+          approved_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -107,6 +127,8 @@ export interface Database {
           assigned_mentor_id: string | null
           visibility: 'public' | 'summary' | 'private'
           industry_tags: string[] | null
+          support_type: SupportType
+          program_id: string | null
           created_at: string
           updated_at: string
         }
@@ -126,6 +148,8 @@ export interface Database {
           assigned_mentor_id?: string | null
           visibility?: 'public' | 'summary' | 'private'
           industry_tags?: string[] | null
+          support_type?: SupportType
+          program_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -145,6 +169,8 @@ export interface Database {
           assigned_mentor_id?: string | null
           visibility?: 'public' | 'summary' | 'private'
           industry_tags?: string[] | null
+          support_type?: SupportType
+          program_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -356,6 +382,8 @@ export interface Database {
           comment: string
           is_resolved: boolean
           resolved_at: string | null
+          session_id: string | null
+          feedback_source: FeedbackSource
           created_at: string
         }
         Insert: {
@@ -368,6 +396,8 @@ export interface Database {
           comment: string
           is_resolved?: boolean
           resolved_at?: string | null
+          session_id?: string | null
+          feedback_source?: FeedbackSource
           created_at?: string
         }
         Update: {
@@ -380,6 +410,8 @@ export interface Database {
           comment?: string
           is_resolved?: boolean
           resolved_at?: string | null
+          session_id?: string | null
+          feedback_source?: FeedbackSource
           created_at?: string
         }
         Relationships: []
@@ -651,6 +683,588 @@ export interface Database {
         }
         Relationships: []
       }
+      // ============================================
+      // 확장판 (모두의 창업) 신규 테이블
+      // ============================================
+      bi_programs: {
+        Row: {
+          id: string
+          name: string
+          year: number
+          round: number
+          description: string | null
+          start_date: string | null
+          end_date: string | null
+          status: ProgramStatus
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          year: number
+          round?: number
+          description?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          status?: ProgramStatus
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          year?: number
+          round?: number
+          description?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          status?: ProgramStatus
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bi_institutions: {
+        Row: {
+          id: string
+          name: string
+          region: string
+          type: InstitutionType
+          address: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          is_approved: boolean
+          approved_at: string | null
+          approved_by: string | null
+          max_mentors: number
+          max_projects: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          region: string
+          type?: InstitutionType
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          is_approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          max_mentors?: number
+          max_projects?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          region?: string
+          type?: InstitutionType
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          is_approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          max_mentors?: number
+          max_projects?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bi_institution_members: {
+        Row: {
+          id: string
+          user_id: string
+          institution_id: string
+          role_in_institution: InstitutionRole
+          is_approved: boolean
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          institution_id: string
+          role_in_institution?: InstitutionRole
+          is_approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          institution_id?: string
+          role_in_institution?: InstitutionRole
+          is_approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      bi_mentor_profiles: {
+        Row: {
+          user_id: string
+          resume_url: string | null
+          bank_account_url: string | null
+          bank_name: string | null
+          account_number_masked: string | null
+          account_number_encrypted: string | null
+          account_holder: string | null
+          specialty: string[]
+          career_summary: string | null
+          is_approved: boolean
+          approved_at: string | null
+          approved_by: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          resume_url?: string | null
+          bank_account_url?: string | null
+          bank_name?: string | null
+          account_number_masked?: string | null
+          account_number_encrypted?: string | null
+          account_holder?: string | null
+          specialty?: string[]
+          career_summary?: string | null
+          is_approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          resume_url?: string | null
+          bank_account_url?: string | null
+          bank_name?: string | null
+          account_number_masked?: string | null
+          account_number_encrypted?: string | null
+          account_holder?: string | null
+          specialty?: string[]
+          career_summary?: string | null
+          is_approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bi_mentor_institution_pool: {
+        Row: {
+          id: string
+          mentor_id: string
+          institution_id: string
+          registered_by: string | null
+          status: MentorPoolStatus
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          mentor_id: string
+          institution_id: string
+          registered_by?: string | null
+          status?: MentorPoolStatus
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          mentor_id?: string
+          institution_id?: string
+          registered_by?: string | null
+          status?: MentorPoolStatus
+          created_at?: string
+        }
+        Relationships: []
+      }
+      bi_project_institution_maps: {
+        Row: {
+          id: string
+          project_id: string
+          institution_id: string
+          program_id: string | null
+          status: MappingStatus
+          mapped_by: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          institution_id: string
+          program_id?: string | null
+          status?: MappingStatus
+          mapped_by?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          institution_id?: string
+          program_id?: string | null
+          status?: MappingStatus
+          mapped_by?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      bi_mentor_matches: {
+        Row: {
+          id: string
+          project_id: string
+          mentor_id: string
+          institution_id: string
+          program_id: string | null
+          mentor_role: MentorMatchRole
+          status: MentorMatchStatus
+          matched_by: string | null
+          started_at: string | null
+          completed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          mentor_id: string
+          institution_id: string
+          program_id?: string | null
+          mentor_role?: MentorMatchRole
+          status?: MentorMatchStatus
+          matched_by?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          mentor_id?: string
+          institution_id?: string
+          program_id?: string | null
+          mentor_role?: MentorMatchRole
+          status?: MentorMatchStatus
+          matched_by?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bi_mentoring_sessions: {
+        Row: {
+          id: string
+          match_id: string
+          round_number: number
+          session_type: SessionType
+          comments: Json
+          revision_summary: string | null
+          session_date: string | null
+          duration_minutes: number | null
+          status: SessionStatus
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          match_id: string
+          round_number?: number
+          session_type?: SessionType
+          comments?: Json
+          revision_summary?: string | null
+          session_date?: string | null
+          duration_minutes?: number | null
+          status?: SessionStatus
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          match_id?: string
+          round_number?: number
+          session_type?: SessionType
+          comments?: Json
+          revision_summary?: string | null
+          session_date?: string | null
+          duration_minutes?: number | null
+          status?: SessionStatus
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bi_mentoring_reports: {
+        Row: {
+          id: string
+          match_id: string
+          mentor_opinion: string | null
+          strengths: string | null
+          improvements: string | null
+          overall_rating: number | null
+          ai_summary: string | null
+          ai_generated_report: string | null
+          status: ReportStatus
+          submitted_at: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          rejection_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          match_id: string
+          mentor_opinion?: string | null
+          strengths?: string | null
+          improvements?: string | null
+          overall_rating?: number | null
+          ai_summary?: string | null
+          ai_generated_report?: string | null
+          status?: ReportStatus
+          submitted_at?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          rejection_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          match_id?: string
+          mentor_opinion?: string | null
+          strengths?: string | null
+          improvements?: string | null
+          overall_rating?: number | null
+          ai_summary?: string | null
+          ai_generated_report?: string | null
+          status?: ReportStatus
+          submitted_at?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          rejection_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bi_mentor_payouts: {
+        Row: {
+          id: string
+          report_id: string
+          mentor_id: string
+          institution_id: string
+          program_id: string | null
+          amount: number | null
+          total_sessions: number | null
+          total_hours: number | null
+          status: PayoutStatus
+          approved_by: string | null
+          approved_at: string | null
+          paid_at: string | null
+          payment_reference: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          report_id: string
+          mentor_id: string
+          institution_id: string
+          program_id?: string | null
+          amount?: number | null
+          total_sessions?: number | null
+          total_hours?: number | null
+          status?: PayoutStatus
+          approved_by?: string | null
+          approved_at?: string | null
+          paid_at?: string | null
+          payment_reference?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          report_id?: string
+          mentor_id?: string
+          institution_id?: string
+          program_id?: string | null
+          amount?: number | null
+          total_sessions?: number | null
+          total_hours?: number | null
+          status?: PayoutStatus
+          approved_by?: string | null
+          approved_at?: string | null
+          paid_at?: string | null
+          payment_reference?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bi_notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          title: string
+          message: string | null
+          link: string | null
+          is_read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          title: string
+          message?: string | null
+          link?: string | null
+          is_read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          title?: string
+          message?: string | null
+          link?: string | null
+          is_read?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      bi_messages: {
+        Row: {
+          id: string
+          sender_id: string
+          recipient_id: string
+          institution_id: string | null
+          project_id: string | null
+          thread_id: string | null
+          subject: string | null
+          content: string
+          is_read: boolean
+          read_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          sender_id: string
+          recipient_id: string
+          institution_id?: string | null
+          project_id?: string | null
+          thread_id?: string | null
+          subject?: string | null
+          content: string
+          is_read?: boolean
+          read_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          sender_id?: string
+          recipient_id?: string
+          institution_id?: string | null
+          project_id?: string | null
+          thread_id?: string | null
+          subject?: string | null
+          content?: string
+          is_read?: boolean
+          read_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      bi_message_batches: {
+        Row: {
+          id: string
+          sender_id: string
+          institution_id: string
+          subject: string
+          content: string
+          recipient_type: MessageRecipientType
+          recipient_count: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          sender_id: string
+          institution_id: string
+          subject: string
+          content: string
+          recipient_type: MessageRecipientType
+          recipient_count?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          sender_id?: string
+          institution_id?: string
+          subject?: string
+          content?: string
+          recipient_type?: MessageRecipientType
+          recipient_count?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      bi_audit_logs: {
+        Row: {
+          id: string
+          user_id: string | null
+          action: string
+          resource_type: string
+          resource_id: string | null
+          details: Json | null
+          ip_address: string | null
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          action: string
+          resource_type: string
+          resource_id?: string | null
+          details?: Json | null
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          action?: string
+          resource_type?: string
+          resource_id?: string | null
+          details?: Json | null
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -690,3 +1304,19 @@ export type PromptVersion = Database['public']['Tables']['bi_prompt_versions']['
 export type PromptVariable = Database['public']['Tables']['bi_prompt_variables']['Row']
 export type BusinessReview = Database['public']['Tables']['bi_business_reviews']['Row']
 export type CreditLog = Database['public']['Tables']['bi_credit_logs']['Row']
+
+// 확장판 (모두의 창업) 편의 타입
+export type Program = Database['public']['Tables']['bi_programs']['Row']
+export type Institution = Database['public']['Tables']['bi_institutions']['Row']
+export type InstitutionMember = Database['public']['Tables']['bi_institution_members']['Row']
+export type MentorProfile = Database['public']['Tables']['bi_mentor_profiles']['Row']
+export type MentorInstitutionPool = Database['public']['Tables']['bi_mentor_institution_pool']['Row']
+export type ProjectInstitutionMap = Database['public']['Tables']['bi_project_institution_maps']['Row']
+export type MentorMatch = Database['public']['Tables']['bi_mentor_matches']['Row']
+export type MentoringSession = Database['public']['Tables']['bi_mentoring_sessions']['Row']
+export type MentoringReport = Database['public']['Tables']['bi_mentoring_reports']['Row']
+export type MentorPayout = Database['public']['Tables']['bi_mentor_payouts']['Row']
+export type Notification = Database['public']['Tables']['bi_notifications']['Row']
+export type Message = Database['public']['Tables']['bi_messages']['Row']
+export type MessageBatch = Database['public']['Tables']['bi_message_batches']['Row']
+export type AuditLog = Database['public']['Tables']['bi_audit_logs']['Row']
