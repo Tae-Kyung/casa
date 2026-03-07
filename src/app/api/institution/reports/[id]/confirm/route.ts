@@ -54,7 +54,17 @@ export async function POST(
       .single()
 
     if (match) {
-      // 세션 통계 집계 (acknowledged 세션만)
+      // submitted 세션을 자동으로 acknowledged 처리
+      await supabase
+        .from('bi_mentoring_sessions')
+        .update({
+          status: 'acknowledged',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('match_id', match.id)
+        .eq('status', 'submitted')
+
+      // 세션 통계 집계 (acknowledged 세션)
       const { data: sessions } = await supabase
         .from('bi_mentoring_sessions')
         .select('duration_minutes, status')

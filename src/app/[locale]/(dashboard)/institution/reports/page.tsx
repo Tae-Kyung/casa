@@ -9,6 +9,8 @@ import {
   XCircle,
   Star,
   Eye,
+  CalendarCheck,
+  Clock,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -48,6 +50,15 @@ function stripMarkdown(text: string): string {
     .trim()
 }
 
+interface SessionInfo {
+  id: string
+  round_number: number
+  session_type: string
+  session_date: string | null
+  duration_minutes: number | null
+  status: string
+}
+
 interface MentoringReport {
   id: string
   match_id: string
@@ -67,6 +78,7 @@ interface MentoringReport {
     mentor: { id: string; name: string | null } | null
     project: { id: string; name: string } | null
   } | null
+  sessions: SessionInfo[]
 }
 
 interface PaginationInfo {
@@ -335,6 +347,25 @@ export default function InstitutionReportsPage() {
                     </div>
                   </div>
 
+                  {/* Session summary */}
+                  {report.sessions && report.sessions.length > 0 && (
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <CalendarCheck className="h-4 w-4" />
+                        {t('institution.reports.sessionCount', { count: report.sessions.length })}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        {t('institution.reports.totalMinutes', { minutes: report.sessions.reduce((sum, s) => sum + (s.duration_minutes || 0), 0) })}
+                      </span>
+                      <span>
+                        {t('institution.reports.submittedSessions', { count: report.sessions.filter(s => s.status === 'submitted' || s.status === 'acknowledged').length })}
+                        {' / '}
+                        {report.sessions.length}
+                      </span>
+                    </div>
+                  )}
+
                   {/* AI Summary preview */}
                   {report.ai_summary && (
                     <div className="rounded-lg bg-muted p-3">
@@ -446,6 +477,55 @@ export default function InstitutionReportsPage() {
                     ))}
                   </div>
                   <span className="text-sm font-medium">{selectedReport.overall_rating}/5</span>
+                </div>
+              )}
+
+              {/* Sessions */}
+              {selectedReport.sessions && selectedReport.sessions.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">{t('institution.reports.sessionsTitle')}</p>
+                  <div className="space-y-1">
+                    {selectedReport.sessions.map((session) => (
+                      <div
+                        key={session.id}
+                        className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium">
+                            {session.round_number}{t('institution.reports.sessionRound')}
+                          </span>
+                          <Badge variant="outline" className="text-xs">{session.session_type}</Badge>
+                          {session.session_date && (
+                            <span className="text-muted-foreground">
+                              {new Date(session.session_date).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {session.duration_minutes && (
+                            <span className="text-muted-foreground">
+                              {session.duration_minutes}{t('institution.reports.minutes')}
+                            </span>
+                          )}
+                          <Badge
+                            className={
+                              session.status === 'acknowledged'
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                : session.status === 'submitted'
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                            }
+                          >
+                            {session.status === 'acknowledged'
+                              ? t('institution.reports.sessionAcknowledged')
+                              : session.status === 'submitted'
+                              ? t('institution.reports.sessionSubmitted')
+                              : t('institution.reports.sessionDraft')}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

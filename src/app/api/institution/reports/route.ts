@@ -92,6 +92,28 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Fetch sessions for each match
+    let sessionMap: Record<string, Array<{ id: string; round_number: number; session_type: string; session_date: string | null; duration_minutes: number | null; status: string }>> = {}
+    if (reportMatchIds.length > 0) {
+      const { data: sessions } = await supabase
+        .from('bi_mentoring_sessions')
+        .select('id, match_id, round_number, session_type, session_date, duration_minutes, status')
+        .in('match_id', reportMatchIds)
+        .order('round_number', { ascending: true })
+
+      for (const s of sessions || []) {
+        if (!sessionMap[s.match_id]) sessionMap[s.match_id] = []
+        sessionMap[s.match_id].push({
+          id: s.id,
+          round_number: s.round_number,
+          session_type: s.session_type,
+          session_date: s.session_date,
+          duration_minutes: s.duration_minutes,
+          status: s.status,
+        })
+      }
+    }
+
     const enriched = reports.map((r) => {
       const match = matchMap[r.match_id]
       return {
@@ -101,6 +123,7 @@ export async function GET(request: NextRequest) {
           mentor: mentorMap[match.mentor_id] || null,
           project: projectMap[match.project_id] || null,
         } : null,
+        sessions: sessionMap[r.match_id] || [],
       }
     })
 

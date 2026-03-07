@@ -1033,7 +1033,16 @@
       "viewReport": "View Report",
       "reportDetail": "Mentoring Report Detail",
       "noReportContent": "No report content available.",
-      "rejectionReason": "Rejection Reason"
+      "rejectionReason": "Rejection Reason",
+      "sessionCount": "{count} Sessions",
+      "totalMinutes": "{minutes} min",
+      "submittedSessions": "{count} submitted",
+      "sessionsTitle": "Mentoring Sessions",
+      "sessionRound": "",
+      "minutes": " min",
+      "sessionAcknowledged": "Acknowledged",
+      "sessionSubmitted": "Submitted",
+      "sessionDraft": "Draft"
     },
     "payouts": {
       "title": "Payout Management",

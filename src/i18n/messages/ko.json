@@ -1032,7 +1032,16 @@
       "viewReport": "보고서 보기",
       "reportDetail": "멘토링 보고서 상세",
       "noReportContent": "보고서 내용이 없습니다.",
-      "rejectionReason": "반려 사유"
+      "rejectionReason": "반려 사유",
+      "sessionCount": "멘토링 {count}회",
+      "totalMinutes": "{minutes}분",
+      "submittedSessions": "제출 {count}건",
+      "sessionsTitle": "멘토링 세션",
+      "sessionRound": "회차",
+      "minutes": "분",
+      "sessionAcknowledged": "확인됨",
+      "sessionSubmitted": "제출됨",
+      "sessionDraft": "작성중"
     },
     "payouts": {
       "title": "수당 관리",
