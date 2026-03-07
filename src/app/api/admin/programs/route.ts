@@ -55,14 +55,31 @@ export async function GET(request: NextRequest) {
     const programIds = programs.map((p) => p.id)
 
     // 프로그램별 통계 조회 (병렬)
+    // 프로젝트-프로그램 연결은 bi_project_institution_maps를 통해 이루어짐
+    // 멘토 매칭은 프로젝트를 경유하여 프로그램에 연결
     if (programIds.length > 0) {
-      const [projectsRes, mentorsRes, institutionsRes, matchesRes] = await Promise.all([
-        supabase.from('bi_projects').select('program_id').in('program_id', programIds),
-        supabase.from('bi_mentor_matches').select('program_id, mentor_id').in('program_id', programIds),
+      const [mapsRes, institutionsRes] = await Promise.all([
+        supabase.from('bi_project_institution_maps').select('project_id, institution_id, program_id').in('program_id', programIds),
         supabase.from('bi_project_institution_maps').select('program_id, institution_id').in('program_id', programIds),
-        supabase.from('bi_mentor_matches').select('id, program_id').in('program_id', programIds),
       ])
 
+      // 프로그램별 프로젝트 ID 맵
+      const programProjectMap: Record<string, Set<string>> = {}
+      for (const id of programIds) {
+        programProjectMap[id] = new Set(
+          (mapsRes.data || []).filter((m) => m.program_id === id).map((m) => m.project_id)
+        )
+      }
+
+      // 모든 프로젝트 ID 수집 → 멘토 매칭 조회
+      const allProjectIds = [...new Set((mapsRes.data || []).map((m) => m.project_id))]
+      const [matchesRes] = allProjectIds.length > 0
+        ? await Promise.all([
+            supabase.from('bi_mentor_matches').select('id, project_id, mentor_id').in('project_id', allProjectIds),
+          ])
+        : [{ data: [] as { id: string; project_id: string; mentor_id: string }[] }]
+
+      // 멘토링 세션 조회
       const matchIds = (matchesRes.data || []).map((m) => m.id)
       const sessionsRes = matchIds.length > 0
         ? await supabase.from('bi_mentoring_sessions').select('match_id').in('match_id', matchIds)
@@ -70,10 +87,17 @@ export async function GET(request: NextRequest) {
 
       const statsMap: Record<string, { projectCount: number; mentorCount: number; institutionCount: number; sessionCount: number }> = {}
       for (const id of programIds) {
-        const projectCount = (projectsRes.data || []).filter((p) => p.program_id === id).length
-        const mentorCount = new Set((mentorsRes.data || []).filter((m) => m.program_id === id).map((m) => m.mentor_id)).size
-        const institutionCount = new Set((institutionsRes.data || []).filter((i) => i.program_id === id).map((i) => i.institution_id)).size
-        const programMatchIds = new Set((matchesRes.data || []).filter((m) => m.program_id === id).map((m) => m.id))
+        const projectIds = programProjectMap[id]
+        const projectCount = projectIds.size
+        const mentorCount = new Set(
+          (matchesRes.data || []).filter((m) => projectIds.has(m.project_id)).map((m) => m.mentor_id)
+        ).size
+        const institutionCount = new Set(
+          (institutionsRes.data || []).filter((i) => i.program_id === id).map((i) => i.institution_id)
+        ).size
+        const programMatchIds = new Set(
+          (matchesRes.data || []).filter((m) => projectIds.has(m.project_id)).map((m) => m.id)
+        )
         const sessionCount = (sessionsRes.data || []).filter((s) => programMatchIds.has(s.match_id)).length
         statsMap[id] = { projectCount, mentorCount, institutionCount, sessionCount }
       }
