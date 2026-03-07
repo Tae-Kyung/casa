@@ -929,7 +929,22 @@
       "remove": "제거",
       "removeSuccess": "멘토가 제거되었습니다.",
       "statusUpdated": "상태가 변경되었습니다.",
-      "statusUpdateFailed": "상태 변경에 실패했습니다."
+      "statusUpdateFailed": "상태 변경에 실패했습니다.",
+      "activityProjects": "프로젝트 {count}건",
+      "activitySessions": "세션 {completed}/{total}회",
+      "activityReports": "보고서 {submitted}/{total}건",
+      "colProject": "프로젝트",
+      "colRole": "역할",
+      "colStatus": "상태",
+      "colSessions": "세션",
+      "colReport": "보고서",
+      "reportDraft": "작성중",
+      "reportSubmitted": "제출됨",
+      "reportConfirmed": "확인됨",
+      "reportRejected": "반려됨",
+      "noActivity": "활동 내역이 없습니다.",
+      "rolePrimary": "주멘토",
+      "roleSecondary": "부멘토"
     },
     "matches": {
       "title": "멘토-프로젝트 매칭",

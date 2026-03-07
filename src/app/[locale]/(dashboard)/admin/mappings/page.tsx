@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { RefreshCw, Link2, Plus, Search, Check } from 'lucide-react'
+import { RefreshCw, Link2, Plus, Search, Check, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -62,6 +62,7 @@ export default function MappingsPage() {
 
   // 모달 상태
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingMapping, setEditingMapping] = useState<Mapping | null>(null)
   const [institutions, setInstitutions] = useState<SelectOption[]>([])
   const [programs, setPrograms] = useState<SelectOption[]>([])
   const [selectedProjectId, setSelectedProjectId] = useState('')
@@ -69,6 +70,7 @@ export default function MappingsPage() {
   const [selectedInstitutionId, setSelectedInstitutionId] = useState('')
   const [selectedProgramId, setSelectedProgramId] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   // 프로젝트 검색 상태
   const [projectQuery, setProjectQuery] = useState('')
@@ -171,40 +173,95 @@ export default function MappingsPage() {
 
   const openCreateModal = async () => {
     await fetchSelectOptions()
+    setEditingMapping(null)
     setSelectedProjectId('')
     setSelectedProjectName('')
     setProjectQuery('')
     setProjectResults([])
     setSelectedInstitutionId('')
     setSelectedProgramId('')
-    // 초기 프로젝트 목록 로드
     searchProjects('')
     setIsModalOpen(true)
   }
 
-  const handleCreateMapping = async () => {
+  const openEditModal = async (mapping: Mapping) => {
+    await fetchSelectOptions()
+    setEditingMapping(mapping)
+    setSelectedProjectId(mapping.project?.id || '')
+    setSelectedProjectName(mapping.project?.name || '')
+    setProjectQuery(mapping.project?.name || '')
+    setSelectedInstitutionId(mapping.institution?.id || '')
+    setSelectedProgramId(mapping.program?.id || '')
+    setIsModalOpen(true)
+  }
+
+  const handleDeleteMapping = async (id: string) => {
+    try {
+      const response = await fetch(`/api/admin/mappings/${id}`, {
+        method: 'DELETE',
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('admin.mappings.deleteSuccess'))
+        fetchMappings()
+      } else {
+        toast.error(result.error || t('admin.mappings.deleteFailed'))
+      }
+    } catch {
+      toast.error(t('admin.mappings.deleteFailed'))
+    } finally {
+      setDeleteConfirmId(null)
+    }
+  }
+
+  const handleSaveMapping = async () => {
     if (!selectedProjectId || !selectedInstitutionId || !selectedProgramId) return
 
     setIsSaving(true)
     try {
-      const response = await fetch('/api/admin/mappings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project_id: selectedProjectId,
-          institution_id: selectedInstitutionId,
-          program_id: selectedProgramId,
-        }),
-      })
+      if (editingMapping) {
+        // 수정
+        const updateBody: Record<string, string> = {}
+        if (selectedInstitutionId !== editingMapping.institution?.id) updateBody.institution_id = selectedInstitutionId
+        if (selectedProgramId !== editingMapping.program?.id) updateBody.program_id = selectedProgramId
 
-      const result = await response.json()
+        if (Object.keys(updateBody).length === 0) {
+          setIsModalOpen(false)
+          return
+        }
 
-      if (result.success) {
-        toast.success(t('admin.mappings.mapped'))
-        setIsModalOpen(false)
-        fetchMappings()
+        const response = await fetch(`/api/admin/mappings/${editingMapping.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateBody),
+        })
+        const result = await response.json()
+        if (result.success) {
+          toast.success(t('admin.mappings.updateSuccess'))
+          setIsModalOpen(false)
+          fetchMappings()
+        } else {
+          toast.error(result.error || t('admin.mappings.updateFailed'))
+        }
       } else {
-        toast.error(result.error || t('admin.mappings.mappingFailed'))
+        // 생성
+        const response = await fetch('/api/admin/mappings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            project_id: selectedProjectId,
+            institution_id: selectedInstitutionId,
+            program_id: selectedProgramId,
+          }),
+        })
+        const result = await response.json()
+        if (result.success) {
+          toast.success(t('admin.mappings.mapped'))
+          setIsModalOpen(false)
+          fetchMappings()
+        } else {
+          toast.error(result.error || t('admin.mappings.mappingFailed'))
+        }
       }
     } catch {
       toast.error(t('admin.mappings.mappingFailed'))
@@ -292,10 +349,11 @@ export default function MappingsPage() {
           {/* 테이블 헤더 */}
           <div className="hidden rounded-lg bg-muted px-4 py-3 text-sm font-medium text-muted-foreground md:grid md:grid-cols-12 md:gap-4">
             <div className="col-span-3">{t('admin.mappings.project')}</div>
-            <div className="col-span-3">{t('admin.mappings.institution')}</div>
-            <div className="col-span-3">{t('admin.mappings.program')}</div>
+            <div className="col-span-2">{t('admin.mappings.institution')}</div>
+            <div className="col-span-2">{t('admin.mappings.program')}</div>
             <div className="col-span-2">{t('admin.mappings.status')}</div>
             <div className="col-span-1"></div>
+            <div className="col-span-2">{t('admin.mappings.actions')}</div>
           </div>
 
           <div className="space-y-2">
@@ -305,13 +363,15 @@ export default function MappingsPage() {
                   <div className="col-span-3 min-w-0">
                     <p className="truncate text-sm font-medium">{mapping.project?.name || '-'}</p>
                   </div>
-                  <div className="col-span-3 min-w-0">
+                  <div className="col-span-2 min-w-0">
                     <p className="truncate text-sm">
                       {mapping.institution?.name || '-'}
-                      {mapping.institution?.region && <span className="text-muted-foreground"> ({mapping.institution.region})</span>}
                     </p>
+                    {mapping.institution?.region && (
+                      <p className="truncate text-xs text-muted-foreground">{mapping.institution.region}</p>
+                    )}
                   </div>
-                  <div className="col-span-3 min-w-0">
+                  <div className="col-span-2 min-w-0">
                     <p className="truncate text-sm">{mapping.program?.name || '-'}</p>
                   </div>
                   <div className="col-span-2">
@@ -332,6 +392,24 @@ export default function MappingsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="col-span-2 flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => openEditModal(mapping)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => setDeleteConfirmId(mapping.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -347,7 +425,7 @@ export default function MappingsPage() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('admin.mappings.createMapping')}</DialogTitle>
+            <DialogTitle>{editingMapping ? t('admin.mappings.editMapping') : t('admin.mappings.createMapping')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div ref={dropdownRef} className="relative">
@@ -360,7 +438,8 @@ export default function MappingsPage() {
                   placeholder={t('admin.mappings.searchProject')}
                   value={projectQuery}
                   onChange={(e) => handleProjectQueryChange(e.target.value)}
-                  onFocus={() => setShowProjectDropdown(true)}
+                  onFocus={() => !editingMapping && setShowProjectDropdown(true)}
+                  disabled={!!editingMapping}
                 />
                 {isSearching && (
                   <LoadingSpinner size="sm" className="absolute right-3 top-1/2 -translate-y-1/2" />
@@ -433,11 +512,34 @@ export default function MappingsPage() {
               {t('common.cancel')}
             </Button>
             <Button
-              onClick={handleCreateMapping}
+              onClick={handleSaveMapping}
               disabled={isSaving || !selectedProjectId || !selectedInstitutionId || !selectedProgramId}
             >
               {isSaving ? <LoadingSpinner size="sm" className="mr-2" /> : null}
               {t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 삭제 확인 다이얼로그 */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('admin.mappings.deleteConfirmTitle')}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t('admin.mappings.deleteConfirmMessage')}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteConfirmId && handleDeleteMapping(deleteConfirmId)}
+            >
+              {t('common.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

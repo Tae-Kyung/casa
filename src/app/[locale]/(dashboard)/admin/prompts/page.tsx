@@ -264,7 +264,7 @@ export default function PromptsPage() {
                         <p className="line-clamp-2">{prompt.description}</p>
                       )}
                       <div className="flex gap-4">
-                        <span>{t('admin.prompts.modelLabel')} {prompt.model}</span>
+                        <span>{t('admin.prompts.modelLabel', { model: prompt.model })}</span>
                         <span>Temperature: {prompt.temperature}</span>
                         <span>Max Tokens: {prompt.max_tokens}</span>
                       </div>

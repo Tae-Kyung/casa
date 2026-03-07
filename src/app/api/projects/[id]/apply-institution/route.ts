@@ -58,18 +58,21 @@ export async function POST(
       return errorResponse('승인되지 않은 기관에는 지원할 수 없습니다.', 400)
     }
 
-    // 중복 지원 확인 (같은 프로젝트+기관에 pending 또는 approved 상태가 있는 경우)
-    const { data: existingMapping, error: existingError } = await supabase
+    // 다른 기관에 이미 매핑(지원/승인)된 프로젝트인지 확인
+    const { data: otherMapping, error: otherError } = await supabase
       .from('bi_project_institution_maps')
-      .select('id, status')
+      .select('id, institution_id, status')
       .eq('project_id', id)
-      .eq('institution_id', institution_id)
       .in('status', ['pending', 'approved'])
 
-    if (existingError) throw existingError
+    if (otherError) throw otherError
 
-    if (existingMapping && existingMapping.length > 0) {
-      return errorResponse('이미 해당 기관에 지원 중이거나 승인된 상태입니다.', 400)
+    if (otherMapping && otherMapping.length > 0) {
+      const sameInstitution = otherMapping.some((m) => m.institution_id === institution_id)
+      if (sameInstitution) {
+        return errorResponse('이미 해당 기관에 지원 중이거나 승인된 상태입니다.', 400)
+      }
+      return errorResponse('이미 다른 기관에 지원 중이거나 승인된 프로젝트입니다. 하나의 프로젝트는 하나의 기관에만 지원할 수 있습니다.', 400)
     }
 
     // 기관 프로그램 매핑 생성

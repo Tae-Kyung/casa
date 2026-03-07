@@ -930,7 +930,22 @@
       "remove": "Remove",
       "removeSuccess": "Mentor removed.",
       "statusUpdated": "Status updated.",
-      "statusUpdateFailed": "Failed to update status."
+      "statusUpdateFailed": "Failed to update status.",
+      "activityProjects": "{count} Projects",
+      "activitySessions": "Sessions {completed}/{total}",
+      "activityReports": "Reports {submitted}/{total}",
+      "colProject": "Project",
+      "colRole": "Role",
+      "colStatus": "Status",
+      "colSessions": "Sessions",
+      "colReport": "Report",
+      "reportDraft": "Draft",
+      "reportSubmitted": "Submitted",
+      "reportConfirmed": "Confirmed",
+      "reportRejected": "Rejected",
+      "noActivity": "No activity found.",
+      "rolePrimary": "Primary",
+      "roleSecondary": "Secondary"
     },
     "matches": {
       "title": "Mentor-Project Matching",

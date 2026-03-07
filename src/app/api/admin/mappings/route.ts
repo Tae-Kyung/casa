@@ -74,6 +74,18 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient()
 
+    // 이미 다른 기관에 매핑된 프로젝트인지 확인
+    const { data: existing } = await supabase
+      .from('bi_project_institution_maps')
+      .select('institution_id')
+      .eq('project_id', validatedData.project_id)
+      .limit(1)
+      .single()
+
+    if (existing && existing.institution_id !== validatedData.institution_id) {
+      return errorResponse('이미 다른 기관에 매핑된 프로젝트입니다.', 409)
+    }
+
     const { data, error } = await supabase
       .from('bi_project_institution_maps')
       .insert(validatedData)
