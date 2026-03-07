@@ -75,7 +75,8 @@ export async function POST(
       return errorResponse('멘토 매칭 정보를 찾을 수 없습니다.', 404)
     }
 
-    const body = await request.json()
+    let body = {}
+    try { body = await request.json() } catch { /* empty body is ok */ }
     const validatedData = createSessionSchema.parse(body)
 
     // 현재 최대 round_number 조회
