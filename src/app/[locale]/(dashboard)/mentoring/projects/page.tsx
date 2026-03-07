@@ -207,12 +207,19 @@ export default function MentorProjectsPage() {
                       </span>
                     </div>
                   </div>
-                  <Link href={`/projects/${project.id}`}>
-                    <Button variant="outline" size="sm">
-                      {t('mentor.projects.startMentoring')}
-                      <ArrowRight className="ml-1.5 h-4 w-4" />
-                    </Button>
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/projects/${project.id}/mentoring`}>
+                      <Button variant="default" size="sm">
+                        {t('mentor.projects.startMentoring')}
+                        <ArrowRight className="ml-1.5 h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <Link href={`/projects/${project.id}`}>
+                      <Button variant="outline" size="sm">
+                        {t('mentor.projects.viewProject')}
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </CardContent>
             </Card>

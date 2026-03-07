@@ -1227,6 +1227,7 @@
       "cancelled": "취소",
       "noProjects": "배정된 프로젝트가 없습니다.",
       "startMentoring": "멘토링 시작",
+      "viewProject": "프로젝트 보기",
       "fetchFailed": "프로젝트를 불러오는데 실패했습니다.",
       "noProjectsDesc": "배정된 프로젝트가 없습니다",
       "rolePrimary": "주멘토",

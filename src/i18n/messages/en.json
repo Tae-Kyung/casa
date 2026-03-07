@@ -1228,6 +1228,7 @@
       "cancelled": "Cancelled",
       "noProjects": "No assigned projects.",
       "startMentoring": "Start Mentoring",
+      "viewProject": "View Project",
       "fetchFailed": "Failed to load projects.",
       "noProjectsDesc": "No assigned projects",
       "rolePrimary": "Primary",

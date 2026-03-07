@@ -204,6 +204,11 @@ export default function ProjectDetailPage({ params }: PageProps) {
         )}
         {isMentor && (
           <div className="flex items-center gap-3">
+            <Link href={`/projects/${id}/mentoring`}>
+              <Button>
+                {t('mentor.projects.startMentoring')}
+              </Button>
+            </Link>
             <Link href={`/projects/${id}/mentoring/report`}>
               <Button variant="outline">
                 <FileText className="mr-2 h-4 w-4" />
