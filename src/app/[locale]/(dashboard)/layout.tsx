@@ -42,7 +42,7 @@ export default async function DashboardLayoutWrapper({
       .limit(1)
       .single()
 
-    institutionName = (membership?.institution as { name: string } | null)?.name || undefined
+    institutionName = (membership?.institution as unknown as { name: string } | null)?.name || undefined
   }
 
   return (
