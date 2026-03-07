@@ -724,7 +724,8 @@
     },
     "mentors": {
       "title": "Mentor Management",
-      "description": "Manage mentor approvals.",
+      "description": "Manage mentor details. Approvals are handled in User Management.",
+      "approveInUsers": "Mentor approval can be done in the User Management page.",
       "fetchFailed": "Failed to load mentors.",
       "name": "Name",
       "email": "Email",

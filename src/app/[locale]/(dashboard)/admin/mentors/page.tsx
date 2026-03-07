@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { RefreshCw, UserCheck, CheckCircle } from 'lucide-react'
+import { RefreshCw, UserCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -100,25 +100,6 @@ export default function MentorsPage() {
     }
   }
 
-  const handleApprove = async (mentorId: string) => {
-    try {
-      const response = await fetch(`/api/admin/mentors/${mentorId}/approve`, { method: 'POST' })
-      const result = await response.json()
-
-      if (result.success) {
-        toast.success(t('admin.mentors.approved_success'))
-        fetchMentors()
-        if (selectedMentor?.user_id === mentorId) {
-          setSelectedMentor(null)
-        }
-      } else {
-        toast.error(result.error || t('admin.mentors.approveFailed'))
-      }
-    } catch {
-      toast.error(t('admin.mentors.approveFailed'))
-    }
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -179,13 +160,7 @@ export default function MentorsPage() {
                     {mentor.is_approved ? (
                       <Badge className="bg-green-500 text-white">{t('admin.mentors.approved')}</Badge>
                     ) : (
-                      <>
-                        <Badge variant="secondary">{t('admin.mentors.pendingApproval')}</Badge>
-                        <Button size="sm" onClick={() => handleApprove(mentor.user_id)}>
-                          <CheckCircle className="mr-1 h-4 w-4" />
-                          {t('admin.mentors.approve')}
-                        </Button>
-                      </>
+                      <Badge variant="secondary">{t('admin.mentors.pendingApproval')}</Badge>
                     )}
                     <Button variant="outline" size="sm" onClick={() => viewDetail(mentor.user_id)}>
                       {t('admin.mentors.viewDetail')}
@@ -261,10 +236,9 @@ export default function MentorsPage() {
               )}
 
               {!selectedMentor.is_approved && (
-                <Button className="w-full" onClick={() => handleApprove(selectedMentor.user_id)}>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  {t('admin.mentors.approve')}
-                </Button>
+                <p className="text-sm text-center text-muted-foreground">
+                  {t('admin.mentors.approveInUsers')}
+                </p>
               )}
             </div>
           )}
