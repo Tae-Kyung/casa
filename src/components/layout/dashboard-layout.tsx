@@ -224,7 +224,6 @@ export function DashboardLayout({ children, userRole = 'user', userName, institu
     await supabase.auth.signOut()
     toast.success(tAuth('logoutSuccess'))
     router.push('/login')
-    router.refresh()
   }
 
   const isActive = (href: string, exactMatch?: boolean) => {
