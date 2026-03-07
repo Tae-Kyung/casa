@@ -35,11 +35,18 @@ export async function GET(request: NextRequest) {
         if (user) {
           const { data: profile } = await supabase
             .from('bi_users')
-            .select('role')
+            .select('role, is_approved')
             .eq('id', user.id)
             .single()
-          if (profile?.role === 'admin') redirectPath = '/admin'
-          else if (profile?.role === 'institution') redirectPath = '/institution/dashboard'
+
+          // 미승인 사용자는 승인 대기 페이지로
+          if (profile && !profile.is_approved) {
+            redirectPath = '/pending-approval'
+          } else if (profile?.role === 'admin') {
+            redirectPath = '/admin'
+          } else if (profile?.role === 'institution') {
+            redirectPath = '/institution/dashboard'
+          }
         }
       }
       return NextResponse.redirect(`${origin}${redirectPath}`)

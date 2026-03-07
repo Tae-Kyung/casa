@@ -98,10 +98,11 @@ export default function SignupPage() {
 
     if (multiRoleEnabled && selectedRole !== 'user') {
       toast.success(t('auth.signupPendingApproval'))
+      router.push('/pending-approval')
     } else {
       toast.success(t('auth.signupSuccess'))
+      router.push('/login')
     }
-    router.push('/login')
   }
 
   const roleOptions: { value: SelectableRole; label: string; desc: string }[] = [

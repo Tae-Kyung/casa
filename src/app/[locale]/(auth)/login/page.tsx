@@ -52,9 +52,16 @@ export default function LoginPage() {
     if (loggedInUser) {
       const { data: profile } = await supabase
         .from('bi_users')
-        .select('role')
+        .select('role, is_approved')
         .eq('id', loggedInUser.id)
         .single()
+
+      // 미승인 사용자는 승인 대기 페이지로
+      if (profile && !profile.is_approved) {
+        router.push('/pending-approval')
+        return
+      }
+
       if (profile?.role === 'admin') {
         router.push('/admin')
       } else if (profile?.role === 'institution') {
