@@ -51,7 +51,47 @@ export async function GET(request: NextRequest) {
       return errorResponse('프로그램 목록을 불러오는데 실패했습니다.', 500)
     }
 
-    return paginatedResponse(data || [], count || 0, page, limit)
+    const programs = data || []
+    const programIds = programs.map((p) => p.id)
+
+    // 프로그램별 통계 조회 (병렬)
+    if (programIds.length > 0) {
+      const [projectsRes, mentorsRes, institutionsRes, matchesRes] = await Promise.all([
+        supabase.from('bi_projects').select('program_id').in('program_id', programIds),
+        supabase.from('bi_mentor_matches').select('program_id, mentor_id').in('program_id', programIds),
+        supabase.from('bi_project_institution_maps').select('program_id, institution_id').in('program_id', programIds),
+        supabase.from('bi_mentor_matches').select('id, program_id').in('program_id', programIds),
+      ])
+
+      const matchIds = (matchesRes.data || []).map((m) => m.id)
+      const sessionsRes = matchIds.length > 0
+        ? await supabase.from('bi_mentoring_sessions').select('match_id').in('match_id', matchIds)
+        : { data: [] as { match_id: string }[] }
+
+      const statsMap: Record<string, { projectCount: number; mentorCount: number; institutionCount: number; sessionCount: number }> = {}
+      for (const id of programIds) {
+        const projectCount = (projectsRes.data || []).filter((p) => p.program_id === id).length
+        const mentorCount = new Set((mentorsRes.data || []).filter((m) => m.program_id === id).map((m) => m.mentor_id)).size
+        const institutionCount = new Set((institutionsRes.data || []).filter((i) => i.program_id === id).map((i) => i.institution_id)).size
+        const programMatchIds = new Set((matchesRes.data || []).filter((m) => m.program_id === id).map((m) => m.id))
+        const sessionCount = (sessionsRes.data || []).filter((s) => programMatchIds.has(s.match_id)).length
+        statsMap[id] = { projectCount, mentorCount, institutionCount, sessionCount }
+      }
+
+      const programsWithStats = programs.map((p) => ({
+        ...p,
+        stats: statsMap[p.id] || { projectCount: 0, mentorCount: 0, institutionCount: 0, sessionCount: 0 },
+      }))
+
+      return paginatedResponse(programsWithStats, count || 0, page, limit)
+    }
+
+    const programsWithStats = programs.map((p) => ({
+      ...p,
+      stats: { projectCount: 0, mentorCount: 0, institutionCount: 0, sessionCount: 0 },
+    }))
+
+    return paginatedResponse(programsWithStats, count || 0, page, limit)
   } catch (error) {
     return handleApiError(error)
   }

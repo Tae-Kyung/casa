@@ -671,7 +671,11 @@
       "saveFailed": "Failed to save.",
       "created": "Program has been created.",
       "updated": "Program has been updated.",
-      "statusActive": "Active"
+      "statusActive": "Active",
+      "projects": "Projects",
+      "mentors": "Mentors",
+      "institutions": "Institutions",
+      "sessions": "Sessions"
     },
     "institutions": {
       "title": "Institution Management",
@@ -755,7 +759,15 @@
       "bulkMapped": "{count} mappings completed.",
       "mappingFailed": "Mapping failed.",
       "searchProject": "Search by project name...",
-      "noProjectsFound": "No projects found."
+      "noProjectsFound": "No projects found.",
+      "editMapping": "Edit Mapping",
+      "actions": "Actions",
+      "updateSuccess": "Mapping updated successfully.",
+      "updateFailed": "Failed to update mapping.",
+      "deleteSuccess": "Mapping deleted successfully.",
+      "deleteFailed": "Failed to delete mapping.",
+      "deleteConfirmTitle": "Delete Mapping",
+      "deleteConfirmMessage": "Are you sure you want to delete this mapping? This action cannot be undone."
     },
     "overview": {
       "title": "National Overview",

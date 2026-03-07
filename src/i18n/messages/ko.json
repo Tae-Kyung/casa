@@ -670,7 +670,11 @@
       "period": "기간",
       "saveFailed": "저장에 실패했습니다.",
       "created": "프로그램이 생성되었습니다.",
-      "updated": "프로그램이 수정되었습니다."
+      "updated": "프로그램이 수정되었습니다.",
+      "projects": "프로젝트",
+      "mentors": "멘토",
+      "institutions": "참여 기관",
+      "sessions": "멘토링 세션"
     },
     "institutions": {
       "title": "기관 관리",
@@ -754,7 +758,15 @@
       "bulkMapped": "{count}건이 매핑되었습니다.",
       "mappingFailed": "매핑에 실패했습니다.",
       "searchProject": "프로젝트명으로 검색...",
-      "noProjectsFound": "검색 결과가 없습니다."
+      "noProjectsFound": "검색 결과가 없습니다.",
+      "editMapping": "매핑 수정",
+      "actions": "관리",
+      "updateSuccess": "매핑이 수정되었습니다.",
+      "updateFailed": "매핑 수정에 실패했습니다.",
+      "deleteSuccess": "매핑이 삭제되었습니다.",
+      "deleteFailed": "매핑 삭제에 실패했습니다.",
+      "deleteConfirmTitle": "매핑 삭제",
+      "deleteConfirmMessage": "이 매핑을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
     },
     "overview": {
       "title": "전국 현황",

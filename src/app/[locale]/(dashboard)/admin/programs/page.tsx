@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { Plus, RefreshCw, Calendar, Edit2 } from 'lucide-react'
+import { Plus, RefreshCw, Calendar, Edit2, FolderOpen, Users, Building2, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -27,6 +27,13 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 
+interface ProgramStats {
+  projectCount: number
+  mentorCount: number
+  institutionCount: number
+  sessionCount: number
+}
+
 interface Program {
   id: string
   name: string
@@ -37,6 +44,7 @@ interface Program {
   end_date: string | null
   status: string
   created_at: string
+  stats: ProgramStats
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -248,6 +256,28 @@ export default function ProgramsPage() {
                       {t('admin.programs.period')}: {program.start_date || '?'} ~ {program.end_date || '?'}
                     </p>
                   )}
+                  <div className="mt-3 flex flex-wrap gap-4 text-sm">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <FolderOpen className="h-4 w-4" />
+                      <span>{t('admin.programs.projects')}</span>
+                      <span className="font-semibold text-foreground">{program.stats.projectCount}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>{t('admin.programs.mentors')}</span>
+                      <span className="font-semibold text-foreground">{program.stats.mentorCount}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Building2 className="h-4 w-4" />
+                      <span>{t('admin.programs.institutions')}</span>
+                      <span className="font-semibold text-foreground">{program.stats.institutionCount}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <MessageSquare className="h-4 w-4" />
+                      <span>{t('admin.programs.sessions')}</span>
+                      <span className="font-semibold text-foreground">{program.stats.sessionCount}</span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             ))}
