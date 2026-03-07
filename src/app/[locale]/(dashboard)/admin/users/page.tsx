@@ -15,9 +15,11 @@ import {
   XCircle,
   Clock,
   Trash2,
+  Edit2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
@@ -78,6 +80,11 @@ export default function AdminUsersPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [changingRoleId, setChangingRoleId] = useState<string | null>(null)
+
+  // 수정 모달
+  const [editUser, setEditUser] = useState<UserWithProjects | null>(null)
+  const [editForm, setEditForm] = useState({ name: '', email: '', password: '' })
+  const [isSaving, setIsSaving] = useState(false)
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true)
@@ -190,6 +197,46 @@ export default function AdminUsersPage() {
       toast.error(t('admin.users.deleteFailed'))
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const openEditModal = (user: UserWithProjects) => {
+    setEditUser(user)
+    setEditForm({ name: user.name || '', email: user.email, password: '' })
+  }
+
+  const handleEditSave = async () => {
+    if (!editUser) return
+
+    const updates: Record<string, string> = {}
+    if (editForm.name && editForm.name !== (editUser.name || '')) updates.name = editForm.name
+    if (editForm.email && editForm.email !== editUser.email) updates.email = editForm.email
+    if (editForm.password) updates.password = editForm.password
+
+    if (Object.keys(updates).length === 0) {
+      setEditUser(null)
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const response = await fetch(`/api/admin/users/${editUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('admin.users.editSuccess'))
+        setEditUser(null)
+        fetchUsers()
+      } else {
+        toast.error(result.error || t('admin.users.editFailed'))
+      }
+    } catch {
+      toast.error(t('admin.users.editFailed'))
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -353,14 +400,24 @@ export default function AdminUsersPage() {
                       <span className="text-sm text-muted-foreground">
                         {new Date(user.created_at).toLocaleDateString()}
                       </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(user.id) }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => { e.stopPropagation(); openEditModal(user) }}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(user.id) }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
 
@@ -465,6 +522,55 @@ export default function AdminUsersPage() {
             >
               {deletingId ? <LoadingSpinner size="sm" className="mr-2" /> : <Trash2 className="mr-2 h-4 w-4" />}
               {t('common.delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 사용자 수정 모달 */}
+      <Dialog open={!!editUser} onOpenChange={(open) => { if (!open) setEditUser(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('admin.users.editUser')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>{t('admin.users.nameLabel')}</Label>
+              <Input
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder={t('admin.users.nameLabel')}
+              />
+            </div>
+            <div>
+              <Label>{t('admin.users.emailLabel')}</Label>
+              <Input
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                placeholder={t('admin.users.emailLabel')}
+              />
+            </div>
+            <div>
+              <Label>{t('admin.users.newPassword')}</Label>
+              <Input
+                type="password"
+                value={editForm.password}
+                onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                placeholder={t('admin.users.newPasswordPlaceholder')}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t('admin.users.passwordHint')}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditUser(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleEditSave} disabled={isSaving}>
+              {isSaving && <LoadingSpinner size="sm" className="mr-2" />}
+              {t('common.save')}
             </Button>
           </DialogFooter>
         </DialogContent>

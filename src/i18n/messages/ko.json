@@ -516,7 +516,13 @@
       "deleteConfirmMessage": "이 사용자를 삭제하시겠습니까? 사용자의 모든 프로젝트, 멘토링, 메시지 등 관련 데이터가 함께 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
       "changeRole": "역할 변경",
       "roleChangeSuccess": "역할이 변경되었습니다.",
-      "roleChangeFailed": "역할 변경에 실패했습니다."
+      "roleChangeFailed": "역할 변경에 실패했습니다.",
+      "editUser": "사용자 정보 수정",
+      "newPassword": "새 비밀번호",
+      "newPasswordPlaceholder": "변경할 비밀번호 입력 (8자 이상)",
+      "passwordHint": "비워두면 비밀번호가 변경되지 않습니다.",
+      "editSuccess": "사용자 정보가 수정되었습니다.",
+      "editFailed": "사용자 정보 수정에 실패했습니다."
     },
     "approvals": {
       "title": "승인 관리",

@@ -8,40 +8,103 @@ const updateRoleSchema = z.object({
   role: z.enum(['user', 'mentor', 'institution', 'admin']),
 })
 
+const updateUserSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  email: z.string().email().optional(),
+  password: z.string().min(8).optional(),
+  role: z.enum(['user', 'mentor', 'institution', 'admin']).optional(),
+}).refine(data => data.name || data.email || data.password || data.role, {
+  message: '최소 하나의 필드를 입력해주세요.',
+})
+
 interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-// PATCH: 역할 변경
+// PATCH: 사용자 정보 수정 (이름, 이메일, 비밀번호, 역할)
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const admin = await requireAdmin()
     const { id } = await context.params
 
-    if (admin.id === id) {
-      return errorResponse('자기 자신의 역할은 변경할 수 없습니다.', 400)
+    const body = await request.json()
+
+    // 역할만 변경하는 기존 요청 호환
+    const isRoleOnly = Object.keys(body).length === 1 && body.role
+    if (isRoleOnly) {
+      const parsed = updateRoleSchema.safeParse(body)
+      if (!parsed.success) {
+        return errorResponse('유효하지 않은 역할입니다.', 400)
+      }
+      if (admin.id === id) {
+        return errorResponse('자기 자신의 역할은 변경할 수 없습니다.', 400)
+      }
+      const supabase = createServiceClient()
+      const { data, error } = await supabase
+        .from('bi_users')
+        .update({ role: parsed.data.role })
+        .eq('id', id)
+        .select('id, role')
+        .single()
+      if (error) return errorResponse('역할 변경에 실패했습니다.', 500)
+      return successResponse(data)
     }
 
-    const body = await request.json()
-    const parsed = updateRoleSchema.safeParse(body)
+    // 사용자 정보 수정
+    const parsed = updateUserSchema.safeParse(body)
     if (!parsed.success) {
-      return errorResponse('유효하지 않은 역할입니다.', 400)
+      return errorResponse(parsed.error.issues[0].message, 400, 'VALIDATION_ERROR')
+    }
+
+    if (parsed.data.role && admin.id === id) {
+      return errorResponse('자기 자신의 역할은 변경할 수 없습니다.', 400)
     }
 
     const supabase = createServiceClient()
 
-    const { data, error } = await supabase
-      .from('bi_users')
-      .update({ role: parsed.data.role })
-      .eq('id', id)
-      .select('id, role')
-      .single()
+    // bi_users 업데이트 (이름, 역할)
+    const biUpdate: Record<string, string> = {}
+    if (parsed.data.name) biUpdate.name = parsed.data.name
+    if (parsed.data.role) biUpdate.role = parsed.data.role
 
-    if (error) {
-      return errorResponse('역할 변경에 실패했습니다.', 500)
+    if (Object.keys(biUpdate).length > 0) {
+      const { error } = await supabase
+        .from('bi_users')
+        .update(biUpdate)
+        .eq('id', id)
+      if (error) {
+        console.error('User update error:', error.message)
+        return errorResponse('사용자 정보 수정에 실패했습니다.', 500)
+      }
     }
 
-    return successResponse(data)
+    // Supabase Auth 업데이트 (이메일, 비밀번호, 이름 메타데이터)
+    const authUpdate: { email?: string; password?: string; user_metadata?: Record<string, string> } = {}
+    if (parsed.data.email) authUpdate.email = parsed.data.email
+    if (parsed.data.password) authUpdate.password = parsed.data.password
+    if (parsed.data.name) authUpdate.user_metadata = { name: parsed.data.name }
+
+    if (parsed.data.email || parsed.data.password || parsed.data.name) {
+      const { error: authError } = await supabase.auth.admin.updateUserById(id, authUpdate)
+      if (authError) {
+        console.error('Auth update error:', authError.message)
+        return errorResponse('인증 정보 수정에 실패했습니다: ' + authError.message, 500)
+      }
+    }
+
+    // 이메일 변경 시 bi_users도 동기화
+    if (parsed.data.email) {
+      await supabase.from('bi_users').update({ email: parsed.data.email }).eq('id', id)
+    }
+
+    // 업데이트된 사용자 반환
+    const { data: updated } = await supabase
+      .from('bi_users')
+      .select('id, name, email, role')
+      .eq('id', id)
+      .single()
+
+    return successResponse(updated)
   } catch (error) {
     return handleApiError(error)
   }
