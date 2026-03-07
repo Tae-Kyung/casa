@@ -1268,7 +1268,10 @@
       "commentsPlaceholder": "코멘트를 입력하세요",
       "minutes": "분",
       "saveFailed": "저장에 실패했습니다",
-      "saved": "저장되었습니다"
+      "saved": "저장되었습니다",
+      "unsubmit": "제출 취소",
+      "unsubmitted": "제출이 취소되었습니다.",
+      "unsubmitFailed": "제출 취소에 실패했습니다."
     },
     "reports": {
       "title": "멘토링 보고서",

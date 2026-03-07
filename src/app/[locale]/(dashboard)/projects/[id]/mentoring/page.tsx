@@ -214,6 +214,26 @@ export default function MentoringWorkstationPage() {
     }
   }
 
+  const handleUnsubmitSession = async (sessionId: string) => {
+    setSubmittingSessionId(sessionId)
+    try {
+      const response = await fetch(`/api/mentor/sessions/${sessionId}/unsubmit`, {
+        method: 'POST',
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('mentor.sessions.unsubmitted'))
+        await fetchSessions()
+      } else {
+        toast.error(result.error || t('mentor.sessions.unsubmitFailed'))
+      }
+    } catch {
+      toast.error(t('mentor.sessions.unsubmitFailed'))
+    } finally {
+      setSubmittingSessionId(null)
+    }
+  }
+
   const handleSubmitFeedback = async (stage: string) => {
     if (!feedbackComment.trim()) return
 
@@ -723,10 +743,10 @@ export default function MentoringWorkstationPage() {
                           }
                           rows={6}
                           placeholder={t('mentor.sessions.commentsPlaceholder')}
-                          disabled={session.status === 'completed'}
+                          disabled={session.status !== 'draft'}
                         />
                       </div>
-                      {session.status !== 'completed' && (
+                      {session.status === 'draft' && (
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
@@ -750,6 +770,20 @@ export default function MentoringWorkstationPage() {
                               <Send className="mr-2 h-4 w-4" />
                             )}
                             {t('mentor.sessions.submit')}
+                          </Button>
+                        </div>
+                      )}
+                      {session.status === 'submitted' && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => handleUnsubmitSession(session.id)}
+                            disabled={submittingSessionId === session.id}
+                          >
+                            {submittingSessionId === session.id ? (
+                              <LoadingSpinner size="sm" className="mr-2" />
+                            ) : null}
+                            {t('mentor.sessions.unsubmit')}
                           </Button>
                         </div>
                       )}

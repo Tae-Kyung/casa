@@ -1269,7 +1269,10 @@
       "commentsPlaceholder": "Enter comments",
       "minutes": "minutes",
       "saveFailed": "Failed to save",
-      "saved": "Saved successfully"
+      "saved": "Saved successfully",
+      "unsubmit": "Unsubmit",
+      "unsubmitted": "Session unsubmitted.",
+      "unsubmitFailed": "Failed to unsubmit session."
     },
     "reports": {
       "title": "Mentoring Report",
