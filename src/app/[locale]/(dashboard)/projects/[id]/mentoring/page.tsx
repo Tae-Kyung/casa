@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { useParams } from 'next/navigation'
-import { FileText, MessageSquare, Plus, Send, Save, ChevronDown, ChevronUp, Download, Eye } from 'lucide-react'
+import { FileText, MessageSquare, Plus, Send, Save, ChevronDown, ChevronUp, Download, Eye, Edit2, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -115,6 +115,13 @@ export default function MentoringWorkstationPage() {
   const [submittingFeedback, setSubmittingFeedback] = useState(false)
   const [expandedFeedbackStage, setExpandedFeedbackStage] = useState<string | null>(null)
   const [expandedDocId, setExpandedDocId] = useState<string | null>(null)
+
+  // Feedback edit/delete state
+  const [editingFeedbackId, setEditingFeedbackId] = useState<string | null>(null)
+  const [editFeedbackComment, setEditFeedbackComment] = useState('')
+  const [editFeedbackType, setEditFeedbackType] = useState<string>('comment')
+  const [savingFeedback, setSavingFeedback] = useState(false)
+  const [deletingFeedbackId, setDeletingFeedbackId] = useState<string | null>(null)
 
   const fetchProject = async () => {
     try {
@@ -276,6 +283,59 @@ export default function MentoringWorkstationPage() {
     }
   }
 
+  const handleEditFeedback = async (feedbackId: string) => {
+    if (!editFeedbackComment.trim()) return
+    setSavingFeedback(true)
+    try {
+      const response = await fetch(`/api/mentor/feedbacks/${feedbackId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          comment: editFeedbackComment,
+          feedback_type: editFeedbackType,
+        }),
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('mentor.workstation.feedbackUpdated'))
+        setEditingFeedbackId(null)
+        await fetchFeedbacks()
+      } else {
+        toast.error(result.error || t('mentor.workstation.feedbackUpdateFailed'))
+      }
+    } catch {
+      toast.error(t('mentor.workstation.feedbackUpdateFailed'))
+    } finally {
+      setSavingFeedback(false)
+    }
+  }
+
+  const handleDeleteFeedback = async (feedbackId: string) => {
+    setDeletingFeedbackId(feedbackId)
+    try {
+      const response = await fetch(`/api/mentor/feedbacks/${feedbackId}`, {
+        method: 'DELETE',
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('mentor.workstation.feedbackDeleted'))
+        await fetchFeedbacks()
+      } else {
+        toast.error(result.error || t('mentor.workstation.feedbackDeleteFailed'))
+      }
+    } catch {
+      toast.error(t('mentor.workstation.feedbackDeleteFailed'))
+    } finally {
+      setDeletingFeedbackId(null)
+    }
+  }
+
+  const startEditFeedback = (fb: FeedbackItem) => {
+    setEditingFeedbackId(fb.id)
+    setEditFeedbackComment(fb.comment)
+    setEditFeedbackType(fb.feedback_type)
+  }
+
   const getFeedbacksForStage = (stage: string) =>
     feedbacks.filter((f) => f.stage === stage)
 
@@ -348,18 +408,87 @@ export default function MentoringWorkstationPage() {
                 key={fb.id}
                 className="rounded-lg border bg-muted/30 p-3"
               >
-                <div className="mb-1 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">
-                      {fb.author?.name || fb.author?.email || '-'}
-                    </span>
-                    <span>{new Date(fb.created_at).toLocaleDateString()}</span>
+                {editingFeedbackId === fb.id ? (
+                  /* 수정 모드 */
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      {(['comment', 'approval', 'revision_request', 'rejection'] as const).map((type) => (
+                        <button
+                          key={type}
+                          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                            editFeedbackType === type
+                              ? feedbackTypeBadgeClass(type)
+                              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                          }`}
+                          onClick={() => setEditFeedbackType(type)}
+                        >
+                          {feedbackTypeLabel(type)}
+                        </button>
+                      ))}
+                    </div>
+                    <Textarea
+                      value={editFeedbackComment}
+                      onChange={(e) => setEditFeedbackComment(e.target.value)}
+                      rows={3}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingFeedbackId(null)}
+                      >
+                        {t('common.cancel')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleEditFeedback(fb.id)}
+                        disabled={savingFeedback || !editFeedbackComment.trim()}
+                      >
+                        {savingFeedback ? <LoadingSpinner size="sm" className="mr-2" /> : <Save className="mr-2 h-3 w-3" />}
+                        {t('common.save')}
+                      </Button>
+                    </div>
                   </div>
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${feedbackTypeBadgeClass(fb.feedback_type)}`}>
-                    {feedbackTypeLabel(fb.feedback_type)}
-                  </span>
-                </div>
-                <p className="whitespace-pre-wrap text-sm">{fb.comment}</p>
+                ) : (
+                  /* 보기 모드 */
+                  <>
+                    <div className="mb-1 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground">
+                          {fb.author?.name || fb.author?.email || '-'}
+                        </span>
+                        <span>{new Date(fb.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${feedbackTypeBadgeClass(fb.feedback_type)}`}>
+                          {feedbackTypeLabel(fb.feedback_type)}
+                        </span>
+                        {fb.is_mine && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => startEditFeedback(fb)}
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                              onClick={() => handleDeleteFeedback(fb.id)}
+                              disabled={deletingFeedbackId === fb.id}
+                            >
+                              {deletingFeedbackId === fb.id ? <LoadingSpinner size="sm" /> : <Trash2 className="h-3 w-3" />}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <p className="whitespace-pre-wrap text-sm">{fb.comment}</p>
+                  </>
+                )}
               </div>
             ))}
 
