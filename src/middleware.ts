@@ -18,14 +18,9 @@ const pendingApprovalPath = '/pending-approval'
 // 리다이렉트 응답 생성 시 Supabase 세션 쿠키를 유지하기 위한 헬퍼
 function createRedirect(url: URL, response: NextResponse): NextResponse {
   const redirect = NextResponse.redirect(url)
-  // i18n 응답에 설정된 Supabase 세션 쿠키를 리다이렉트 응답에 복사
-  response.cookies.getAll().forEach((cookie) => {
-    redirect.cookies.set(cookie.name, cookie.value, {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-    })
+  // i18n 응답에 설정된 Supabase 세션 쿠키를 리다이렉트 응답에 복사 (원본 옵션 유지)
+  response.headers.getSetCookie().forEach((cookie) => {
+    redirect.headers.append('set-cookie', cookie)
   })
   return redirect
 }
