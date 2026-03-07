@@ -27,12 +27,23 @@ interface IdeaCard {
   is_confirmed: boolean
 }
 
+interface EvalFeedback {
+  feedback: string
+  strengths: string[]
+  weaknesses: string[]
+  recommendations: string[]
+}
+
 interface EvaluationItem {
   id: string
-  category: string
-  score: number | null
-  feedback: string | null
-  status: string
+  investor_score: number | null
+  investor_feedback: string | null
+  market_score: number | null
+  market_feedback: string | null
+  tech_score: number | null
+  tech_feedback: string | null
+  total_score: number | null
+  is_confirmed: boolean
 }
 
 interface DocumentItem {
@@ -574,28 +585,76 @@ export default function MentoringWorkstationPage() {
             </CardHeader>
             <CardContent>
               {project.evaluations.length > 0 ? (
-                <div className="space-y-3">
-                  {project.evaluations.map((evaluation) => (
-                    <div
-                      key={evaluation.id}
-                      className="flex items-start justify-between rounded-lg border p-3"
-                    >
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">{evaluation.category}</p>
-                        {evaluation.feedback && (
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {evaluation.feedback}
-                          </p>
-                        )}
+                <div className="space-y-4">
+                  {project.evaluations.map((evaluation) => {
+                    const categories = [
+                      { label: t('mentor.workstation.evalInvestor'), score: evaluation.investor_score, feedback: evaluation.investor_feedback },
+                      { label: t('mentor.workstation.evalMarket'), score: evaluation.market_score, feedback: evaluation.market_feedback },
+                      { label: t('mentor.workstation.evalTech'), score: evaluation.tech_score, feedback: evaluation.tech_feedback },
+                    ]
+                    return (
+                      <div key={evaluation.id} className="space-y-3">
+                        {/* 종합 점수 */}
+                        <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3">
+                          <span className="font-medium">{t('mentor.workstation.evalTotal')}</span>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={evaluation.is_confirmed ? 'default' : 'secondary'}>
+                              {evaluation.is_confirmed ? t('mentor.workstation.confirmed') : t('mentor.workstation.draft')}
+                            </Badge>
+                            {evaluation.total_score !== null && (
+                              <span className="text-lg font-bold">{evaluation.total_score}<span className="text-sm text-muted-foreground">/100</span></span>
+                            )}
+                          </div>
+                        </div>
+                        {/* 항목별 */}
+                        {categories.map((cat) => {
+                          let parsed: EvalFeedback | null = null
+                          try { parsed = cat.feedback ? JSON.parse(cat.feedback) : null } catch { /* not JSON */ }
+                          return (
+                            <div key={cat.label} className="rounded-lg border p-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">{cat.label}</span>
+                                {cat.score !== null && (
+                                  <Badge variant="outline">{cat.score}/100</Badge>
+                                )}
+                              </div>
+                              {parsed ? (
+                                <div className="space-y-2 text-sm">
+                                  <p className="text-muted-foreground">{parsed.feedback}</p>
+                                  {parsed.strengths?.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-semibold text-green-700 dark:text-green-400">{t('mentor.workstation.evalStrengths')}</p>
+                                      <ul className="ml-4 list-disc text-xs text-muted-foreground">
+                                        {parsed.strengths.map((s, i) => <li key={i}>{s}</li>)}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  {parsed.weaknesses?.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-semibold text-red-700 dark:text-red-400">{t('mentor.workstation.evalWeaknesses')}</p>
+                                      <ul className="ml-4 list-disc text-xs text-muted-foreground">
+                                        {parsed.weaknesses.map((s, i) => <li key={i}>{s}</li>)}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  {parsed.recommendations?.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">{t('mentor.workstation.evalRecommendations')}</p>
+                                      <ul className="ml-4 list-disc text-xs text-muted-foreground">
+                                        {parsed.recommendations.map((s, i) => <li key={i}>{s}</li>)}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : cat.feedback ? (
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{cat.feedback}</p>
+                              ) : null}
+                            </div>
+                          )
+                        })}
                       </div>
-                      <div className="flex items-center gap-2">
-                        {evaluation.score !== null && (
-                          <Badge variant="outline">{evaluation.score}/10</Badge>
-                        )}
-                        <Badge variant="secondary">{evaluation.status}</Badge>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
@@ -644,16 +703,39 @@ export default function MentoringWorkstationPage() {
                               <Download className="h-3.5 w-3.5" />
                             </Button>
                           )}
-                          {doc.content ? (
+                          {(doc.content || doc.storage_path) ? (
                             expandedDocId === doc.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                           ) : null}
                         </div>
                       </div>
-                      {expandedDocId === doc.id && doc.content && (
+                      {expandedDocId === doc.id && (
                         <div className="border-t p-4">
-                          <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-                            {doc.content}
-                          </div>
+                          {/* 이미지 파일 (infographic, leaflet 등) */}
+                          {doc.storage_path && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(doc.storage_path) ? (
+                            <div className="flex justify-center">
+                              <img
+                                src={doc.storage_path}
+                                alt={doc.title}
+                                className="max-w-full max-h-[600px] rounded-lg object-contain"
+                              />
+                            </div>
+                          ) : doc.type === 'landing' && doc.content ? (
+                            /* 랜딩페이지 HTML - iframe으로 렌더링 */
+                            <iframe
+                              srcDoc={doc.content}
+                              className="w-full rounded-lg border"
+                              style={{ height: '600px' }}
+                              sandbox="allow-scripts"
+                              title={doc.title}
+                            />
+                          ) : doc.content ? (
+                            /* 텍스트 콘텐츠 (사업계획서, 피치 등) */
+                            <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                              {doc.content}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-center text-muted-foreground">{t('mentor.workstation.noContent')}</p>
+                          )}
                         </div>
                       )}
                     </div>
