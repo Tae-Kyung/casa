@@ -39,9 +39,10 @@ interface PayoutSummary {
 interface PayoutItem {
   id: string
   report_id: string
+  project_name: string | null
   amount: number
-  sessions: number
-  hours: number
+  total_sessions: number
+  total_hours: number
   status: 'pending' | 'approved' | 'processing' | 'paid' | 'cancelled'
   created_at: string
   updated_at: string
@@ -225,10 +226,10 @@ export default function MentorPayoutsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {formatKRW(summary.mentoringProjects.reduce((sum, p) => sum + p.unitPrice, 0))}
+                  {formatKRW(summary.totalAmount)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {summary.mentoringProjects.length}{t('mentor.payouts.projectCount')}
+                  {summary.totalCount}{t('mentor.payouts.payoutCount')}
                 </p>
               </CardContent>
             </Card>
@@ -352,7 +353,7 @@ export default function MentorPayoutsPage() {
                 <thead>
                   <tr className="border-b bg-muted/50 dark:bg-muted/20">
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      {t('mentor.payouts.columnReportId')}
+                      {t('mentor.payouts.columnProject')}
                     </th>
                     <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                       {t('mentor.payouts.columnAmount')}
@@ -377,14 +378,14 @@ export default function MentorPayoutsPage() {
                       key={payout.id}
                       className="border-b transition-colors last:border-b-0 hover:bg-muted/50 dark:hover:bg-muted/20"
                     >
-                      <td className="px-4 py-3 font-mono text-xs">
-                        {payout.report_id.slice(0, 8)}...
+                      <td className="px-4 py-3 text-sm font-medium">
+                        {payout.project_name || payout.report_id.slice(0, 8) + '...'}
                       </td>
                       <td className="px-4 py-3 text-right font-semibold">
                         {formatKRW(payout.amount)}
                       </td>
-                      <td className="px-4 py-3 text-center">{payout.sessions}</td>
-                      <td className="px-4 py-3 text-center">{payout.hours}h</td>
+                      <td className="px-4 py-3 text-center">{payout.total_sessions || 0}</td>
+                      <td className="px-4 py-3 text-center">{payout.total_hours || 0}h</td>
                       <td className="px-4 py-3 text-center">{getPayoutStatusBadge(payout.status)}</td>
                       <td className="px-4 py-3 text-right text-muted-foreground">
                         {new Date(payout.created_at).toLocaleDateString()}

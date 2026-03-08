@@ -1363,7 +1363,7 @@
       "columnAmount": "금액",
       "columnDate": "날짜",
       "columnHours": "시간",
-      "columnReportId": "보고서 ID",
+      "columnProject": "프로젝트",
       "columnSessions": "세션 수",
       "columnStatus": "상태",
       "fetchSummaryFailed": "요약 정보를 불러오지 못했습니다",
@@ -1390,7 +1390,8 @@
       "statusInProgress": "진행중",
       "statusReview": "검토중",
       "statusCompleted": "완료",
-      "projectCount": "개 프로젝트"
+      "projectCount": "개 프로젝트",
+      "payoutCount": "건"
     },
     "workstation": {
       "title": "멘토링 워크스테이션",

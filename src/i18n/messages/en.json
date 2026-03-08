@@ -1364,7 +1364,7 @@
       "columnAmount": "Amount",
       "columnDate": "Date",
       "columnHours": "Hours",
-      "columnReportId": "Report ID",
+      "columnProject": "Project",
       "columnSessions": "Sessions",
       "columnStatus": "Status",
       "fetchSummaryFailed": "Failed to fetch summary",
@@ -1391,7 +1391,8 @@
       "statusInProgress": "In Progress",
       "statusReview": "Under Review",
       "statusCompleted": "Completed",
-      "projectCount": " projects"
+      "projectCount": " projects",
+      "payoutCount": " payouts"
     },
     "workstation": {
       "title": "Mentoring Workstation",
