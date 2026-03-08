@@ -101,6 +101,19 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient()
 
+    // 중복 매칭 방지: 같은 프로젝트에 같은 멘토가 이미 매칭되어 있는지 확인
+    const { data: existingMatch } = await supabase
+      .from('bi_mentor_matches')
+      .select('id')
+      .eq('project_id', validatedData.project_id)
+      .eq('mentor_id', validatedData.mentor_id)
+      .neq('status', 'cancelled')
+      .limit(1)
+
+    if (existingMatch && existingMatch.length > 0) {
+      return errorResponse('이미 해당 프로젝트에 매칭된 멘토입니다.', 409)
+    }
+
     // 기관 기본 단가 조회
     const { data: institution } = await supabase
       .from('bi_institutions')
