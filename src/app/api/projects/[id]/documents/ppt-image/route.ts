@@ -60,8 +60,10 @@ export async function POST(
     try {
       const cleanContent = removeCodeFence(storyResponse.content.trim(), 'json')
       storyData = JSON.parse(cleanContent)
-    } catch {
-      return errorResponse('스토리 생성에 실패했습니다. 다시 시도해주세요.', 500)
+    } catch (parseError) {
+      console.error('Story JSON parse failed:', storyResponse.content.slice(0, 500))
+      const detail = parseError instanceof Error ? parseError.message : ''
+      return errorResponse(`스토리 생성에 실패했습니다. (${detail}) 다시 시도해주세요.`, 500)
     }
 
     const slides = Array.isArray(storyData.slides) ? storyData.slides : []

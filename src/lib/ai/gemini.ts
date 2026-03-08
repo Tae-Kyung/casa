@@ -99,9 +99,12 @@ export async function callGemini(
       temperature,
       maxOutputTokens: maxTokens,
       ...(options.jsonMode && { responseMimeType: 'application/json' }),
-      ...(options.thinkingBudget !== undefined && {
-        thinkingConfig: { thinkingBudget: options.thinkingBudget },
-      }),
+      // jsonMode 시 thinking 비활성화 (Gemini 2.5에서 JSON 모드와 thinking 충돌 방지)
+      ...(options.jsonMode
+        ? { thinkingConfig: { thinkingBudget: 0 } }
+        : options.thinkingBudget !== undefined
+          ? { thinkingConfig: { thinkingBudget: options.thinkingBudget } }
+          : {}),
     },
   })
 
