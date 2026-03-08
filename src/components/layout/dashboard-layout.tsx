@@ -25,6 +25,7 @@ import {
   Bell,
   BookOpen,
   BarChart3,
+  AlertTriangle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -42,6 +43,7 @@ interface NavItem {
   icon: React.ReactNode
   badge?: number
   exactMatch?: boolean
+  warning?: boolean
 }
 
 interface NavSection {
@@ -62,7 +64,8 @@ function getSectionsForRole(
   t: ReturnType<typeof useTranslations>,
   pendingCount: number,
   unreadMessages: number,
-  unreadNotifications: number
+  unreadNotifications: number,
+  mentorDocsIncomplete: boolean
 ): NavSection[] {
   if (userRole === 'admin') {
     return [
@@ -144,7 +147,7 @@ function getSectionsForRole(
           { href: '/messages', label: t('nav.messages'), icon: <Mail className="h-5 w-5" />, badge: unreadMessages > 0 ? unreadMessages : undefined },
           { href: '/notifications', label: t('nav.notifications'), icon: <Bell className="h-5 w-5" />, badge: unreadNotifications > 0 ? unreadNotifications : undefined },
           { href: '/showcase', label: t('nav.showcase'), icon: <Award className="h-5 w-5" /> },
-          { href: '/settings', label: t('nav.settings'), icon: <Settings className="h-5 w-5" /> },
+          { href: '/settings', label: t('nav.settings'), icon: <Settings className="h-5 w-5" />, warning: mentorDocsIncomplete },
         ],
       },
     ]
@@ -181,6 +184,7 @@ export function DashboardLayout({ children, userRole = 'user', userName, institu
   const [pendingCount, setPendingCount] = useState(0)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
+  const [mentorDocsIncomplete, setMentorDocsIncomplete] = useState(false)
 
   useEffect(() => {
     fetch('/api/credits')
@@ -217,6 +221,21 @@ export function DashboardLayout({ children, userRole = 'user', userName, institu
       .catch(() => {})
   }, [pathname])
 
+  // 멘토 서류 미비 확인
+  useEffect(() => {
+    if (userRole === 'mentor') {
+      fetch('/api/mentor/documents')
+        .then(res => res.json())
+        .then(result => {
+          if (result.success) {
+            const d = result.data
+            setMentorDocsIncomplete(!d.resume || !d.bank_account || !d.privacy_consent)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [userRole])
+
   // 승인 대기 건수 조회 (admin/mentor)
   useEffect(() => {
     if (userRole === 'admin' || userRole === 'mentor') {
@@ -231,7 +250,7 @@ export function DashboardLayout({ children, userRole = 'user', userName, institu
     }
   }, [userRole])
 
-  const sections = getSectionsForRole(userRole, t, pendingCount, unreadMessages, unreadNotifications)
+  const sections = getSectionsForRole(userRole, t, pendingCount, unreadMessages, unreadNotifications, mentorDocsIncomplete)
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -292,6 +311,9 @@ export function DashboardLayout({ children, userRole = 'user', userName, institu
                 <Badge variant="destructive" className="ml-auto h-5 min-w-[20px] px-1.5 text-xs">
                   {item.badge}
                 </Badge>
+              )}
+              {item.warning && (
+                <AlertTriangle className="ml-auto h-4 w-4 text-yellow-500" />
               )}
             </Link>
           ))}
