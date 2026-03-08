@@ -1,217 +1,63 @@
 import { NextRequest } from 'next/server'
-import { requireProjectOwner } from '@/lib/auth/guards'
-import { deductCredits } from '@/lib/credits'
 import { createClient } from '@/lib/supabase/server'
-import { errorResponse, handleApiError } from '@/lib/utils/api-response'
-import { preparePrompt, getPromptCreditCost } from '@/lib/prompts'
+import { handleApiError, errorResponse } from '@/lib/utils/api-response'
+import { preparePrompt } from '@/lib/prompts'
 import { createSSEResponse } from '@/lib/ai/claude'
 import { streamGemini } from '@/lib/ai/gemini'
 import { buildPptHtml } from '@/lib/templates/ppt-template'
+import { prepareDocumentGeneration, saveDocument, buildMinimalPromptVars, removeCodeFence } from '@/lib/services/document-generator'
 
-// Gemini 스트리밍은 오래 걸릴 수 있으므로 타임아웃 확장
 export const maxDuration = 120
 
 interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-export async function POST(
-  request: NextRequest,
-  context: RouteContext
-) {
+export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params
-    const user = await requireProjectOwner(id)
-    await deductCredits(user.id, await getPromptCreditCost('doc_ppt'), 'ai_doc_ppt', id)
+    const result = await prepareDocumentGeneration(id, 'ppt', 'doc_ppt', 'ai_doc_ppt')
+    if (result instanceof Response) return result
+    const ctx = result
 
-    const supabase = await createClient()
+    const prompt = await preparePrompt('doc_ppt', buildMinimalPromptVars(ctx))
+    if (!prompt) return errorResponse('PPT 프롬프트를 찾을 수 없습니다.', 500)
 
-    const { data: project, error: projectError } = await supabase
-      .from('bi_projects')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (projectError || !project) {
-      return errorResponse('프로젝트를 찾을 수 없습니다.', 404)
-    }
-
-    if (!project.gate_2_passed_at) {
-      return errorResponse('평가 단계(Gate 2)를 먼저 완료해주세요.', 400)
-    }
-
-    const { data: ideaCard } = await supabase
-      .from('bi_idea_cards')
-      .select('*')
-      .eq('project_id', id)
-      .eq('is_confirmed', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    const { data: evaluation } = await supabase
-      .from('bi_evaluations')
-      .select('*')
-      .eq('project_id', id)
-      .eq('is_confirmed', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    if (!ideaCard || !evaluation) {
-      return errorResponse('확정된 아이디어와 평가가 필요합니다.', 400)
-    }
-
-    const { data: existingDoc } = await supabase
-      .from('bi_documents')
-      .select('id, is_confirmed')
-      .eq('project_id', id)
-      .eq('type', 'ppt')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    if (existingDoc?.is_confirmed) {
-      return errorResponse('이미 확정된 PPT가 있습니다.', 400)
-    }
-
-    const promptVariables: Record<string, string> = {
-      project_name: project.name || '',
-      problem: ideaCard.problem || ideaCard.raw_input || '',
-      solution: ideaCard.solution || '',
-      target: ideaCard.target || '',
-      differentiation: ideaCard.differentiation || '',
-      total_score: String(evaluation.total_score ?? ''),
-      investor_score: String(evaluation.investor_score ?? ''),
-      market_score: String(evaluation.market_score ?? ''),
-      tech_score: String(evaluation.tech_score ?? ''),
-    }
-
-    const prompt = await preparePrompt('doc_ppt', promptVariables)
-
-    if (!prompt) {
-      return errorResponse('PPT 프롬프트를 찾을 수 없습니다.', 500)
-    }
-
-    const projectId = id
-    const existingDocId = existingDoc?.id
-    const projectName = project.name
-    const systemPrompt = prompt.systemPrompt
-    const userPrompt = prompt.userPrompt
-    const model = prompt.model
-    const temperature = prompt.temperature
-    const maxTokens = prompt.maxTokens
+    const { systemPrompt, userPrompt, model, temperature, maxTokens } = prompt
 
     async function* generateDocument() {
       let fullJson = ''
-
       yield { type: 'start', data: JSON.stringify({ type: 'ppt', model }) }
 
-      const stream = streamGemini(systemPrompt, userPrompt, {
-        model,
-        temperature,
-        maxTokens,
-        thinkingBudget: 0,
-        jsonMode: true,
-      })
-
-      for await (const event of stream) {
+      for await (const event of streamGemini(systemPrompt, userPrompt, { model, temperature, maxTokens, thinkingBudget: 0, jsonMode: true })) {
         if (event.type === 'text') {
           fullJson += event.data
           yield { type: 'text', data: event.data }
         }
       }
 
-      // JSON 파싱: 코드 펜스 제거 후 파싱
-      fullJson = fullJson.trim()
-      const fenceMatch = fullJson.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/)
-      if (fenceMatch) {
-        fullJson = fenceMatch[1].trim()
-      }
+      fullJson = removeCodeFence(fullJson, 'json')
 
       let parsedJson: Record<string, unknown>
       try {
         parsedJson = JSON.parse(fullJson) as Record<string, unknown>
       } catch {
-        // JSON 파싱 실패 시 원본 텍스트를 그대로 저장 (폴백)
-        const supabaseUpdate = await createClient()
-        let documentId: string
-
-        if (existingDocId) {
-          const { data: updated, error: updateError } = await supabaseUpdate
-            .from('bi_documents')
-            .update({ content: fullJson, ai_model_used: model })
-            .eq('id', existingDocId)
-            .select('id')
-            .single()
-          if (updateError) throw updateError
-          documentId = updated.id
-        } else {
-          const { data: created, error: createError } = await supabaseUpdate
-            .from('bi_documents')
-            .insert({
-              project_id: projectId,
-              type: 'ppt',
-              title: `${projectName} 서비스 소개 PPT`,
-              content: fullJson,
-              ai_model_used: model,
-            })
-            .select('id')
-            .single()
-          if (createError) throw createError
-          documentId = created.id
-        }
-
-        yield {
-          type: 'complete',
-          data: JSON.stringify({ documentId, type: 'ppt' }),
-        }
+        // JSON 파싱 실패 시 원본 저장 (폴백)
+        const documentId = await saveDocument(await createClient(), {
+          existingDocId: ctx.existingDocId, projectId: id, docType: 'ppt',
+          title: `${ctx.project.name} 서비스 소개 PPT`, content: fullJson, model,
+        })
+        yield { type: 'complete', data: JSON.stringify({ documentId, type: 'ppt' }) }
         return
       }
 
-      // 템플릿에 JSON 주입하여 최종 HTML 생성 (normalize 내장)
       const finalHtml = buildPptHtml(parsedJson)
+      const documentId = await saveDocument(await createClient(), {
+        existingDocId: ctx.existingDocId, projectId: id, docType: 'ppt',
+        title: `${ctx.project.name} 서비스 소개 PPT`, content: finalHtml, model,
+      })
 
-      const supabaseUpdate = await createClient()
-      let documentId: string
-
-      if (existingDocId) {
-        const { data: updated, error: updateError } = await supabaseUpdate
-          .from('bi_documents')
-          .update({
-            content: finalHtml,
-            ai_model_used: model,
-          })
-          .eq('id', existingDocId)
-          .select('id')
-          .single()
-
-        if (updateError) throw updateError
-        documentId = updated.id
-      } else {
-        const { data: created, error: createError } = await supabaseUpdate
-          .from('bi_documents')
-          .insert({
-            project_id: projectId,
-            type: 'ppt',
-            title: `${projectName} 서비스 소개 PPT`,
-            content: finalHtml,
-            ai_model_used: model,
-          })
-          .select('id')
-          .single()
-
-        if (createError) throw createError
-        documentId = created.id
-      }
-
-      yield {
-        type: 'complete',
-        data: JSON.stringify({
-          documentId,
-          type: 'ppt',
-        })
-      }
+      yield { type: 'complete', data: JSON.stringify({ documentId, type: 'ppt' }) }
     }
 
     return createSSEResponse(generateDocument())

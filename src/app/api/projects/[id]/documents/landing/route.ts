@@ -4,6 +4,7 @@ import { deductCredit } from '@/lib/credits'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { streamClaude, createSSEResponse } from '@/lib/ai/claude'
+import { saveDocument, removeCodeFence } from '@/lib/services/document-generator'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -29,10 +30,7 @@ const LANDING_SYSTEM_PROMPT = `당신은 스타트업 랜딩페이지 전문 디
 HTML만 출력하고, 다른 설명은 포함하지 마세요.`
 
 // POST: 랜딩페이지 생성 (SSE 스트리밍)
-export async function POST(
-  request: NextRequest,
-  context: RouteContext
-) {
+export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params
     const user = await requireProjectOwner(id)
@@ -40,59 +38,22 @@ export async function POST(
 
     const supabase = await createClient()
 
-    // Gate 2 통과 확인
+    // 프로젝트, 아이디어, 평가, 기존 문서 병렬 조회
     const { data: project, error: projectError } = await supabase
-      .from('bi_projects')
-      .select('*')
-      .eq('id', id)
-      .single()
+      .from('bi_projects').select('*').eq('id', id).single()
 
-    if (projectError || !project) {
-      return errorResponse('프로젝트를 찾을 수 없습니다.', 404)
-    }
+    if (projectError || !project) return errorResponse('프로젝트를 찾을 수 없습니다.', 404)
+    if (!project.gate_2_passed_at) return errorResponse('평가 단계(Gate 2)를 먼저 완료해주세요.', 400)
 
-    if (!project.gate_2_passed_at) {
-      return errorResponse('평가 단계(Gate 2)를 먼저 완료해주세요.', 400)
-    }
+    const [{ data: ideaCard }, { data: evaluation }, { data: existingDoc }] = await Promise.all([
+      supabase.from('bi_idea_cards').select('*').eq('project_id', id).eq('is_confirmed', true).order('created_at', { ascending: false }).limit(1).single(),
+      supabase.from('bi_evaluations').select('*').eq('project_id', id).eq('is_confirmed', true).order('created_at', { ascending: false }).limit(1).single(),
+      supabase.from('bi_documents').select('id, is_confirmed').eq('project_id', id).eq('type', 'landing').order('created_at', { ascending: false }).limit(1).single(),
+    ])
 
-    // 아이디어와 평가 데이터 조회
-    const { data: ideaCard } = await supabase
-      .from('bi_idea_cards')
-      .select('*')
-      .eq('project_id', id)
-      .eq('is_confirmed', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
+    if (!ideaCard || !evaluation) return errorResponse('확정된 아이디어와 평가가 필요합니다.', 400)
+    if (existingDoc?.is_confirmed) return errorResponse('이미 확정된 랜딩페이지가 있습니다.', 400)
 
-    const { data: evaluation } = await supabase
-      .from('bi_evaluations')
-      .select('*')
-      .eq('project_id', id)
-      .eq('is_confirmed', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    if (!ideaCard || !evaluation) {
-      return errorResponse('확정된 아이디어와 평가가 필요합니다.', 400)
-    }
-
-    // 기존 랜딩페이지 확인
-    const { data: existingDoc } = await supabase
-      .from('bi_documents')
-      .select('id, is_confirmed')
-      .eq('project_id', id)
-      .eq('type', 'landing')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    if (existingDoc?.is_confirmed) {
-      return errorResponse('이미 확정된 랜딩페이지가 있습니다.', 400)
-    }
-
-    // 사용자 프롬프트 구성
     const userPrompt = `다음 정보를 바탕으로 랜딩페이지 HTML을 생성해주세요:
 
 ## 프로젝트명
@@ -118,79 +79,28 @@ ${ideaCard.differentiation || ''}
 
 완전한 HTML 문서를 생성해주세요.`
 
-    const projectId = id
-    const existingDocId = existingDoc?.id
-    const projectName = project.name
     const model = 'claude-sonnet-4-20250514'
+    const existingDocId = existingDoc?.id || null
 
-    // SSE 스트리밍 생성기
     async function* generateDocument() {
       let fullContent = ''
-
       yield { type: 'start', data: JSON.stringify({ type: 'landing', model }) }
 
-      const stream = streamClaude(LANDING_SYSTEM_PROMPT, userPrompt, {
-        model,
-        temperature: 0.7,
-        maxTokens: 8000,
-      })
-
-      for await (const event of stream) {
+      for await (const event of streamClaude(LANDING_SYSTEM_PROMPT, userPrompt, { model, temperature: 0.7, maxTokens: 8000 })) {
         if (event.type === 'text') {
           fullContent += event.data
           yield { type: 'text', data: event.data }
         }
       }
 
-      // 코드 펜스 제거 (AI가 ```html ... ``` 로 감싸는 경우)
-      fullContent = fullContent.trim()
-      const fenceMatch = fullContent.match(/^```(?:html)?\s*\n?([\s\S]*?)\n?\s*```$/)
-      if (fenceMatch) {
-        fullContent = fenceMatch[1].trim()
-      }
+      fullContent = removeCodeFence(fullContent, 'html')
 
-      // DB 저장
-      const supabaseUpdate = await createClient()
+      const documentId = await saveDocument(await createClient(), {
+        existingDocId, projectId: id, docType: 'landing',
+        title: `${project!.name} 랜딩페이지`, content: fullContent, model,
+      })
 
-      let documentId: string
-
-      if (existingDocId) {
-        const { data: updated, error: updateError } = await supabaseUpdate
-          .from('bi_documents')
-          .update({
-            content: fullContent,
-            ai_model_used: model,
-          })
-          .eq('id', existingDocId)
-          .select('id')
-          .single()
-
-        if (updateError) throw updateError
-        documentId = updated.id
-      } else {
-        const { data: created, error: createError } = await supabaseUpdate
-          .from('bi_documents')
-          .insert({
-            project_id: projectId,
-            type: 'landing',
-            title: `${projectName} 랜딩페이지`,
-            content: fullContent,
-            ai_model_used: model,
-          })
-          .select('id')
-          .single()
-
-        if (createError) throw createError
-        documentId = created.id
-      }
-
-      yield {
-        type: 'complete',
-        data: JSON.stringify({
-          documentId,
-          type: 'landing',
-        })
-      }
+      yield { type: 'complete', data: JSON.stringify({ documentId, type: 'landing' }) }
     }
 
     return createSSEResponse(generateDocument())
