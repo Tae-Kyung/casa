@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { requireAuth } from '@/lib/auth/guards'
 import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
+import { isValidUUID } from '@/lib/security/validation'
 import { z } from 'zod'
 
 interface RouteContext {
@@ -9,10 +10,10 @@ interface RouteContext {
 }
 
 const updateSessionSchema = z.object({
-  comments: z.any().optional(),
-  revision_summary: z.string().optional(),
-  session_date: z.string().optional(),
-  duration_minutes: z.number().int().positive().optional(),
+  comments: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
+  revision_summary: z.string().max(5000).optional(),
+  session_date: z.string().regex(/^\d{4}-\d{2}-\d{2}/, '날짜 형식이 올바르지 않습니다.').optional(),
+  duration_minutes: z.number().int().positive().max(480).optional(),
 })
 
 // PATCH: 멘토링 세션 수정
@@ -22,6 +23,7 @@ export async function PATCH(
 ) {
   try {
     const { sessionId } = await context.params
+    if (!isValidUUID(sessionId)) return errorResponse('잘못된 ID 형식입니다.', 400)
     const user = await requireAuth()
 
     const supabase = createServiceClient()
@@ -55,12 +57,13 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const validatedData = updateSessionSchema.parse(body)
+    const { comments, ...restData } = updateSessionSchema.parse(body)
 
     const { data: updated, error: updateError } = await supabase
       .from('bi_mentoring_sessions')
       .update({
-        ...validatedData,
+        ...restData,
+        ...(comments !== undefined && { comments: comments as import('@/types/database').Json }),
         updated_at: new Date().toISOString(),
       })
       .eq('id', sessionId)

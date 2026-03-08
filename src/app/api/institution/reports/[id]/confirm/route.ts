@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { requireInstitutionAccess } from '@/lib/auth/institution'
 import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
+import { isValidUUID } from '@/lib/security/validation'
 import { createNotification } from '@/lib/notifications'
 
 // POST: 보고서 확인(승인) → 수당 레코드 자동 생성
@@ -13,6 +14,7 @@ export async function POST(
     const { searchParams } = new URL(request.url)
     const { user, institutionId } = await requireInstitutionAccess(searchParams.get('institution_id'))
     const { id } = await context.params
+    if (!isValidUUID(id)) return errorResponse('잘못된 ID 형식입니다.', 400)
 
     const supabase = createServiceClient()
 

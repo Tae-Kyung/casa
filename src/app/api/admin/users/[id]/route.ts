@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/auth/guards'
 import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
+import { isValidUUID } from '@/lib/security/validation'
 import { z } from 'zod'
 
 const updateRoleSchema = z.object({
@@ -26,6 +27,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const admin = await requireAdmin()
     const { id } = await context.params
+    if (!isValidUUID(id)) return errorResponse('잘못된 ID 형식입니다.', 400)
 
     const body = await request.json()
 
@@ -115,6 +117,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     const admin = await requireAdmin()
     const { id } = await context.params
+    if (!isValidUUID(id)) return errorResponse('잘못된 ID 형식입니다.', 400)
 
     // 자기 자신은 삭제 불가
     if (admin.id === id) {

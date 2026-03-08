@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { requireInstitutionAccess } from '@/lib/auth/institution'
 import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
+import { isValidUUID } from '@/lib/security/validation'
 import { createNotification } from '@/lib/notifications'
 
 const rejectSchema = z.object({
@@ -18,6 +19,7 @@ export async function POST(
     const { searchParams } = new URL(request.url)
     await requireInstitutionAccess(searchParams.get('institution_id'))
     const { id } = await context.params
+    if (!isValidUUID(id)) return errorResponse('잘못된 ID 형식입니다.', 400)
 
     const body = await request.json()
     const { reason } = rejectSchema.parse(body)

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/auth/guards'
 import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
+import { isValidUUID } from '@/lib/security/validation'
 import { logAudit, extractRequestInfo } from '@/lib/security/audit'
 
 // POST: 멘토 승인
@@ -9,6 +10,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   try {
     const admin = await requireAdmin()
     const { id } = await context.params
+    if (!isValidUUID(id)) return errorResponse('잘못된 ID 형식입니다.', 400)
 
     const supabase = createServiceClient()
 

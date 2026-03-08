@@ -35,7 +35,8 @@ export async function GET(request: NextRequest) {
       return paginatedResponse([], 0, page, limit)
     }
 
-    const sortField = searchParams.get('sort') // 'project' | 'mentor' | null
+    const rawSort = searchParams.get('sort')
+    const sortField = rawSort === 'project' || rawSort === 'mentor' ? rawSort : null
     const sortDir = searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc'
 
     // 정렬이 project/mentor인 경우 전체를 가져와서 정렬 후 페이징

@@ -20,8 +20,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params
-    await requireProjectOwner(id)
-    const user = await requireAuth()
+    const user = await requireProjectOwner(id)
 
     const supabase = await createClient()
 
