@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { requireProjectOwner } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
+import { escapeHtml as _escapeHtmlBase } from '@/lib/utils/html'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -124,10 +125,5 @@ export async function GET(
 }
 
 function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/\n/g, '<br/>')
+  return _escapeHtmlBase(text, { nl2br: true })
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { UserPlus, RefreshCw, User2, Search, ChevronDown, ChevronRight, FolderKanban, CalendarCheck, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,6 +25,7 @@ import {
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { Pagination } from '@/components/common/pagination'
 import { toast } from 'sonner'
+import { usePaginatedFetch } from '@/hooks/usePaginatedFetch'
 
 interface MentorProjectActivity {
   id: string
@@ -64,10 +65,17 @@ interface MentorItem {
 
 export default function InstitutionMentorsPage() {
   const t = useTranslations()
-  const [mentors, setMentors] = useState<MentorItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+
+  const {
+    data: mentors,
+    pagination,
+    isLoading,
+    currentPage,
+    setCurrentPage,
+    refetch,
+  } = usePaginatedFetch<MentorItem>({
+    url: '/api/institution/mentors',
+  })
 
   // Invite modal state
   const [isInviteOpen, setIsInviteOpen] = useState(false)
@@ -84,34 +92,6 @@ export default function InstitutionMentorsPage() {
   const [removingId, setRemovingId] = useState<string | null>(null)
   // Expand toggle
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
-
-  const fetchMentors = async () => {
-    setIsLoading(true)
-    try {
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '10',
-      })
-
-      const response = await fetch(`/api/institution/mentors?${params}`)
-      const result = await response.json()
-
-      if (result.success) {
-        setMentors(result.data.items)
-        setTotalPages(result.data.totalPages)
-      } else {
-        toast.error(t('institution.mentors.fetchFailed'))
-      }
-    } catch {
-      toast.error(t('institution.mentors.fetchFailed'))
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchMentors()
-  }, [currentPage])
 
   const searchMentors = useCallback(async (query: string) => {
     if (query.trim().length < 2) {
@@ -171,7 +151,7 @@ export default function InstitutionMentorsPage() {
         setInviteQuery('')
         setSelectedMentor(null)
         setSearchResults([])
-        fetchMentors()
+        refetch()
       } else {
         toast.error(result.error || t('institution.mentors.inviteFailed'))
       }
@@ -194,11 +174,7 @@ export default function InstitutionMentorsPage() {
 
       if (result.success) {
         toast.success(t('institution.mentors.statusUpdated'))
-        setMentors((prev) =>
-          prev.map((m) =>
-            m.mentor_id === mentorId ? { ...m, status: newStatus } : m
-          )
-        )
+        refetch()
       } else {
         toast.error(result.error || t('institution.mentors.statusUpdateFailed'))
       }
@@ -219,7 +195,7 @@ export default function InstitutionMentorsPage() {
 
       if (result.success) {
         toast.success(t('institution.mentors.removeSuccess'))
-        fetchMentors()
+        refetch()
       } else {
         toast.error(result.error || t('institution.mentors.removeFailed'))
       }
@@ -271,7 +247,7 @@ export default function InstitutionMentorsPage() {
           <p className="text-muted-foreground">{t('institution.mentors.description')}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchMentors}>
+          <Button variant="outline" onClick={refetch}>
             <RefreshCw className="mr-2 h-4 w-4" />
             {t('common.refresh')}
           </Button>
@@ -420,10 +396,10 @@ export default function InstitutionMentorsPage() {
             })}
           </div>
 
-          {totalPages > 1 && (
+          {pagination && pagination.totalPages > 1 && (
             <Pagination
               currentPage={currentPage}
-              totalPages={totalPages}
+              totalPages={pagination.totalPages}
               onPageChange={setCurrentPage}
             />
           )}

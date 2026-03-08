@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   FolderOpen,
@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/select'
 import { MarkdownContent } from '@/components/common/markdown-content'
 import { toast } from 'sonner'
+import { usePaginatedFetch } from '@/hooks/usePaginatedFetch'
 
 interface ProjectUser {
   id: string
@@ -84,21 +85,10 @@ interface ReportDetail {
   }
 }
 
-interface PaginationInfo {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-}
-
 export default function InstitutionProjectsPage() {
   const t = useTranslations()
 
-  const [projects, setProjects] = useState<Project[]>([])
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('all')
-  const [currentPage, setCurrentPage] = useState(1)
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
   const [mentorsMap, setMentorsMap] = useState<Record<string, ProjectMentor[]>>({})
   const [loadingMentors, setLoadingMentors] = useState<Set<string>>(new Set())
@@ -110,41 +100,24 @@ export default function InstitutionProjectsPage() {
   const [rejectMode, setRejectMode] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
 
-  const fetchProjects = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '10',
-      })
-
-      if (statusFilter !== 'all') {
-        params.append('status', statusFilter)
-      }
-
-      const response = await fetch(`/api/institution/projects?${params}`)
-      const result = await response.json()
-
-      if (result.success) {
-        setProjects(result.data.items)
-        setPagination(result.data.pagination)
-      } else {
-        toast.error(t('institution.projects.fetchFailed'))
-      }
-    } catch {
-      toast.error(t('institution.projects.fetchFailed'))
-    } finally {
-      setIsLoading(false)
-    }
-  }, [currentPage, statusFilter, t])
-
-  useEffect(() => {
-    fetchProjects()
-  }, [fetchProjects])
-
-  useEffect(() => {
-    setCurrentPage(1)
+  const fetchParams = useMemo(() => {
+    const p: Record<string, string> = {}
+    if (statusFilter !== 'all') p.status = statusFilter
+    return p
   }, [statusFilter])
+
+  const {
+    data: projects,
+    pagination,
+    isLoading,
+    currentPage,
+    setCurrentPage,
+    refetch,
+  } = usePaginatedFetch<Project>({
+    url: '/api/institution/projects',
+    params: fetchParams,
+    dataKey: 'items',
+  })
 
   const fetchMentors = async (projectId: string) => {
     if (mentorsMap[projectId]) return
@@ -309,7 +282,7 @@ export default function InstitutionProjectsPage() {
             {t('institution.projects.description')}
           </p>
         </div>
-        <Button variant="outline" onClick={fetchProjects}>
+        <Button variant="outline" onClick={refetch}>
           <RefreshCw className="mr-2 h-4 w-4" />
           {t('common.refresh')}
         </Button>

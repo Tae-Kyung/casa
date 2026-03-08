@@ -250,9 +250,6 @@ IMPORTANT: Write all string values in the SAME LANGUAGE as the user's idea input
               try {
                 const raw = JSON.parse(cleanContent) as Record<string, unknown>
 
-                // 디버그: AI 응답의 실제 필드명 로깅
-                console.log(`[eval:${persona.name}:${provider}] response keys:`, Object.keys(raw))
-
                 // 필드 정규화 헬퍼: 여러 후보 키에서 배열 추출
                 const findArray = (...keys: string[]): string[] | undefined => {
                   for (const k of keys) {

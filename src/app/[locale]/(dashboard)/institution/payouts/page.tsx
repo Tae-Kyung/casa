@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
+import { usePaginatedFetch } from '@/hooks/usePaginatedFetch'
 import { DollarSign, RefreshCw, CheckCircle, Download, FileText, ChevronDown, ChevronUp, ExternalLink, AlertCircle, Check, Settings, Save } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -46,13 +47,6 @@ interface Payout {
   mentor: Mentor
 }
 
-interface PaginationInfo {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-}
-
 type StatusFilter = 'all' | 'pending' | 'approved' | 'processing' | 'paid'
 
 const STATUS_BADGE_CLASSES: Record<Payout['status'], string> = {
@@ -84,12 +78,27 @@ function formatDate(dateStr: string | null): string {
 export default function InstitutionPayoutsPage() {
   const t = useTranslations()
 
-  const [payouts, setPayouts] = useState<Payout[]>([])
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [currentPage, setCurrentPage] = useState(1)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  const fetchParams = useMemo(() => {
+    const p: Record<string, string> = {}
+    if (statusFilter !== 'all') p.status = statusFilter
+    return p
+  }, [statusFilter])
+
+  const {
+    data: payouts,
+    pagination,
+    isLoading,
+    currentPage,
+    setCurrentPage,
+    refetch,
+  } = usePaginatedFetch<Payout>({
+    url: '/api/institution/payouts',
+    params: fetchParams,
+    dataKey: 'items',
+  })
   const [isApproving, setIsApproving] = useState(false)
   const [isBulkApproving, setIsBulkApproving] = useState(false)
   const [showMentorDocs, setShowMentorDocs] = useState(false)
@@ -151,37 +160,9 @@ export default function InstitutionPayoutsPage() {
     }
   }
 
-  const fetchPayouts = async () => {
-    setIsLoading(true)
-    try {
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '10',
-      })
-
-      if (statusFilter !== 'all') {
-        params.set('status', statusFilter)
-      }
-
-      const response = await fetch(`/api/institution/payouts?${params}`)
-      const result = await response.json()
-
-      if (result.success) {
-        setPayouts(result.data.items)
-        setPagination(result.data.pagination)
-      } else {
-        toast.error(t('institution.payouts.fetchFailed'))
-      }
-    } catch {
-      toast.error(t('institution.payouts.fetchFailed'))
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
+  // Clear selection when filters or page change
   useEffect(() => {
     setSelectedIds(new Set())
-    fetchPayouts()
   }, [statusFilter, currentPage])
 
   const handleApprove = async (payoutId: string) => {
@@ -194,7 +175,7 @@ export default function InstitutionPayoutsPage() {
 
       if (result.success) {
         toast.success(t('institution.payouts.approveSuccess'))
-        fetchPayouts()
+        refetch()
       } else {
         toast.error(result.error || t('institution.payouts.approveFailed'))
       }
@@ -220,7 +201,7 @@ export default function InstitutionPayoutsPage() {
       if (result.success) {
         toast.success(t('institution.payouts.bulkApproveSuccess'))
         setSelectedIds(new Set())
-        fetchPayouts()
+        refetch()
       } else {
         toast.error(result.error || t('institution.payouts.bulkApproveFailed'))
       }
@@ -297,7 +278,7 @@ export default function InstitutionPayoutsPage() {
             <Download className="mr-2 h-4 w-4" />
             {t('institution.payouts.exportCSV')}
           </Button>
-          <Button variant="outline" onClick={fetchPayouts}>
+          <Button variant="outline" onClick={refetch}>
             <RefreshCw className="mr-2 h-4 w-4" />
             {t('common.refresh')}
           </Button>
@@ -369,7 +350,6 @@ export default function InstitutionPayoutsPage() {
               value={statusFilter}
               onValueChange={(value) => {
                 setStatusFilter(value as StatusFilter)
-                setCurrentPage(1)
               }}
             >
               <SelectTrigger className="w-36">

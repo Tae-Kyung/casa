@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
+import { usePaginatedFetch } from '@/hooks/usePaginatedFetch'
 import {
   FileText,
   RefreshCw,
@@ -81,21 +82,29 @@ interface MentoringReport {
   sessions: SessionInfo[]
 }
 
-interface PaginationInfo {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-}
-
 export default function InstitutionReportsPage() {
   const t = useTranslations()
 
-  const [reports, setReports] = useState<MentoringReport[]>([])
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('all')
-  const [currentPage, setCurrentPage] = useState(1)
+
+  const fetchParams = useMemo(() => {
+    const p: Record<string, string> = {}
+    if (statusFilter !== 'all') p.status = statusFilter
+    return p
+  }, [statusFilter])
+
+  const {
+    data: reports,
+    pagination,
+    isLoading,
+    currentPage,
+    setCurrentPage,
+    refetch,
+  } = usePaginatedFetch<MentoringReport>({
+    url: '/api/institution/reports',
+    params: fetchParams,
+    dataKey: 'items',
+  })
 
   // Report detail dialog
   const [selectedReport, setSelectedReport] = useState<MentoringReport | null>(null)
@@ -104,36 +113,6 @@ export default function InstitutionReportsPage() {
   const [rejectTarget, setRejectTarget] = useState<MentoringReport | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
-
-  const fetchReports = async () => {
-    setIsLoading(true)
-    try {
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '10',
-      })
-
-      if (statusFilter !== 'all') {
-        params.append('status', statusFilter)
-      }
-
-      const response = await fetch(`/api/institution/reports?${params}`)
-      const result = await response.json()
-
-      if (result.success) {
-        setReports(result.data.items)
-        setPagination(result.data.pagination)
-      }
-    } catch {
-      toast.error(t('institution.reports.fetchFailed'))
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchReports()
-  }, [statusFilter, currentPage])
 
   const handleConfirm = async (report: MentoringReport) => {
     setIsProcessing(true)
@@ -145,7 +124,7 @@ export default function InstitutionReportsPage() {
 
       if (result.success) {
         toast.success(t('institution.reports.confirmSuccess'))
-        fetchReports()
+        refetch()
         if (selectedReport?.id === report.id) {
           setSelectedReport({ ...selectedReport, status: 'confirmed' })
         }
@@ -175,7 +154,7 @@ export default function InstitutionReportsPage() {
         toast.success(t('institution.reports.rejectSuccess'))
         setRejectTarget(null)
         setRejectReason('')
-        fetchReports()
+        refetch()
         if (selectedReport?.id === rejectTarget.id) {
           setSelectedReport({ ...selectedReport, status: 'rejected', rejection_reason: rejectReason })
         }
@@ -229,7 +208,7 @@ export default function InstitutionReportsPage() {
             {t('institution.reports.description')}
           </p>
         </div>
-        <Button variant="outline" onClick={fetchReports}>
+        <Button variant="outline" onClick={refetch}>
           <RefreshCw className="mr-2 h-4 w-4" />
           {t('common.refresh')}
         </Button>
@@ -245,10 +224,7 @@ export default function InstitutionReportsPage() {
             </span>
             <Select
               value={statusFilter}
-              onValueChange={(value) => {
-                setStatusFilter(value)
-                setCurrentPage(1)
-              }}
+              onValueChange={setStatusFilter}
             >
               <SelectTrigger className="w-40">
                 <SelectValue />

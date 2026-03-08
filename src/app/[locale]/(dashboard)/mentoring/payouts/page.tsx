@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { DollarSign, RefreshCw, FolderKanban } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -16,6 +16,7 @@ import {
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { Pagination } from '@/components/common/pagination'
 import { toast } from 'sonner'
+import { usePaginatedFetch } from '@/hooks/usePaginatedFetch'
 
 interface MentoringProject {
   matchId: string
@@ -48,13 +49,6 @@ interface PayoutItem {
   updated_at: string
 }
 
-interface PaginationInfo {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-}
-
 type StatusFilter = 'all' | 'pending' | 'approved' | 'processing' | 'paid' | 'cancelled'
 
 function formatKRW(amount: number): string {
@@ -69,12 +63,26 @@ export default function MentorPayoutsPage() {
   const t = useTranslations()
 
   const [summary, setSummary] = useState<PayoutSummary | null>(null)
-  const [payouts, setPayouts] = useState<PayoutItem[]>([])
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null)
   const [isLoadingSummary, setIsLoadingSummary] = useState(true)
-  const [isLoadingList, setIsLoadingList] = useState(true)
-  const [currentPage, setCurrentPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+
+  const fetchParams = useMemo(() => {
+    const p: Record<string, string> = {}
+    if (statusFilter !== 'all') p.status = statusFilter
+    return p
+  }, [statusFilter])
+
+  const {
+    data: payouts,
+    pagination,
+    isLoading: isLoadingList,
+    currentPage,
+    setCurrentPage,
+    refetch: refetchPayouts,
+  } = usePaginatedFetch<PayoutItem>({
+    url: '/api/mentor/payouts',
+    params: fetchParams,
+  })
 
   const fetchSummary = useCallback(async () => {
     setIsLoadingSummary(true)
@@ -94,49 +102,13 @@ export default function MentorPayoutsPage() {
     }
   }, [t])
 
-  const fetchPayouts = useCallback(async () => {
-    setIsLoadingList(true)
-    try {
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '10',
-      })
-      if (statusFilter !== 'all') {
-        params.set('status', statusFilter)
-      }
-
-      const response = await fetch(`/api/mentor/payouts?${params}`)
-      const result = await response.json()
-
-      if (result.success) {
-        setPayouts(result.data.items)
-        setPagination(result.data.pagination)
-      } else {
-        toast.error(t('mentor.payouts.fetchFailed'))
-      }
-    } catch {
-      toast.error(t('mentor.payouts.fetchFailed'))
-    } finally {
-      setIsLoadingList(false)
-    }
-  }, [currentPage, statusFilter, t])
-
   useEffect(() => {
     fetchSummary()
   }, [fetchSummary])
 
-  useEffect(() => {
-    fetchPayouts()
-  }, [fetchPayouts])
-
-  const handleStatusFilterChange = (value: string) => {
-    setStatusFilter(value as StatusFilter)
-    setCurrentPage(1)
-  }
-
   const handleRefresh = () => {
     fetchSummary()
-    fetchPayouts()
+    refetchPayouts()
   }
 
   const getPayoutStatusBadge = (status: string) => {
@@ -318,7 +290,7 @@ export default function MentorPayoutsPage() {
 
       {/* Payout History */}
       <div className="flex items-center gap-4">
-        <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder={t('mentor.payouts.filterAll')} />
           </SelectTrigger>

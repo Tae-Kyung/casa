@@ -265,8 +265,8 @@ export default function PromptsPage() {
                       )}
                       <div className="flex gap-4">
                         <span>{t('admin.prompts.modelLabel', { model: prompt.model })}</span>
-                        <span>Temperature: {prompt.temperature}</span>
-                        <span>Max Tokens: {prompt.max_tokens}</span>
+                        <span>{t('admin.prompts.temperatureLabel', { value: prompt.temperature })}</span>
+                        <span>{t('admin.prompts.maxTokensLabel', { value: prompt.max_tokens })}</span>
                       </div>
                     </div>
                   </CardContent>

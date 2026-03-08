@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   FileText,
@@ -15,15 +15,12 @@ import {
   RefreshCw,
   Download,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   AlertTriangle,
   Edit3,
   ArrowLeft,
   Undo2
 } from 'lucide-react'
-import { marked } from 'marked'
 import { exportToPdf, exportToDocx, exportToPptx, exportImagesToPdf } from '@/lib/utils/document-export'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -35,53 +32,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import type { Document as DocType } from '@/types/database'
-
-// 기존 JSON 형식 피치를 마크다운으로 변환하는 헬퍼
-function formatPitchContent(content: string): string {
-  try {
-    const parsed = JSON.parse(content)
-    if (typeof parsed !== 'object' || parsed === null) return content
-
-    const lines: string[] = ['# 요약 피치', '']
-
-    if (parsed.oneLiner) {
-      lines.push('## 한 줄 요약 (One-Liner)', '', parsed.oneLiner, '')
-    }
-    if (parsed.hook) {
-      lines.push('## 훅 (Hook)', '', parsed.hook, '')
-    }
-    if (parsed.pitch30s) {
-      lines.push('## 30초 피치', '', parsed.pitch30s, '')
-    }
-    if (parsed.pitch2m) {
-      lines.push('## 2분 피치', '', parsed.pitch2m, '')
-    }
-    if (Array.isArray(parsed.keyMessages) && parsed.keyMessages.length > 0) {
-      lines.push('## 핵심 메시지', '')
-      parsed.keyMessages.forEach((msg: string) => {
-        lines.push(`- ${msg}`)
-      })
-      lines.push('')
-    }
-
-    return lines.join('\n')
-  } catch {
-    // JSON 파싱 실패 → 이미 마크다운이므로 그대로 반환
-    return content
-  }
-}
+import { extractSections } from '../utils'
+import { DocumentPreviewDialog } from './DocumentPreviewDialog'
+import { SectionReviseDialog } from './SectionReviseDialog'
+import { GoBackConfirmDialog } from './GoBackConfirmDialog'
 
 interface DocumentStageProps {
   projectId: string
@@ -178,9 +134,6 @@ export function DocumentStage({
   const [reviseInstruction, setReviseInstruction] = useState('')
   const [isRevising, setIsRevising] = useState(false)
   const [reviseStreamContent, setReviseStreamContent] = useState('')
-
-  // 슬라이드쇼 프리뷰 상태
-  const [previewSlideIndex, setPreviewSlideIndex] = useState(0)
 
   // 문서 확정 해제 관련 상태
   const [unconfirmingId, setUnconfirmingId] = useState<string | null>(null)
@@ -366,7 +319,7 @@ export function DocumentStage({
     try {
       exportToDocx(doc.title, doc.content)
     } catch {
-      toast.error('Word export failed')
+      toast.error(t('documentStage.wordExportFailed'))
     }
   }
 
@@ -375,7 +328,7 @@ export function DocumentStage({
     try {
       exportToPptx(doc.title, doc.content)
     } catch {
-      toast.error('PowerPoint export failed')
+      toast.error(t('documentStage.pptExportFailed'))
     }
   }
 
@@ -472,14 +425,6 @@ export function DocumentStage({
     } finally {
       setIsGoingBack(false)
     }
-  }
-
-  // 문서에서 섹션 목록 추출 (## 로 시작하는 헤더)
-  const extractSections = (content: string | null, docType?: string): string[] => {
-    if (!content) return []
-    const normalized = docType === 'pitch' ? formatPitchContent(content) : content
-    const matches = normalized.match(/^##\s+(.+)$/gm)
-    return matches ? matches.map(m => m.replace(/^##\s+/, '').trim()) : []
   }
 
   if (!canGenerate) {
@@ -581,10 +526,7 @@ export function DocumentStage({
                     src={doc.storage_path}
                     alt={doc.title}
                     className="h-40 w-full cursor-pointer object-cover transition-opacity hover:opacity-80"
-                    onClick={() => {
-                      setPreviewSlideIndex(0)
-                      setPreviewDoc(doc)
-                    }}
+                    onClick={() => setPreviewDoc(doc)}
                   />
                   {doc.content && (() => {
                     try {
@@ -620,17 +562,6 @@ export function DocumentStage({
                 </Button>
                 {isMultiImageType ? (
                   <>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setPreviewSlideIndex(0)
-                        setPreviewDoc(doc)
-                      }}
-                    >
-                      <Eye className="mr-1 h-4 w-4" />
-                      {t('documentStage.slideshow')}
-                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -870,234 +801,28 @@ export function DocumentStage({
         </Card>
       )}
 
-      {/* 미리보기 다이얼로그 */}
-      <Dialog open={!!previewDoc} onOpenChange={() => setPreviewDoc(null)}>
-        <DialogContent className={`max-h-[90vh] overflow-hidden ${previewDoc && MULTI_IMAGE_DOC_TYPES.has(previewDoc.type) ? 'max-w-5xl' : 'max-w-4xl'}`}>
-          <DialogHeader>
-            <DialogTitle>{previewDoc?.title}</DialogTitle>
-          </DialogHeader>
-          <div className="max-h-[70vh] overflow-y-auto">
-            {previewDoc && MULTI_IMAGE_DOC_TYPES.has(previewDoc.type) ? (() => {
-              let slides: string[] = []
-              try {
-                slides = JSON.parse(previewDoc.content || '[]')
-              } catch { /* ignore */ }
-              if (slides.length === 0) return <p className="text-center text-muted-foreground">{t('documentStage.noSlides')}</p>
-              return (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="relative w-full flex items-center justify-center bg-black/5 dark:bg-white/5 rounded-lg p-2 min-h-[400px]">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/20 text-white hover:bg-black/40"
-                      onClick={() => setPreviewSlideIndex((prev) => (prev - 1 + slides.length) % slides.length)}
-                    >
-                      <ChevronLeft className="h-5 w-5" />
-                    </Button>
-                    <img
-                      src={slides[previewSlideIndex]}
-                      alt={`Slide ${previewSlideIndex + 1}`}
-                      className="max-h-[60vh] rounded object-contain"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/20 text-white hover:bg-black/40"
-                      onClick={() => setPreviewSlideIndex((prev) => (prev + 1) % slides.length)}
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm text-muted-foreground">
-                      {previewSlideIndex + 1} / {slides.length}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const a = document.createElement('a')
-                        a.href = slides[previewSlideIndex]
-                        a.download = `slide-${previewSlideIndex + 1}.png`
-                        a.target = '_blank'
-                        document.body.appendChild(a)
-                        a.click()
-                        document.body.removeChild(a)
-                      }}
-                    >
-                      <Download className="mr-1 h-4 w-4" />
-                      {t('documentStage.downloadSlide')}
-                    </Button>
-                  </div>
-                  {/* 썸네일 네비게이션 */}
-                  <div className="flex gap-2 overflow-x-auto pb-2 w-full justify-center">
-                    {slides.map((url, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setPreviewSlideIndex(i)}
-                        className={`shrink-0 overflow-hidden rounded border-2 transition-all ${
-                          i === previewSlideIndex
-                            ? 'border-primary ring-2 ring-primary/30'
-                            : 'border-transparent opacity-60 hover:opacity-100'
-                        }`}
-                      >
-                        <img
-                          src={url}
-                          alt={`Slide ${i + 1}`}
-                          className="h-14 w-24 object-cover"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )
-            })() : previewDoc && IMAGE_DOC_TYPES.has(previewDoc.type) ? (
-              <div className="flex justify-center">
-                <img
-                  src={previewDoc.storage_path || previewDoc.content || ''}
-                  alt={previewDoc.title}
-                  className="max-h-[65vh] rounded object-contain"
-                />
-              </div>
-            ) : previewDoc && HTML_DOC_TYPES.has(previewDoc.type) ? (
-              <iframe
-                srcDoc={previewDoc.content || ''}
-                className="h-[60vh] w-full rounded border"
-                title={`${previewDoc.title} Preview`}
-              />
-            ) : (
-              <div
-                className="markdown-preview"
-                dangerouslySetInnerHTML={{
-                  __html: marked.parse(
-                    previewDoc?.type === 'pitch'
-                      ? formatPitchContent(previewDoc?.content || '')
-                      : (previewDoc?.content || ''),
-                    { async: false }
-                  ) as string,
-                }}
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DocumentPreviewDialog doc={previewDoc} onClose={() => setPreviewDoc(null)} />
 
-      {/* 평가 단계로 돌아가기 확인 다이얼로그 */}
-      <Dialog open={showGoBackDialog} onOpenChange={(open) => !isGoingBack && setShowGoBackDialog(open)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('documentStage.goBackConfirmTitle')}</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            {t('documentStage.goBackConfirmDesc')}
-          </p>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowGoBackDialog(false)}
-              disabled={isGoingBack}
-            >
-              {t('common.cancel')}
-            </Button>
-            <Button
-              onClick={handleGoBack}
-              disabled={isGoingBack}
-            >
-              {isGoingBack ? (
-                <LoadingSpinner size="sm" className="mr-2" />
-              ) : (
-                <ArrowLeft className="mr-2 h-4 w-4" />
-              )}
-              {t('documentStage.goBackToEvaluation')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <GoBackConfirmDialog
+        open={showGoBackDialog}
+        isLoading={isGoingBack}
+        onOpenChange={setShowGoBackDialog}
+        onConfirm={handleGoBack}
+      />
 
-      {/* 섹션 수정 다이얼로그 */}
-      <Dialog open={!!reviseDoc} onOpenChange={() => !isRevising && setReviseDoc(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{t('documentStage.sectionReviseDialogTitle', { title: reviseDoc?.title || '' })}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="section">{t('documentStage.sectionLabel')}</Label>
-              <div className="mt-1.5">
-                {extractSections(reviseDoc?.content || '', reviseDoc?.type).length > 0 ? (
-                  <select
-                    id="section"
-                    value={reviseSection}
-                    onChange={(e) => setReviseSection(e.target.value)}
-                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                    disabled={isRevising}
-                  >
-                    <option value="">{t('documentStage.selectSection')}</option>
-                    {extractSections(reviseDoc?.content || '', reviseDoc?.type).map((section) => (
-                      <option key={section} value={section}>
-                        {section}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <Input
-                    id="section"
-                    value={reviseSection}
-                    onChange={(e) => setReviseSection(e.target.value)}
-                    placeholder={t('documentStage.sectionInputPlaceholder')}
-                    disabled={isRevising}
-                  />
-                )}
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="instruction">{t('documentStage.instructionLabel')}</Label>
-              <Textarea
-                id="instruction"
-                value={reviseInstruction}
-                onChange={(e) => setReviseInstruction(e.target.value)}
-                placeholder={t('documentStage.instructionPlaceholder')}
-                rows={4}
-                disabled={isRevising}
-                className="mt-1.5"
-              />
-            </div>
-            {isRevising && reviseStreamContent && (
-              <div className="rounded-lg bg-muted p-3">
-                <p className="mb-2 text-sm font-medium">{t('documentStage.revising')}</p>
-                <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap text-xs">
-                  {reviseStreamContent}
-                </pre>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setReviseDoc(null)}
-              disabled={isRevising}
-            >
-              {t('common.cancel')}
-            </Button>
-            <Button
-              onClick={handleRevise}
-              disabled={isRevising || !reviseSection.trim() || !reviseInstruction.trim()}
-            >
-              {isRevising ? (
-                <>
-                  <LoadingSpinner size="sm" className="mr-2" />
-                  {t('documentStage.revising')}
-                </>
-              ) : (
-                <>
-                  <Edit3 className="mr-2 h-4 w-4" />
-                  {t('documentStage.sectionRevise')}
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SectionReviseDialog
+        open={!!reviseDoc}
+        title={reviseDoc?.title || ''}
+        sections={extractSections(reviseDoc?.content || '', reviseDoc?.type)}
+        reviseSection={reviseSection}
+        reviseInstruction={reviseInstruction}
+        isRevising={isRevising}
+        reviseStreamContent={reviseStreamContent}
+        onClose={() => setReviseDoc(null)}
+        onSectionChange={setReviseSection}
+        onInstructionChange={setReviseInstruction}
+        onRevise={handleRevise}
+      />
     </div>
   )
 }

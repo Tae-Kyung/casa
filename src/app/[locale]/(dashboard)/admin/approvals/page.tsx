@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import {
   CheckCircle,
   XCircle,
   Clock,
-  MessageSquare,
   ExternalLink,
   RefreshCw,
   Filter
@@ -16,7 +15,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
-import { ConfirmModal } from '@/components/common/confirm-modal'
 import { Pagination } from '@/components/common/pagination'
 import {
   Select,
@@ -35,6 +33,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { usePaginatedFetch } from '@/hooks/usePaginatedFetch'
 
 interface Approval {
   id: string
@@ -68,60 +67,37 @@ interface Approval {
   } | null
 }
 
-interface PaginationInfo {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-}
-
 export default function ApprovalsPage() {
   const t = useTranslations()
   const router = useRouter()
 
-  const [approvals, setApprovals] = useState<Approval[]>([])
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('pending')
   const [gateFilter, setGateFilter] = useState('all')
-  const [currentPage, setCurrentPage] = useState(1)
+
+  const fetchParams = useMemo(() => {
+    const p: Record<string, string> = { status: statusFilter }
+    if (gateFilter !== 'all') p.gate = gateFilter
+    return p
+  }, [statusFilter, gateFilter])
+
+  const {
+    data: approvals,
+    pagination,
+    isLoading,
+    currentPage,
+    setCurrentPage,
+    refetch,
+  } = usePaginatedFetch<Approval>({
+    url: '/api/admin/approvals',
+    params: fetchParams,
+    dataKey: 'approvals',
+  })
 
   // 승인 처리 모달
   const [selectedApproval, setSelectedApproval] = useState<Approval | null>(null)
   const [actionType, setActionType] = useState<'approve' | 'reject' | 'request_revision'>('approve')
   const [comment, setComment] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
-
-  const fetchApprovals = async () => {
-    setIsLoading(true)
-    try {
-      const params = new URLSearchParams({
-        status: statusFilter,
-        page: currentPage.toString(),
-        limit: '10',
-      })
-
-      if (gateFilter !== 'all') {
-        params.append('gate', gateFilter)
-      }
-
-      const response = await fetch(`/api/admin/approvals?${params}`)
-      const result = await response.json()
-
-      if (result.success) {
-        setApprovals(result.data.approvals)
-        setPagination(result.data.pagination)
-      }
-    } catch (error) {
-      toast.error(t('admin.approvals.fetchFailed'))
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchApprovals()
-  }, [statusFilter, gateFilter, currentPage])
 
   const handleApprovalAction = async () => {
     if (!selectedApproval) return
@@ -144,7 +120,7 @@ export default function ApprovalsPage() {
         toast.success(result.data.message)
         setSelectedApproval(null)
         setComment('')
-        fetchApprovals()
+        refetch()
       } else {
         toast.error(result.error || t('admin.approvals.processFailed'))
       }
@@ -192,7 +168,7 @@ export default function ApprovalsPage() {
             {t('admin.approvals.description')}
           </p>
         </div>
-        <Button variant="outline" onClick={fetchApprovals}>
+        <Button variant="outline" onClick={refetch}>
           <RefreshCw className="mr-2 h-4 w-4" />
           {t('common.refresh')}
         </Button>

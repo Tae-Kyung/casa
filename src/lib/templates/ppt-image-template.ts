@@ -1,3 +1,5 @@
+import { escapeHtml } from '@/lib/utils/html'
+
 export interface PptImageSlide {
   type: string
   title: string
@@ -13,14 +15,6 @@ export interface PptImageStory {
     style: string
   }
   slides: PptImageSlide[]
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
 }
 
 function normalizeStory(raw: Record<string, unknown>): PptImageStory {

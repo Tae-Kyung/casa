@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { Link2, RefreshCw, Plus, Pencil, Trash2, DollarSign, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { usePaginatedFetch } from '@/hooks/usePaginatedFetch'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -68,10 +69,6 @@ const STATUSES = ['assigned', 'in_progress', 'review', 'completed', 'cancelled']
 
 export default function InstitutionMatchesPage() {
   const t = useTranslations()
-  const [matches, setMatches] = useState<Match[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
 
   // Create/Edit modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -87,35 +84,27 @@ export default function InstitutionMatchesPage() {
   const [sortField, setSortField] = useState<'project' | 'mentor' | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
-  const fetchMatches = async () => {
-    setIsLoading(true)
-    try {
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '10',
-      })
-      if (sortField) {
-        params.set('sort', sortField)
-        params.set('sort_dir', sortDirection)
-      }
-
-      const response = await fetch(`/api/institution/matches?${params}`)
-      const result = await response.json()
-
-      if (result.success) {
-        setMatches(result.data.items)
-        setTotalPages(result.data.totalPages)
-      }
-    } catch {
-      toast.error(t('institution.matches.fetchFailed'))
-    } finally {
-      setIsLoading(false)
+  const fetchParams = useMemo(() => {
+    const p: Record<string, string> = {}
+    if (sortField) {
+      p.sort = sortField
+      p.sort_dir = sortDirection
     }
-  }
+    return p
+  }, [sortField, sortDirection])
 
-  useEffect(() => {
-    fetchMatches()
-  }, [currentPage, sortField, sortDirection])
+  const {
+    data: matches,
+    pagination,
+    isLoading,
+    currentPage,
+    setCurrentPage,
+    refetch,
+  } = usePaginatedFetch<Match>({
+    url: '/api/institution/matches',
+    params: fetchParams,
+    dataKey: 'items',
+  })
 
   const fetchSelectOptions = async () => {
     try {
@@ -194,7 +183,7 @@ export default function InstitutionMatchesPage() {
         if (result.success) {
           toast.success(t('institution.matches.updateSuccess'))
           setIsModalOpen(false)
-          fetchMatches()
+          refetch()
         } else {
           toast.error(result.error || t('institution.matches.updateFailed'))
         }
@@ -213,7 +202,7 @@ export default function InstitutionMatchesPage() {
         if (result.success) {
           toast.success(t('institution.matches.createSuccess'))
           setIsModalOpen(false)
-          fetchMatches()
+          refetch()
         } else {
           toast.error(result.error || t('institution.matches.createFailed'))
         }
@@ -233,7 +222,7 @@ export default function InstitutionMatchesPage() {
       const result = await response.json()
       if (result.success) {
         toast.success(t('institution.matches.deleteSuccess'))
-        fetchMatches()
+        refetch()
       } else {
         toast.error(result.error || t('institution.matches.deleteFailed'))
       }
@@ -255,7 +244,7 @@ export default function InstitutionMatchesPage() {
       const result = await response.json()
       if (result.success) {
         toast.success(t('institution.matches.statusUpdated'))
-        fetchMatches()
+        refetch()
       } else {
         toast.error(result.error || t('institution.matches.statusUpdateFailed'))
       }
@@ -276,7 +265,6 @@ export default function InstitutionMatchesPage() {
   }
 
   const toggleSort = (field: 'project' | 'mentor') => {
-    setCurrentPage(1)
     if (sortField === field) {
       if (sortDirection === 'asc') {
         setSortDirection('desc')
@@ -315,7 +303,7 @@ export default function InstitutionMatchesPage() {
           <p className="text-muted-foreground">{t('institution.matches.description')}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchMatches}>
+          <Button variant="outline" onClick={refetch}>
             <RefreshCw className="mr-2 h-4 w-4" />
             {t('common.refresh')}
           </Button>
@@ -430,10 +418,10 @@ export default function InstitutionMatchesPage() {
             </Card>
           ))}
 
-          {totalPages > 1 && (
+          {(pagination?.totalPages ?? 1) > 1 && (
             <Pagination
               currentPage={currentPage}
-              totalPages={totalPages}
+              totalPages={pagination?.totalPages ?? 1}
               onPageChange={setCurrentPage}
             />
           )}

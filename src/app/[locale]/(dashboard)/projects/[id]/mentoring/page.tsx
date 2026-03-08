@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { useParams } from 'next/navigation'
-import { FileText, MessageSquare, Plus, Send, Save, ChevronDown, ChevronUp, Download, Eye, Edit2, Trash2 } from 'lucide-react'
+import { FileText, MessageSquare, Plus, Send, Save, ChevronDown, ChevronUp, Download } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { FeedbackSection } from './components/FeedbackSection'
 
 interface IdeaCard {
   id: string
@@ -339,26 +340,6 @@ export default function MentoringWorkstationPage() {
   const getFeedbacksForStage = (stage: string) =>
     feedbacks.filter((f) => f.stage === stage)
 
-  const feedbackTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      comment: t('mentor.workstation.fbComment'),
-      approval: t('mentor.workstation.fbApproval'),
-      rejection: t('mentor.workstation.fbRejection'),
-      revision_request: t('mentor.workstation.fbRevision'),
-    }
-    return labels[type] || type
-  }
-
-  const feedbackTypeBadgeClass = (type: string) => {
-    const classes: Record<string, string> = {
-      comment: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-      approval: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-      rejection: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-      revision_request: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-    }
-    return classes[type] || ''
-  }
-
   const toggleSession = (session: Session) => {
     if (expandedSessionId === session.id) {
       setExpandedSessionId(null)
@@ -376,191 +357,34 @@ export default function MentoringWorkstationPage() {
     }
   }
 
-  const renderFeedbackSection = (stage: string) => {
-    const stageFeedbacks = getFeedbacksForStage(stage)
-    const isExpanded = expandedFeedbackStage === stage
-    const isWriting = feedbackStage === stage
-
-    return (
-      <div className="border-t pt-4">
-        {/* Feedback toggle header */}
-        <button
-          className="flex w-full items-center justify-between text-sm font-medium text-muted-foreground hover:text-foreground"
-          onClick={() => setExpandedFeedbackStage(isExpanded ? null : stage)}
-        >
-          <span className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            {t('mentor.workstation.mentorFeedback')}
-            {stageFeedbacks.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
-                {stageFeedbacks.length}
-              </Badge>
-            )}
-          </span>
-          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
-
-        {isExpanded && (
-          <div className="mt-3 space-y-3">
-            {/* Existing feedbacks */}
-            {stageFeedbacks.map((fb) => (
-              <div
-                key={fb.id}
-                className="rounded-lg border bg-muted/30 p-3"
-              >
-                {editingFeedbackId === fb.id ? (
-                  /* 수정 모드 */
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                      {(['comment', 'approval', 'revision_request', 'rejection'] as const).map((type) => (
-                        <button
-                          key={type}
-                          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                            editFeedbackType === type
-                              ? feedbackTypeBadgeClass(type)
-                              : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                          }`}
-                          onClick={() => setEditFeedbackType(type)}
-                        >
-                          {feedbackTypeLabel(type)}
-                        </button>
-                      ))}
-                    </div>
-                    <Textarea
-                      value={editFeedbackComment}
-                      onChange={(e) => setEditFeedbackComment(e.target.value)}
-                      rows={3}
-                    />
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingFeedbackId(null)}
-                      >
-                        {t('common.cancel')}
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleEditFeedback(fb.id)}
-                        disabled={savingFeedback || !editFeedbackComment.trim()}
-                      >
-                        {savingFeedback ? <LoadingSpinner size="sm" className="mr-2" /> : <Save className="mr-2 h-3 w-3" />}
-                        {t('common.save')}
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  /* 보기 모드 */
-                  <>
-                    <div className="mb-1 flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="font-medium text-foreground">
-                          {fb.author?.name || fb.author?.email || '-'}
-                        </span>
-                        <span>{new Date(fb.created_at).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${feedbackTypeBadgeClass(fb.feedback_type)}`}>
-                          {feedbackTypeLabel(fb.feedback_type)}
-                        </span>
-                        {fb.is_mine && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() => startEditFeedback(fb)}
-                            >
-                              <Edit2 className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteFeedback(fb.id)}
-                              disabled={deletingFeedbackId === fb.id}
-                            >
-                              {deletingFeedbackId === fb.id ? <LoadingSpinner size="sm" /> : <Trash2 className="h-3 w-3" />}
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <p className="whitespace-pre-wrap text-sm">{fb.comment}</p>
-                  </>
-                )}
-              </div>
-            ))}
-
-            {/* Write feedback */}
-            {isWriting ? (
-              <div className="space-y-3 rounded-lg border p-3">
-                <div className="flex gap-2">
-                  {(['comment', 'approval', 'revision_request', 'rejection'] as const).map((type) => (
-                    <button
-                      key={type}
-                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                        feedbackType === type
-                          ? feedbackTypeBadgeClass(type)
-                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                      }`}
-                      onClick={() => setFeedbackType(type)}
-                    >
-                      {feedbackTypeLabel(type)}
-                    </button>
-                  ))}
-                </div>
-                <Textarea
-                  value={feedbackComment}
-                  onChange={(e) => setFeedbackComment(e.target.value)}
-                  placeholder={t('mentor.workstation.feedbackPlaceholder')}
-                  rows={3}
-                />
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setFeedbackStage(null)
-                      setFeedbackComment('')
-                      setFeedbackType('comment')
-                    }}
-                  >
-                    {t('common.cancel')}
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleSubmitFeedback(stage)}
-                    disabled={submittingFeedback || !feedbackComment.trim()}
-                  >
-                    {submittingFeedback ? (
-                      <LoadingSpinner size="sm" className="mr-2" />
-                    ) : (
-                      <Send className="mr-2 h-3 w-3" />
-                    )}
-                    {t('mentor.workstation.submitFeedback')}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setFeedbackStage(stage)
-                  setFeedbackComment('')
-                  setFeedbackType('comment')
-                }}
-              >
-                <Plus className="mr-2 h-3 w-3" />
-                {t('mentor.workstation.writeFeedback')}
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-    )
-  }
+  const renderFeedbackSection = (stage: string) => (
+    <FeedbackSection
+      stage={stage}
+      feedbacks={getFeedbacksForStage(stage)}
+      isExpanded={expandedFeedbackStage === stage}
+      onToggleExpand={setExpandedFeedbackStage}
+      isWriting={feedbackStage === stage}
+      feedbackType={feedbackType}
+      feedbackComment={feedbackComment}
+      submittingFeedback={submittingFeedback}
+      onStartWrite={(s) => { setFeedbackStage(s); setFeedbackComment(''); setFeedbackType('comment') }}
+      onCancelWrite={() => { setFeedbackStage(null); setFeedbackComment(''); setFeedbackType('comment') }}
+      onTypeChange={setFeedbackType}
+      onCommentChange={setFeedbackComment}
+      onSubmit={handleSubmitFeedback}
+      editingFeedbackId={editingFeedbackId}
+      editFeedbackType={editFeedbackType}
+      editFeedbackComment={editFeedbackComment}
+      savingFeedback={savingFeedback}
+      deletingFeedbackId={deletingFeedbackId}
+      onStartEdit={startEditFeedback}
+      onCancelEdit={() => setEditingFeedbackId(null)}
+      onEditTypeChange={setEditFeedbackType}
+      onEditCommentChange={setEditFeedbackComment}
+      onEditSave={handleEditFeedback}
+      onDelete={handleDeleteFeedback}
+    />
+  )
 
   if (isLoading) {
     return (

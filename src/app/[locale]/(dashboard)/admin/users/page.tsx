@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import {
@@ -39,6 +39,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { usePaginatedFetch } from '@/hooks/usePaginatedFetch'
 
 interface UserProject {
   id: string
@@ -58,23 +59,34 @@ interface UserWithProjects {
   projects: UserProject[]
 }
 
-interface PaginationInfo {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-}
-
 export default function AdminUsersPage() {
   const t = useTranslations()
   const router = useRouter()
 
-  const [users, setUsers] = useState<UserWithProjects[]>([])
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
-  const [currentPage, setCurrentPage] = useState(1)
+
+  const fetchParams = useMemo(() => {
+    const p: Record<string, string> = {}
+    if (searchQuery) p.search = searchQuery
+    if (roleFilter !== 'all') p.role = roleFilter
+    return p
+  }, [searchQuery, roleFilter])
+
+  const {
+    data: users,
+    pagination,
+    isLoading,
+    currentPage,
+    setCurrentPage,
+    refetch,
+  } = usePaginatedFetch<UserWithProjects>({
+    url: '/api/admin/users',
+    limit: 20,
+    params: fetchParams,
+    dataKey: 'users',
+  })
+
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set())
   const [processingUserId, setProcessingUserId] = useState<string | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
@@ -85,44 +97,6 @@ export default function AdminUsersPage() {
   const [editUser, setEditUser] = useState<UserWithProjects | null>(null)
   const [editForm, setEditForm] = useState({ name: '', email: '', password: '' })
   const [isSaving, setIsSaving] = useState(false)
-
-  const fetchUsers = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '20',
-      })
-
-      if (searchQuery) {
-        params.append('search', searchQuery)
-      }
-      if (roleFilter !== 'all') {
-        params.append('role', roleFilter)
-      }
-
-      const response = await fetch(`/api/admin/users?${params}`)
-      const result = await response.json()
-
-      if (result.success) {
-        setUsers(result.data.users)
-        setPagination(result.data.pagination)
-      }
-    } catch {
-      toast.error(t('admin.users.fetchFailed'))
-    } finally {
-      setIsLoading(false)
-    }
-  }, [currentPage, searchQuery, roleFilter, t])
-
-  useEffect(() => {
-    fetchUsers()
-  }, [fetchUsers])
-
-  // 검색 시 페이지 리셋
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery, roleFilter])
 
   const toggleExpanded = (userId: string) => {
     setExpandedUsers((prev) => {
@@ -147,7 +121,7 @@ export default function AdminUsersPage() {
       const result = await response.json()
       if (result.success) {
         toast.success(action === 'approve' ? t('admin.users.approveSuccess') : t('admin.users.rejectSuccess'))
-        fetchUsers()
+        refetch()
       } else {
         toast.error(result.error || t('admin.users.actionFailed'))
       }
@@ -169,7 +143,7 @@ export default function AdminUsersPage() {
       const result = await response.json()
       if (result.success) {
         toast.success(t('admin.users.roleChangeSuccess'))
-        fetchUsers()
+        refetch()
       } else {
         toast.error(result.error || t('admin.users.roleChangeFailed'))
       }
@@ -189,7 +163,7 @@ export default function AdminUsersPage() {
       if (result.success) {
         toast.success(t('admin.users.deleted'))
         setDeleteConfirmId(null)
-        fetchUsers()
+        refetch()
       } else {
         toast.error(result.error || t('admin.users.deleteFailed'))
       }
@@ -229,7 +203,7 @@ export default function AdminUsersPage() {
       if (result.success) {
         toast.success(t('admin.users.editSuccess'))
         setEditUser(null)
-        fetchUsers()
+        refetch()
       } else {
         toast.error(result.error || t('admin.users.editFailed'))
       }
@@ -271,7 +245,7 @@ export default function AdminUsersPage() {
             {t('admin.users.description')}
           </p>
         </div>
-        <Button variant="outline" onClick={fetchUsers}>
+        <Button variant="outline" onClick={refetch}>
           <RefreshCw className="mr-2 h-4 w-4" />
           {t('common.refresh')}
         </Button>

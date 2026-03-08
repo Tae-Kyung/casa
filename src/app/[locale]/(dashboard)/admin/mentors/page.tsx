@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { RefreshCw, UserCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { usePaginatedFetch } from '@/hooks/usePaginatedFetch'
 
 interface MentorProfile {
   user_id: string
@@ -47,42 +48,29 @@ interface MentorDetail extends MentorProfile {
 
 export default function MentorsPage() {
   const t = useTranslations()
-  const [mentors, setMentors] = useState<MentorProfile[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
   const [approvedFilter, setApprovedFilter] = useState('all')
+
+  const fetchParams = useMemo(() => {
+    const p: Record<string, string> = {}
+    if (approvedFilter !== 'all') p.approved = approvedFilter
+    return p
+  }, [approvedFilter])
+
+  const {
+    data: mentors,
+    pagination,
+    isLoading,
+    currentPage,
+    setCurrentPage,
+    refetch,
+  } = usePaginatedFetch<MentorProfile>({
+    url: '/api/admin/mentors',
+    params: fetchParams,
+  })
 
   // 상세 모달
   const [selectedMentor, setSelectedMentor] = useState<MentorDetail | null>(null)
   const [isDetailLoading, setIsDetailLoading] = useState(false)
-
-  const fetchMentors = async () => {
-    setIsLoading(true)
-    try {
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '10',
-      })
-      if (approvedFilter !== 'all') params.set('approved', approvedFilter)
-
-      const response = await fetch(`/api/admin/mentors?${params}`)
-      const result = await response.json()
-
-      if (result.success) {
-        setMentors(result.data.items)
-        setTotalPages(result.data.totalPages)
-      }
-    } catch {
-      toast.error(t('admin.mentors.fetchFailed'))
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchMentors()
-  }, [currentPage, approvedFilter])
 
   const viewDetail = async (mentorId: string) => {
     setIsDetailLoading(true)
@@ -107,7 +95,7 @@ export default function MentorsPage() {
           <h1 className="text-3xl font-bold">{t('admin.mentors.title')}</h1>
           <p className="text-muted-foreground">{t('admin.mentors.description')}</p>
         </div>
-        <Button variant="outline" onClick={fetchMentors}>
+        <Button variant="outline" onClick={refetch}>
           <RefreshCw className="mr-2 h-4 w-4" />
           {t('common.refresh')}
         </Button>
@@ -115,7 +103,7 @@ export default function MentorsPage() {
 
       {/* 필터 */}
       <div className="flex items-center gap-4">
-        <Select value={approvedFilter} onValueChange={(v) => { setApprovedFilter(v); setCurrentPage(1) }}>
+        <Select value={approvedFilter} onValueChange={setApprovedFilter}>
           <SelectTrigger className="w-40">
             <SelectValue />
           </SelectTrigger>
@@ -171,8 +159,8 @@ export default function MentorsPage() {
             ))}
           </div>
 
-          {totalPages > 1 && (
-            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+          {pagination && pagination.totalPages > 1 && (
+            <Pagination currentPage={currentPage} totalPages={pagination.totalPages} onPageChange={setCurrentPage} />
           )}
         </>
       )}
