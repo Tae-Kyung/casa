@@ -86,10 +86,8 @@ export function MentorFeedbackPanel({ projectId, stage, mentorRole, readOnly = f
   }, [projectId, stage, readOnly])
 
   useEffect(() => {
-    if (isExpanded && feedbacks.length === 0) {
-      fetchFeedbacks()
-    }
-  }, [isExpanded, fetchFeedbacks])
+    fetchFeedbacks()
+  }, [fetchFeedbacks])
 
   const handleSubmit = async () => {
     if (!comment.trim()) return

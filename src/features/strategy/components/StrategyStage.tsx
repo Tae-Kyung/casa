@@ -268,21 +268,19 @@ export function StrategyStage({
                 </p>
               </div>
             </div>
-            {canCancelConfirm && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancelConfirm}
-                disabled={isCancellingConfirm}
-              >
-                {isCancellingConfirm ? (
-                  <LoadingSpinner size="sm" className="mr-2" />
-                ) : (
-                  <Undo2 className="mr-2 h-4 w-4" />
-                )}
-                {t('strategy.cancelConfirm')}
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancelConfirm}
+              disabled={isCancellingConfirm}
+            >
+              {isCancellingConfirm ? (
+                <LoadingSpinner size="sm" className="mr-2" />
+              ) : (
+                <Undo2 className="mr-2 h-4 w-4" />
+              )}
+              {t('strategy.cancelConfirm')}
+            </Button>
           </CardContent>
         </Card>
 

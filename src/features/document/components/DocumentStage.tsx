@@ -777,6 +777,30 @@ export function DocumentStage({
         </Card>
       )}
 
+      {/* Gate 3 통과 시 확정 해제 안내 */}
+      {isGate3Passed && (
+        <Card className="border-green-500 bg-green-50 dark:bg-green-950">
+          <CardContent className="flex items-center justify-between py-6">
+            <div className="flex items-center gap-4">
+              <div className="rounded-full bg-green-500 p-2">
+                <Check className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-green-700 dark:text-green-300">
+                  {t('documentStage.gate3Passed')}
+                </h3>
+                <p className="text-sm text-green-600 dark:text-green-400">
+                  {t('documentStage.gate3PassedDesc')}
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-green-600 dark:text-green-400">
+              {t('documentStage.unconfirmHint')}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* 필수 문서 (Gate 3) */}
       <div>
         <div className="mb-3 flex items-center justify-between">
@@ -815,7 +839,7 @@ export function DocumentStage({
         </div>
       </div>
 
-      {/* Gate 3 통과 메시지 */}
+      {/* Gate 3 통과 메시지 - 하단에도 표시 */}
       {isGate3Passed && (
         <Card className="border-green-500 bg-green-50 dark:bg-green-950">
           <CardContent className="flex items-center gap-4 py-6">

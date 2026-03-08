@@ -322,6 +322,7 @@
     "gate3Passed": "Gate 3 Passed",
     "gate3PassedDesc": "All documents have been confirmed. You can now proceed to the deployment stage.",
     "unconfirm": "Undo Confirmation",
+    "unconfirmHint": "Use the 'Undo Confirmation' button on each document to edit.",
     "unconfirmSuccess": "Document confirmation has been undone.",
     "unconfirmFailed": "Failed to undo confirmation.",
     "goBackToEvaluation": "Go back to Evaluation",

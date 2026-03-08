@@ -29,10 +29,7 @@ export async function POST(
       return errorResponse('프로젝트를 찾을 수 없습니다.', 404)
     }
 
-    // 다음 게이트(Gate 4)가 이미 통과된 경우 취소 불가
-    if (project.gate_4_passed_at) {
-      return errorResponse('프로젝트가 이미 완료되어 취소할 수 없습니다.', 400)
-    }
+    // 다음 게이트(Gate 4)가 이미 통과된 경우에도 함께 롤백
 
     // 사업 리뷰 조회
     const { data: review, error: reviewError } = await supabase
@@ -65,13 +62,14 @@ export async function POST(
 
     if (updateError) throw updateError
 
-    // 프로젝트 상태 롤백 (Gate 3로)
+    // 프로젝트 상태 롤백 (Gate 3로, 하위 게이트도 함께 롤백)
     const { error: projectUpdateError } = await supabase
       .from('bi_projects')
       .update({
         current_stage: 'document',
         current_gate: 'gate_3',
         gate_3_passed_at: null,
+        gate_4_passed_at: null,
         updated_at: now,
       })
       .eq('id', id)

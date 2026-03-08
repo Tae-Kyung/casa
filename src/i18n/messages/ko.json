@@ -322,6 +322,7 @@
     "gate3Passed": "Gate 3 통과",
     "gate3PassedDesc": "모든 문서가 확정되었습니다. 배포 단계로 이동할 수 있습니다.",
     "unconfirm": "확정 해제",
+    "unconfirmHint": "각 문서의 '확정 해제' 버튼으로 수정할 수 있습니다.",
     "unconfirmSuccess": "문서 확정이 해제되었습니다.",
     "unconfirmFailed": "확정 해제에 실패했습니다.",
     "goBackToEvaluation": "평가 단계로 돌아가기",

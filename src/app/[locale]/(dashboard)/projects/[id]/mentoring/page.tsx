@@ -694,7 +694,7 @@ export default function MentoringWorkstationPage() {
                           ) : doc.content ? (
                             /* 마크다운 콘텐츠 (사업계획서, 피치 등) */
                             <div
-                              className="prose prose-sm dark:prose-invert max-w-none"
+                              className="markdown-preview"
                               dangerouslySetInnerHTML={{
                                 __html: marked.parse(doc.content, { async: false }) as string,
                               }}

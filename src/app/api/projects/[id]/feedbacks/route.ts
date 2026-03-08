@@ -30,16 +30,27 @@ export async function GET(
 
     const { data: feedbacks, error } = await supabase
       .from('bi_feedbacks')
-      .select(`
-        *,
-        author:bi_users!bi_feedbacks_user_id_fkey(id, name, email, role)
-      `)
+      .select('*')
       .eq('project_id', id)
       .order('created_at', { ascending: false })
 
     if (error) throw error
 
     const feedbackList = feedbacks || []
+
+    // 작성자 정보를 service client로 조회 (RLS 우회)
+    const userIds = [...new Set(feedbackList.map((f) => f.user_id))]
+    let userMap: Record<string, { id: string; name: string | null; email: string; role: string }> = {}
+    if (userIds.length > 0) {
+      const { data: users } = await serviceClient
+        .from('bi_users')
+        .select('id, name, email, role')
+        .in('id', userIds)
+      for (const u of users || []) {
+        userMap[u.id] = u
+      }
+    }
+
     const feedbackIds = feedbackList.map((f) => f.id)
 
     // 좋아요 수 및 본인 좋아요 여부 조회
@@ -71,6 +82,7 @@ export async function GET(
 
     const enriched = feedbackList.map((f) => ({
       ...f,
+      author: userMap[f.user_id] || null,
       like_count: likeCountMap[f.id] || 0,
       is_liked: myLikeSet.has(f.id),
     }))

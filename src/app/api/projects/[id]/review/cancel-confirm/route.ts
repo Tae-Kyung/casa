@@ -29,11 +29,6 @@ export async function POST(
       return errorResponse('프로젝트를 찾을 수 없습니다.', 404)
     }
 
-    // 다음 게이트(Gate 2)가 이미 통과된 경우 취소 불가
-    if (project.gate_2_passed_at) {
-      return errorResponse('다음 단계(진단)가 이미 확정되어 취소할 수 없습니다.', 400)
-    }
-
     // 사업 리뷰 조회
     const { data: review, error: reviewError } = await supabase
       .from('bi_business_reviews')
@@ -72,6 +67,9 @@ export async function POST(
         current_stage: 'idea',
         current_gate: 'gate_1',
         gate_1_passed_at: null,
+        gate_2_passed_at: null,
+        gate_3_passed_at: null,
+        gate_4_passed_at: null,
         updated_at: now,
       })
       .eq('id', id)
