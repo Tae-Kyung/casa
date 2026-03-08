@@ -349,6 +349,7 @@
     "marketScore": "Market",
     "techScore": "Tech",
     "generatedDocs": "Generated Documents",
+    "editDocuments": "Edit Documents",
     "completeProject": "Complete Project",
     "completeProjectDesc": "All stages are complete. Finalize your project.",
     "completeGate4": "Complete Project (Gate 4)",

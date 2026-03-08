@@ -20,6 +20,7 @@ import {
   Eye,
   EyeOff,
   Award,
+  Undo2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -36,6 +37,7 @@ interface DeployStageProps {
   documents: DocType[]
   canDeploy: boolean  // Gate 3가 통과되었는지
   onUpdate: () => void
+  onGoToDocuments?: () => void
 }
 
 export function DeployStage({
@@ -45,6 +47,7 @@ export function DeployStage({
   documents,
   canDeploy,
   onUpdate,
+  onGoToDocuments,
 }: DeployStageProps) {
   const t = useTranslations()
   const [isCompleting, setIsCompleting] = useState(false)
@@ -243,7 +246,19 @@ export function DeployStage({
 
           {/* 생성된 문서 목록 */}
           <div className="rounded-lg border p-4">
-            <h4 className="mb-2 font-medium">{t('deploy.generatedDocs')}</h4>
+            <div className="mb-2 flex items-center justify-between">
+              <h4 className="font-medium">{t('deploy.generatedDocs')}</h4>
+              {onGoToDocuments && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onGoToDocuments}
+                >
+                  <Undo2 className="mr-1 h-4 w-4" />
+                  {t('deploy.editDocuments')}
+                </Button>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               {documents.map(doc => {
                 const Icon = documentIcons[doc.type as keyof typeof documentIcons] || FileText

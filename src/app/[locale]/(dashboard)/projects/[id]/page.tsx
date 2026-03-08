@@ -473,6 +473,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 documents={project.documents}
                 canDeploy={!!project.gate_3_passed_at}
                 onUpdate={handleProjectUpdate}
+                onGoToDocuments={() => setActiveTab('document')}
               />
               {isMentor && <MentorFeedbackPanel projectId={id} stage="deploy" mentorRole={project.mentorRole!} />}
               {isOwner && !isMentor && <MentorFeedbackPanel projectId={id} stage="deploy" readOnly />}
@@ -486,6 +487,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 documents={project.documents}
                 canDeploy={!!project.gate_3_passed_at}
                 onUpdate={handleProjectUpdate}
+                onGoToDocuments={() => setActiveTab('document')}
               />
               {isMentor && <MentorFeedbackPanel projectId={id} stage="done" mentorRole={project.mentorRole!} />}
               {isOwner && !isMentor && <MentorFeedbackPanel projectId={id} stage="done" readOnly />}
