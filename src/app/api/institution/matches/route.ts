@@ -35,23 +35,20 @@ export async function GET(request: NextRequest) {
       return paginatedResponse([], 0, page, limit)
     }
 
-    const { count } = await supabase
-      .from('bi_mentor_matches')
-      .select('*', { count: 'exact', head: true })
-      .in('project_id', projectIds)
+    const sortField = searchParams.get('sort') // 'project' | 'mentor' | null
+    const sortDir = searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc'
 
+    // 정렬이 project/mentor인 경우 전체를 가져와서 정렬 후 페이징
     const { data, error } = await supabase
       .from('bi_mentor_matches')
       .select('*')
       .in('project_id', projectIds)
       .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
 
     if (error) {
       console.error('Matches query error:', error.message)
     }
 
-    // Fetch project and mentor info separately (FK join not supported by generated types)
     const matches = data || []
     const mentorIds = [...new Set(matches.map((m) => m.mentor_id))]
     const matchProjectIds = [...new Set(matches.map((m) => m.project_id))]
@@ -78,13 +75,31 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const enriched = matches.map((m) => ({
+    let enriched = matches.map((m) => ({
       ...m,
       project: projectMap[m.project_id] || null,
       mentor: mentorMap[m.mentor_id] || null,
     }))
 
-    return paginatedResponse(enriched, count || 0, page, limit)
+    // 서버 정렬
+    if (sortField === 'project' || sortField === 'mentor') {
+      enriched.sort((a, b) => {
+        const aVal = sortField === 'project'
+          ? (a.project?.name || '').toLowerCase()
+          : (a.mentor?.name || a.mentor?.email || '').toLowerCase()
+        const bVal = sortField === 'project'
+          ? (b.project?.name || '').toLowerCase()
+          : (b.mentor?.name || b.mentor?.email || '').toLowerCase()
+        const cmp = aVal.localeCompare(bVal, 'ko')
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    }
+
+    // 수동 페이징
+    const total = enriched.length
+    const paged = enriched.slice(offset, offset + limit)
+
+    return paginatedResponse(paged, total, page, limit)
   } catch (error) {
     return handleApiError(error)
   }

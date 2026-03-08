@@ -94,6 +94,10 @@ export default function InstitutionMatchesPage() {
         page: currentPage.toString(),
         limit: '10',
       })
+      if (sortField) {
+        params.set('sort', sortField)
+        params.set('sort_dir', sortDirection)
+      }
 
       const response = await fetch(`/api/institution/matches?${params}`)
       const result = await response.json()
@@ -111,7 +115,7 @@ export default function InstitutionMatchesPage() {
 
   useEffect(() => {
     fetchMatches()
-  }, [currentPage])
+  }, [currentPage, sortField, sortDirection])
 
   const fetchSelectOptions = async () => {
     try {
@@ -272,6 +276,7 @@ export default function InstitutionMatchesPage() {
   }
 
   const toggleSort = (field: 'project' | 'mentor') => {
+    setCurrentPage(1)
     if (sortField === field) {
       if (sortDirection === 'asc') {
         setSortDirection('desc')
@@ -285,17 +290,7 @@ export default function InstitutionMatchesPage() {
     }
   }
 
-  const sortedMatches = [...matches].sort((a, b) => {
-    if (!sortField) return 0
-    const aVal = sortField === 'project'
-      ? (a.project?.name || '').toLowerCase()
-      : (a.mentor?.name || '').toLowerCase()
-    const bVal = sortField === 'project'
-      ? (b.project?.name || '').toLowerCase()
-      : (b.mentor?.name || '').toLowerCase()
-    const cmp = aVal.localeCompare(bVal, 'ko')
-    return sortDirection === 'asc' ? cmp : -cmp
-  })
+  const sortedMatches = matches
 
   const SortIcon = ({ field }: { field: 'project' | 'mentor' }) => {
     if (sortField !== field) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />
