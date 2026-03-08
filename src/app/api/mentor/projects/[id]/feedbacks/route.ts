@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { requireMentorMatch } from '@/lib/auth/guards'
 import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
+import { createNotification } from '@/lib/notifications'
 import type { ProjectStage, FeedbackType } from '@/types/database'
 
 interface RouteContext {
@@ -124,6 +125,27 @@ export async function POST(
     if (error) {
       console.error('Mentor feedback insert error:', error.message)
       return errorResponse('피드백 작성에 실패했습니다.', 500)
+    }
+
+    // 프로젝트 소유자에게 알림 전송
+    const { data: project } = await supabase
+      .from('bi_projects')
+      .select('user_id, name')
+      .eq('id', id)
+      .single()
+
+    if (project && project.user_id !== user.id) {
+      const mentorName = user.name || user.email || '멘토'
+      const commentPreview = validated.comment.length > 50
+        ? validated.comment.slice(0, 50) + '...'
+        : validated.comment
+
+      await createNotification({
+        userId: project.user_id,
+        type: 'mentor_feedback',
+        title: `${mentorName}님이 ${project.name} 프로젝트에 "${commentPreview}" 의견을 작성했습니다.`,
+        link: `/projects/${id}`,
+      })
     }
 
     return successResponse(data, 201)
