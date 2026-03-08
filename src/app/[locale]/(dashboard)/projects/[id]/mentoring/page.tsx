@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { useParams } from 'next/navigation'
 import { FileText, MessageSquare, Plus, Send, Save, ChevronDown, ChevronUp, Download } from 'lucide-react'
+import { marked } from 'marked'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -678,14 +679,26 @@ export default function MentoringWorkstationPage() {
                               srcDoc={doc.content}
                               className="w-full rounded-lg border"
                               style={{ height: '600px' }}
-                              sandbox="allow-scripts"
+                              sandbox="allow-scripts allow-same-origin"
+                              title={doc.title}
+                            />
+                          ) : doc.type === 'ppt' && doc.content ? (
+                            /* PPT HTML - iframe으로 렌더링 */
+                            <iframe
+                              srcDoc={doc.content}
+                              className="w-full rounded-lg border"
+                              style={{ height: '600px' }}
+                              sandbox="allow-scripts allow-same-origin"
                               title={doc.title}
                             />
                           ) : doc.content ? (
-                            /* 텍스트 콘텐츠 (사업계획서, 피치 등) */
-                            <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-                              {doc.content}
-                            </div>
+                            /* 마크다운 콘텐츠 (사업계획서, 피치 등) */
+                            <div
+                              className="prose prose-sm dark:prose-invert max-w-none"
+                              dangerouslySetInnerHTML={{
+                                __html: marked.parse(doc.content, { async: false }) as string,
+                              }}
+                            />
                           ) : (
                             <p className="text-sm text-center text-muted-foreground">{t('mentor.workstation.noContent')}</p>
                           )}
