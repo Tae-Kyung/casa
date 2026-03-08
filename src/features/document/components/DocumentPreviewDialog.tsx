@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react'
 import { marked } from 'marked'
@@ -31,19 +31,6 @@ export function DocumentPreviewDialog({ doc, onClose }: DocumentPreviewDialogPro
   const isMultiImage = doc ? MULTI_IMAGE_DOC_TYPES.has(doc.type) : false
   const isImage = doc ? IMAGE_DOC_TYPES.has(doc.type) : false
   const isHtml = doc ? HTML_DOC_TYPES.has(doc.type) : false
-
-  // HTML 문서를 blob URL로 렌더링하여 부모 CSP 영향을 받지 않도록 함
-  const htmlBlobUrl = useMemo(() => {
-    if (!doc || !isHtml || !doc.content) return null
-    const blob = new Blob([doc.content], { type: 'text/html' })
-    return URL.createObjectURL(blob)
-  }, [doc?.id, doc?.content, isHtml])
-
-  useEffect(() => {
-    return () => {
-      if (htmlBlobUrl) URL.revokeObjectURL(htmlBlobUrl)
-    }
-  }, [htmlBlobUrl])
 
   return (
     <Dialog open={!!doc} onOpenChange={() => onClose()}>
@@ -135,9 +122,10 @@ export function DocumentPreviewDialog({ doc, onClose }: DocumentPreviewDialogPro
                 className="max-h-[65vh] rounded object-contain"
               />
             </div>
-          ) : doc && isHtml && htmlBlobUrl ? (
+          ) : doc && isHtml ? (
             <iframe
-              src={htmlBlobUrl}
+              srcDoc={doc.content || ''}
+              sandbox="allow-scripts allow-same-origin"
               className="h-[60vh] w-full rounded border"
               title={`${doc.title} Preview`}
             />
