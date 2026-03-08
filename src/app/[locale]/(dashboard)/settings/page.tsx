@@ -5,9 +5,10 @@ import { useTranslations } from 'next-intl'
 import { useTheme } from 'next-themes'
 import { useRouter, usePathname } from 'next/navigation'
 import { useLocale } from 'next-intl'
-import { Upload, FileText, Trash2, Check, AlertCircle } from 'lucide-react'
+import { Upload, FileText, Trash2, Check, AlertCircle, User, Lock, Building2, Eye, EyeOff } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -20,10 +21,34 @@ const localeLabels: Record<string, string> = {
   en: 'English',
 }
 
+const roleLabels: Record<string, string> = {
+  user: 'User',
+  mentor: 'Mentor',
+  institution: 'Institution',
+  admin: 'Admin',
+}
+
 interface MentorDocuments {
   resume: string | null
   bank_account: string | null
   privacy_consent: string | null
+}
+
+interface ProfileData {
+  id: string
+  name: string | null
+  email: string
+  role: string
+}
+
+interface InstitutionData {
+  id: string
+  name: string
+  region: string | null
+  type: string
+  address: string | null
+  contact_email: string | null
+  contact_phone: string | null
 }
 
 export default function SettingsPage() {
@@ -33,11 +58,61 @@ export default function SettingsPage() {
   const router = useRouter()
   const pathname = usePathname()
 
+  // Profile state
+  const [profile, setProfile] = useState<ProfileData | null>(null)
+  const [editName, setEditName] = useState('')
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+
+  // Password state
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [isSavingPassword, setIsSavingPassword] = useState(false)
+
+  // Institution state
+  const [institution, setInstitution] = useState<InstitutionData | null>(null)
+  const [editInstitution, setEditInstitution] = useState<Partial<InstitutionData>>({})
+  const [isSavingInstitution, setIsSavingInstitution] = useState(false)
+
+  // Mentor docs state
   const [isMentor, setIsMentor] = useState(false)
   const [documents, setDocuments] = useState<MentorDocuments | null>(null)
   const [isLoadingDocs, setIsLoadingDocs] = useState(false)
   const [uploadingType, setUploadingType] = useState<string | null>(null)
   const [deletingType, setDeletingType] = useState<string | null>(null)
+
+  // Fetch profile
+  useEffect(() => {
+    fetch('/api/settings/profile')
+      .then(res => res.json())
+      .then(result => {
+        if (result.success) {
+          setProfile(result.data)
+          setEditName(result.data.name || '')
+        }
+      })
+      .catch(() => toast.error(t('profileFetchFailed')))
+  }, [])
+
+  // Fetch institution info (only for institution role)
+  useEffect(() => {
+    if (profile?.role === 'institution') {
+      fetch('/api/settings/institution')
+        .then(res => res.json())
+        .then(result => {
+          if (result.success) {
+            setInstitution(result.data)
+            setEditInstitution({
+              name: result.data.name,
+              contact_email: result.data.contact_email,
+              contact_phone: result.data.contact_phone,
+              address: result.data.address,
+            })
+          }
+        })
+        .catch(() => toast.error(t('institutionFetchFailed')))
+    }
+  }, [profile?.role])
 
   const switchLocale = (newLocale: string) => {
     const segments = pathname.split('/')
@@ -46,6 +121,85 @@ export default function SettingsPage() {
     router.push(newPath)
   }
 
+  // Profile save
+  const handleSaveProfile = async () => {
+    if (!editName.trim()) return
+    setIsSavingProfile(true)
+    try {
+      const response = await fetch('/api/settings/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName.trim() }),
+      })
+      const result = await response.json()
+      if (result.success) {
+        setProfile(prev => prev ? { ...prev, name: editName.trim() } : prev)
+        toast.success(t('profileUpdated'))
+      } else {
+        toast.error(t('profileUpdateFailed'))
+      }
+    } catch {
+      toast.error(t('profileUpdateFailed'))
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
+
+  // Password change
+  const handleChangePassword = async () => {
+    if (newPassword.length < 8) {
+      toast.error(t('passwordTooShort'))
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error(t('passwordMismatch'))
+      return
+    }
+    setIsSavingPassword(true)
+    try {
+      const response = await fetch('/api/settings/password', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword }),
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('passwordChanged'))
+        setNewPassword('')
+        setConfirmPassword('')
+      } else {
+        toast.error(result.error || t('passwordChangeFailed'))
+      }
+    } catch {
+      toast.error(t('passwordChangeFailed'))
+    } finally {
+      setIsSavingPassword(false)
+    }
+  }
+
+  // Institution save
+  const handleSaveInstitution = async () => {
+    setIsSavingInstitution(true)
+    try {
+      const response = await fetch('/api/settings/institution', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editInstitution),
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('institutionUpdated'))
+      } else {
+        toast.error(t('institutionUpdateFailed'))
+      }
+    } catch {
+      toast.error(t('institutionUpdateFailed'))
+    } finally {
+      setIsSavingInstitution(false)
+    }
+  }
+
+  // Mentor docs
   const fetchMentorDocuments = useCallback(async () => {
     setIsLoadingDocs(true)
     try {
@@ -140,12 +294,154 @@ export default function SettingsPage() {
       <h1 className="text-3xl font-bold">{t('title')}</h1>
 
       <div className="grid gap-6">
+        {/* 프로필 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              {t('profile')}
+            </CardTitle>
+            <CardDescription>{t('profileDesc')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>{t('name')}</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  maxLength={100}
+                  placeholder={t('name')}
+                />
+                <Button
+                  onClick={handleSaveProfile}
+                  disabled={isSavingProfile || !editName.trim() || editName.trim() === (profile?.name || '')}
+                >
+                  {isSavingProfile ? <LoadingSpinner size="sm" /> : t('save')}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('email')}</Label>
+              <Input value={profile?.email || ''} disabled className="bg-muted" />
+              <p className="text-xs text-muted-foreground">{t('emailReadonly')}</p>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('role')}</Label>
+              <Input value={roleLabels[profile?.role || 'user'] || profile?.role || ''} disabled className="bg-muted" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 비밀번호 변경 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              {t('password')}
+            </CardTitle>
+            <CardDescription>{t('passwordDesc')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>{t('newPassword')}</Label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  minLength={8}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('confirmPassword')}</Label>
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+            <Button
+              onClick={handleChangePassword}
+              disabled={isSavingPassword || !newPassword || !confirmPassword}
+            >
+              {isSavingPassword ? <LoadingSpinner size="sm" className="mr-2" /> : null}
+              {t('changePassword')}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* 기관 정보 (기관 담당자만) */}
+        {profile?.role === 'institution' && institution && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                {t('institution')}
+              </CardTitle>
+              <CardDescription>{t('institutionDesc')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>{t('institutionName')}</Label>
+                <Input
+                  value={editInstitution.name || ''}
+                  onChange={(e) => setEditInstitution(prev => ({ ...prev, name: e.target.value }))}
+                  maxLength={200}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('contactEmail')}</Label>
+                <Input
+                  type="email"
+                  value={editInstitution.contact_email || ''}
+                  onChange={(e) => setEditInstitution(prev => ({ ...prev, contact_email: e.target.value || null }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('contactPhone')}</Label>
+                <Input
+                  value={editInstitution.contact_phone || ''}
+                  onChange={(e) => setEditInstitution(prev => ({ ...prev, contact_phone: e.target.value || null }))}
+                  maxLength={30}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('address')}</Label>
+                <Input
+                  value={editInstitution.address || ''}
+                  onChange={(e) => setEditInstitution(prev => ({ ...prev, address: e.target.value || null }))}
+                  maxLength={500}
+                />
+              </div>
+              <Button
+                onClick={handleSaveInstitution}
+                disabled={isSavingInstitution}
+              >
+                {isSavingInstitution ? <LoadingSpinner size="sm" className="mr-2" /> : null}
+                {t('save')}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 테마 */}
         <Card>
           <CardHeader>
             <CardTitle>{t('theme')}</CardTitle>
-            <CardDescription>
-              {t('themeDesc')}
-            </CardDescription>
+            <CardDescription>{t('themeDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             <RadioGroup
@@ -154,11 +450,7 @@ export default function SettingsPage() {
               className="grid grid-cols-3 gap-4"
             >
               <div>
-                <RadioGroupItem
-                  value="light"
-                  id="light"
-                  className="peer sr-only"
-                />
+                <RadioGroupItem value="light" id="light" className="peer sr-only" />
                 <Label
                   htmlFor="light"
                   className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
@@ -168,11 +460,7 @@ export default function SettingsPage() {
                 </Label>
               </div>
               <div>
-                <RadioGroupItem
-                  value="dark"
-                  id="dark"
-                  className="peer sr-only"
-                />
+                <RadioGroupItem value="dark" id="dark" className="peer sr-only" />
                 <Label
                   htmlFor="dark"
                   className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
@@ -182,11 +470,7 @@ export default function SettingsPage() {
                 </Label>
               </div>
               <div>
-                <RadioGroupItem
-                  value="system"
-                  id="system"
-                  className="peer sr-only"
-                />
+                <RadioGroupItem value="system" id="system" className="peer sr-only" />
                 <Label
                   htmlFor="system"
                   className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
@@ -199,12 +483,11 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* 언어 */}
         <Card>
           <CardHeader>
             <CardTitle>{t('language')}</CardTitle>
-            <CardDescription>
-              {t('languageDesc')}
-            </CardDescription>
+            <CardDescription>{t('languageDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             <RadioGroup
@@ -214,11 +497,7 @@ export default function SettingsPage() {
             >
               {locales.map((loc) => (
                 <div key={loc}>
-                  <RadioGroupItem
-                    value={loc}
-                    id={loc}
-                    className="peer sr-only"
-                  />
+                  <RadioGroupItem value={loc} id={loc} className="peer sr-only" />
                   <Label
                     htmlFor={loc}
                     className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
@@ -234,7 +513,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* 멘토 증빙 서류 섹션 */}
+        {/* 멘토 증빙 서류 */}
         {isMentor && (
           <Card>
             <CardHeader>
@@ -244,9 +523,7 @@ export default function SettingsPage() {
                     <FileText className="h-5 w-5" />
                     {t('mentorDocs.title')}
                   </CardTitle>
-                  <CardDescription>
-                    {t('mentorDocs.description')}
-                  </CardDescription>
+                  <CardDescription>{t('mentorDocs.description')}</CardDescription>
                 </div>
                 {allDocsUploaded ? (
                   <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
@@ -291,18 +568,12 @@ export default function SettingsPage() {
                               </Badge>
                             )}
                           </div>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {doc.description}
-                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">{doc.description}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           {url && (
                             <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => window.open(url, '_blank')}
-                              >
+                              <Button variant="ghost" size="sm" onClick={() => window.open(url, '_blank')}>
                                 <FileText className="mr-1 h-3 w-3" />
                                 {t('mentorDocs.view')}
                               </Button>
@@ -313,11 +584,7 @@ export default function SettingsPage() {
                                 onClick={() => handleDelete(doc.key)}
                                 disabled={isDeleting}
                               >
-                                {isDeleting ? (
-                                  <LoadingSpinner size="sm" />
-                                ) : (
-                                  <Trash2 className="h-3 w-3" />
-                                )}
+                                {isDeleting ? <LoadingSpinner size="sm" /> : <Trash2 className="h-3 w-3" />}
                               </Button>
                             </>
                           )}
@@ -338,9 +605,7 @@ export default function SettingsPage() {
                       </div>
                     )
                   })}
-                  <p className="text-xs text-muted-foreground">
-                    {t('mentorDocs.fileHint')}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t('mentorDocs.fileHint')}</p>
                 </div>
               )}
             </CardContent>
