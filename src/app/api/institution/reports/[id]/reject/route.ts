@@ -45,9 +45,10 @@ export async function POST(
       return errorResponse('보고서 반려에 실패했습니다.', 500)
     }
 
-    // Fetch mentor_id and project_id from the match
+    // Fetch mentor_id, project_id, project name from the match
     let mentorId: string | undefined
     let projectId: string | undefined
+    let projectName = '프로젝트'
     if (report?.match_id) {
       const { data: match } = await supabase
         .from('bi_mentor_matches')
@@ -56,12 +57,20 @@ export async function POST(
         .single()
       mentorId = match?.mentor_id
       projectId = match?.project_id
+      if (match?.project_id) {
+        const { data: project } = await supabase
+          .from('bi_projects')
+          .select('name')
+          .eq('id', match.project_id)
+          .single()
+        if (project?.name) projectName = project.name
+      }
     }
     if (mentorId) {
       await createNotification({
         userId: mentorId,
         type: 'report_rejected',
-        title: '보고서가 반려되었습니다.',
+        title: `[${projectName}] 보고서가 반려되었습니다.`,
         message: reason,
         link: projectId ? `/projects/${projectId}/mentoring/report` : '/dashboard',
       })

@@ -55,6 +55,17 @@ export async function POST(
       .single()
 
     if (match) {
+      // 프로젝트명 조회
+      let projectName = '프로젝트'
+      if (match.project_id) {
+        const { data: project } = await supabase
+          .from('bi_projects')
+          .select('name')
+          .eq('id', match.project_id)
+          .single()
+        if (project?.name) projectName = project.name
+      }
+
       // 모든 세션(draft, submitted)을 자동으로 acknowledged 처리
       await supabase
         .from('bi_mentoring_sessions')
@@ -117,8 +128,8 @@ export async function POST(
       await createNotification({
         userId: match.mentor_id,
         type: 'report_confirmed',
-        title: '보고서가 확인되었습니다.',
-        message: `멘토링 보고서가 승인되었습니다. 세션 ${totalSessions}회, 수당 ${amount.toLocaleString()}원이 등록되었습니다.`,
+        title: `[${projectName}] 보고서가 확인되었습니다.`,
+        message: `세션 ${totalSessions}회, 수당 ${amount.toLocaleString()}원이 등록되었습니다.`,
         link: match.project_id ? `/projects/${match.project_id}/mentoring/report` : '/dashboard',
       })
     }

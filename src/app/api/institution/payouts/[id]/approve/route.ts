@@ -45,13 +45,38 @@ export async function POST(
       userAgent,
     })
 
+    // 프로젝트명 조회 (payout → report → match → project)
+    let projectName = '프로젝트'
+    if (data.report_id) {
+      const { data: report } = await supabase
+        .from('bi_mentoring_reports')
+        .select('match_id')
+        .eq('id', data.report_id)
+        .single()
+      if (report?.match_id) {
+        const { data: match } = await supabase
+          .from('bi_mentor_matches')
+          .select('project_id')
+          .eq('id', report.match_id)
+          .single()
+        if (match?.project_id) {
+          const { data: project } = await supabase
+            .from('bi_projects')
+            .select('name')
+            .eq('id', match.project_id)
+            .single()
+          if (project?.name) projectName = project.name
+        }
+      }
+    }
+
     // 멘토에게 알림
     if (data.mentor_id) {
       await createNotification({
         userId: data.mentor_id,
         type: 'payout_approved',
-        title: '수당이 승인되었습니다.',
-        message: `세션 ${data.total_sessions || 0}회, 수당 ${(data.amount || 0).toLocaleString()}원이 승인되었습니다.`,
+        title: `[${projectName}] 멘토링 수당이 승인되었습니다.`,
+        message: `세션 ${data.total_sessions || 0}회, ${(data.amount || 0).toLocaleString()}원`,
         link: '/mentoring/payouts',
       })
     }
