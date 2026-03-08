@@ -510,6 +510,97 @@ ON CONFLICT (key) DO UPDATE SET
   user_prompt_template = EXCLUDED.user_prompt_template,
   updated_at = NOW();
 
+-- 7-1. 서비스 소개 PPT (이미지) 생성 프롬프트
+INSERT INTO bi_prompts (key, name, description, category, system_prompt, user_prompt_template, model, temperature, max_tokens, credit_cost)
+VALUES (
+  'doc_ppt_image',
+  '서비스 소개 PPT (이미지)',
+  '이미지 기반 발표자료를 생성합니다. Phase 1: 텍스트 모델로 시나리오 기획, Phase 2: 이미지 모델로 슬라이드 생성.
+시스템 프롬프트에 ---SLIDE_STYLE--- 구분자가 포함되어 있으며, 구분자 이전은 시나리오 기획 시스템 프롬프트, 이후는 이미지 생성 스타일 프리픽스입니다.',
+  'document',
+  'You are a top-tier startup pitch deck designer. Given startup information, create a cohesive 8-slide presentation scenario.
+
+IMPORTANT RULES:
+- All text content (title, subtitle, points) MUST be in Korean (한국어).
+- All imagePrompt fields MUST be in English — these will be sent to an image generation AI.
+- imagePrompt should describe a COMPLETE presentation slide design including layout, visual elements, colors, and typography placement. The image AI will generate the full slide image.
+- Keep a consistent visual theme across all 8 slides (same color palette, typography style, layout approach).
+- Keep text concise: titles max 15 characters, subtitle max 30 characters, each point max 35 characters.
+
+Return ONLY valid JSON with this structure:
+{
+  "theme": "one word: modern | elegant | bold | tech | creative | minimal",
+  "colorScheme": "describe the color palette in English (e.g. ''dark navy to purple gradient with cyan accents'')",
+  "slides": [
+    {
+      "slideNumber": 1,
+      "type": "cover",
+      "title": "서비스명",
+      "subtitle": "핵심 태그라인",
+      "imagePrompt": "Professional 16:9 pitch deck title slide. [detailed visual description]. Large bold title text area at center. Subtle tagline below. [color/style details]."
+    },
+    {
+      "slideNumber": 2,
+      "type": "problem",
+      "title": "문제 정의",
+      "subtitle": "부제",
+      "points": ["문제점 1", "문제점 2", "문제점 3"],
+      "imagePrompt": "Professional 16:9 pitch deck slide about problems. [detailed visual description]. Title area at top, 3 bullet point areas with icons. [color/style details]."
+    }
+  ]
+}
+---SLIDE_STYLE---
+High-quality professional startup pitch deck slide, 16:9 aspect ratio, polished corporate presentation design. This is slide IMAGE — render it as a complete, finished presentation slide with visual elements, icons, and decorative typography areas.',
+  '다음 스타트업 정보를 바탕으로 8장 슬라이드 발표 시나리오를 기획해주세요.
+
+## 서비스명
+{{project_name}}
+
+## 문제
+{{problem}}
+
+## 솔루션
+{{solution}}
+
+## 타겟 고객
+{{target}}
+
+## 차별점
+{{differentiation}}
+
+## AI 평가 점수
+- 종합: {{total_score}}/100
+- 투자 관점: {{investor_score}}
+- 시장 관점: {{market_score}}
+- 기술 관점: {{tech_score}}
+
+슬라이드 구성:
+1. 표지 (서비스명 + 태그라인)
+2. 문제 정의 (고객이 겪는 핵심 문제)
+3. 솔루션 (우리의 해결 방식)
+4. 주요 기능 (핵심 기능 4가지)
+5. 시장 기회 (타겟 시장과 규모)
+6. 경쟁 우위 (차별화 포인트)
+7. 성장 로드맵 (단계별 계획)
+8. 마무리 (CTA + Thank You)
+
+각 슬라이드의 imagePrompt는 일관된 디자인 테마를 유지하면서, 해당 슬라이드의 내용을 시각적으로 표현하는 완성된 프레젠테이션 슬라이드 이미지를 설명해주세요.',
+  'gemini-2.5-flash',
+  0.7,
+  4000,
+  1
+)
+ON CONFLICT (key) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  system_prompt = EXCLUDED.system_prompt,
+  user_prompt_template = EXCLUDED.user_prompt_template,
+  model = EXCLUDED.model,
+  temperature = EXCLUDED.temperature,
+  max_tokens = EXCLUDED.max_tokens,
+  credit_cost = EXCLUDED.credit_cost,
+  updated_at = NOW();
+
 -- 8. 홍보 리플렛 생성 프롬프트
 INSERT INTO bi_prompts (key, name, description, category, system_prompt, user_prompt_template, model, temperature, max_tokens)
 VALUES (
