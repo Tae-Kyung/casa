@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   FileText,
@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   Edit3,
   ArrowLeft,
-  Undo2
+  Undo2,
+  PlayCircle,
 } from 'lucide-react'
 import { exportToPdf, exportToDocx, exportToPptx, exportImagesToPdf } from '@/lib/utils/document-export'
 import { Button } from '@/components/ui/button'
@@ -121,10 +122,9 @@ export function DocumentStage({
       apiPath: 'startup-application',
     },
   }
-  const [generatingType, setGeneratingType] = useState<DocumentTypeKey | null>(null)
-  const [streamingContent, setStreamingContent] = useState('')
-  const [generatingModel, setGeneratingModel] = useState<string | null>(null)
-  const [streamingLength, setStreamingLength] = useState(0)
+  const [generatingTypes, setGeneratingTypes] = useState<Set<DocumentTypeKey>>(new Set())
+  const streamingMapRef = useRef<Map<DocumentTypeKey, { content: string; length: number; model: string | null }>>(new Map())
+  const [, forceUpdate] = useState(0)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [previewDoc, setPreviewDoc] = useState<DocType | null>(null)
 
@@ -149,10 +149,9 @@ export function DocumentStage({
   })
 
   const handleGenerate = useCallback(async (type: DocumentTypeKey) => {
-    setGeneratingType(type)
-    setStreamingContent('')
-    setGeneratingModel(null)
-    setStreamingLength(0)
+    setGeneratingTypes(prev => new Set(prev).add(type))
+    streamingMapRef.current.set(type, { content: '', length: 0, model: null })
+    forceUpdate(n => n + 1)
 
     try {
       const response = await fetch(
@@ -196,7 +195,6 @@ export function DocumentStage({
         buffer = blocks.pop() || ''
 
         for (const block of blocks) {
-          // "event: type\ndata: value" 형식 파싱
           const lines = block.split('\n')
           const eventLine = lines.find(l => l.startsWith('event: '))
           const dataLine = lines.find(l => l.startsWith('data: '))
@@ -205,7 +203,6 @@ export function DocumentStage({
           const eventType = eventLine ? eventLine.slice(7) : null
           const rawData = dataLine.slice(6)
 
-          // error 이벤트는 별도 처리 (내부 catch에 삼켜지지 않도록)
           if (eventType === 'error') {
             let errorMsg = rawData
             try { errorMsg = JSON.parse(rawData) } catch { /* raw string 사용 */ }
@@ -216,17 +213,23 @@ export function DocumentStage({
             const parsed = JSON.parse(rawData)
 
             if (eventType === 'start') {
-              // start 이벤트: 모델 정보 추출 (double-stringified JSON)
               try {
                 const inner = typeof parsed === 'string' ? JSON.parse(parsed) : parsed
-                if (inner.model) setGeneratingModel(inner.model)
+                if (inner.model) {
+                  const entry = streamingMapRef.current.get(type)
+                  if (entry) entry.model = inner.model
+                  forceUpdate(n => n + 1)
+                }
               } catch { /* ignore */ }
             } else if (eventType === 'text') {
-              // text 이벤트: 스트리밍 콘텐츠
               const text = typeof parsed === 'string' ? parsed : String(parsed)
               totalLength += text.length
-              setStreamingLength(totalLength)
-              setStreamingContent(prev => prev + text)
+              const entry = streamingMapRef.current.get(type)
+              if (entry) {
+                entry.content += text
+                entry.length = totalLength
+              }
+              forceUpdate(n => n + 1)
             } else if (eventType === 'complete') {
               toast.success(t('documentStage.generateComplete', { label: documentConfig[type].label }))
               onUpdate()
@@ -239,12 +242,21 @@ export function DocumentStage({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('documentStage.generateFailed'))
     } finally {
-      setGeneratingType(null)
-      setStreamingContent('')
-      setGeneratingModel(null)
-      setStreamingLength(0)
+      setGeneratingTypes(prev => {
+        const next = new Set(prev)
+        next.delete(type)
+        return next
+      })
+      streamingMapRef.current.delete(type)
+      forceUpdate(n => n + 1)
     }
   }, [projectId, onUpdate])
+
+  const handleGenerateAll = async () => {
+    const toGenerate = REQUIRED_DOC_TYPES.filter(type => !docByType[type])
+    if (toGenerate.length === 0) return
+    await Promise.allSettled(toGenerate.map(type => handleGenerate(type)))
+  }
 
   const handleConfirm = async (docId: string) => {
     setConfirmingId(docId)
@@ -451,10 +463,13 @@ export function DocumentStage({
   const requiredDocs = documents.filter(d => REQUIRED_DOC_TYPES.includes(d.type as DocumentTypeKey))
   const confirmedCount = requiredDocs.filter(d => d.is_confirmed).length
 
+  const isAnyGenerating = generatingTypes.size > 0
+
   const renderDocCard = (type: DocumentTypeKey, config: typeof documentConfig.business_plan) => {
     const Icon = config.icon
     const doc = docByType[type]
-    const isGenerating = generatingType === type
+    const isGenerating = generatingTypes.has(type)
+    const streamInfo = streamingMapRef.current.get(type)
     const isConfirming = confirmingId === doc?.id
     const isHtmlType = HTML_DOC_TYPES.has(type)
     const isImageType = IMAGE_DOC_TYPES.has(type)
@@ -482,9 +497,9 @@ export function DocumentStage({
               <div className="flex items-center gap-2">
                 <LoadingSpinner size="sm" />
                 <span className="text-sm">{t('documentStage.generating')}</span>
-                {generatingModel && (
+                {streamInfo?.model && (
                   <Badge variant="outline" className="text-xs">
-                    {generatingModel}
+                    {streamInfo.model}
                   </Badge>
                 )}
               </div>
@@ -493,15 +508,15 @@ export function DocumentStage({
                   {t('documentStage.generatingSlides')}
                 </p>
               )}
-              {!isJsonResponse && streamingLength > 0 && (
+              {!isJsonResponse && (streamInfo?.length ?? 0) > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {t('documentStage.generatingChars', { count: streamingLength.toLocaleString() })}
+                  {t('documentStage.generatingChars', { count: (streamInfo?.length ?? 0).toLocaleString() })}
                 </p>
               )}
-              {!isJsonResponse && streamingContent && (
+              {!isJsonResponse && streamInfo?.content && (
                 <div className="max-h-32 overflow-y-auto rounded bg-muted p-2">
                   <pre className="whitespace-pre-wrap text-xs">
-                    {streamingContent.slice(-500)}...
+                    {streamInfo.content.slice(-500)}...
                   </pre>
                 </div>
               )}
@@ -668,7 +683,7 @@ export function DocumentStage({
                         setReviseSection('')
                         setReviseInstruction('')
                       }}
-                      disabled={!!generatingType}
+                      disabled={isAnyGenerating}
                     >
                       <Edit3 className="mr-1 h-4 w-4" />
                       {t('documentStage.sectionRevise')}
@@ -678,7 +693,7 @@ export function DocumentStage({
                     size="sm"
                     variant="outline"
                     onClick={() => handleGenerate(type)}
-                    disabled={!!generatingType}
+                    disabled={isAnyGenerating}
                   >
                     <RefreshCw className="mr-1 h-4 w-4" />
                     {t('documentStage.regenerate')}
@@ -702,7 +717,7 @@ export function DocumentStage({
             <Button
               className="w-full"
               onClick={() => handleGenerate(type)}
-              disabled={!!generatingType}
+              disabled={isAnyGenerating}
             >
               {t('documentStage.generate', { label: config.label })}
             </Button>
@@ -764,9 +779,27 @@ export function DocumentStage({
 
       {/* 필수 문서 (Gate 3) */}
       <div>
-        <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
-          {t('documentStage.requiredDocs')}
-        </h3>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-muted-foreground">
+            {t('documentStage.requiredDocs')}
+          </h3>
+          {(() => {
+            const ungeneratedRequired = REQUIRED_DOC_TYPES.filter(type => !docByType[type])
+            if (ungeneratedRequired.length < 2) return null
+            return (
+              <Button
+                size="sm"
+                onClick={handleGenerateAll}
+                disabled={isAnyGenerating}
+              >
+                <PlayCircle className="mr-1 h-4 w-4" />
+                {isAnyGenerating
+                  ? t('documentStage.generatingCount', { count: generatingTypes.size })
+                  : t('documentStage.generateAll', { count: ungeneratedRequired.length })}
+              </Button>
+            )
+          })()}
+        </div>
         <div className="grid gap-4 md:grid-cols-3">
           {REQUIRED_DOC_TYPES.map(type => renderDocCard(type, documentConfig[type]))}
         </div>

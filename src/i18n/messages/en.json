@@ -332,7 +332,9 @@
     "goBackSuccess": "Returned to evaluation stage. Please proceed with re-evaluation.",
     "goBackFailed": "Failed to go back.",
     "reviseComplete": "Document revision completed",
-    "reviseFailed": "Document revision failed"
+    "reviseFailed": "Document revision failed",
+    "generateAll": "Generate All ({count})",
+    "generatingCount": "Generating {count}..."
   },
   "deploy": {
     "gate3Required": "Gate 3 Required",

@@ -332,7 +332,9 @@
     "goBackSuccess": "평가 단계로 돌아갔습니다. 재평가를 진행해주세요.",
     "goBackFailed": "되돌리기에 실패했습니다.",
     "reviseComplete": "문서 수정이 완료되었습니다",
-    "reviseFailed": "문서 수정에 실패했습니다"
+    "reviseFailed": "문서 수정에 실패했습니다",
+    "generateAll": "전체 생성 ({count}개)",
+    "generatingCount": "{count}개 생성 중..."
   },
   "deploy": {
     "gate3Required": "Gate 3 통과 필요",
