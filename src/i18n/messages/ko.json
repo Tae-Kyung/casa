@@ -251,7 +251,9 @@
     "solutionExperience": "해결 경험",
     "elevatorPitch": "30초 엘리베이터 피치",
     "storytellingScore": "스토리텔링 {score}점",
-    "storytellingFeedback": "피드백"
+    "storytellingFeedback": "피드백",
+    "cancelConfirm": "확정 해제",
+    "cancelConfirmFailed": "확정 해제에 실패했습니다."
   },
   "document": {
     "title": "문서 생성",

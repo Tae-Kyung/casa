@@ -251,7 +251,9 @@
     "solutionExperience": "Solution Experience",
     "elevatorPitch": "30-Second Elevator Pitch",
     "storytellingScore": "Storytelling {score}pts",
-    "storytellingFeedback": "Feedback"
+    "storytellingFeedback": "Feedback",
+    "cancelConfirm": "Undo Confirmation",
+    "cancelConfirmFailed": "Failed to undo confirmation."
   },
   "document": {
     "title": "Document Generation",

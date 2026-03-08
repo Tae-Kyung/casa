@@ -10,7 +10,8 @@ import {
   RefreshCw,
   AlertTriangle,
   MessageSquare,
-  Megaphone
+  Megaphone,
+  Undo2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -79,6 +80,7 @@ export function EvaluationStage({
   const t = useTranslations()
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
+  const [isCancellingConfirm, setIsCancellingConfirm] = useState(false)
   const [isRetrying, setIsRetrying] = useState(false)
   const [progress, setProgress] = useState<EvaluationProgress | null>(null)
   const [personaResults, setPersonaResults] = useState<Partial<Record<PersonaName, PersonaResult>>>({})
@@ -292,6 +294,28 @@ export function EvaluationStage({
       toast.error(t('toast.confirmFailed'))
     } finally {
       setIsConfirming(false)
+    }
+  }
+
+  const handleCancelConfirm = async () => {
+    setIsCancellingConfirm(true)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/evaluation/cancel-confirm`, {
+        method: 'POST',
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast.success(result.data.message)
+        onUpdate()
+      } else {
+        toast.error(result.error || t('evaluationStage.cancelConfirmFailed'))
+      }
+    } catch {
+      toast.error(t('evaluationStage.cancelConfirmFailed'))
+    } finally {
+      setIsCancellingConfirm(false)
     }
   }
 
@@ -705,18 +729,33 @@ export function EvaluationStage({
       {/* 확정 완료 메시지 */}
       {isConfirmed && (
         <Card className="border-green-500 bg-green-50 dark:bg-green-950">
-          <CardContent className="flex items-center gap-4 py-6">
-            <div className="rounded-full bg-green-500 p-2">
-              <Check className="h-6 w-6 text-white" />
+          <CardContent className="flex items-center justify-between py-6">
+            <div className="flex items-center gap-4">
+              <div className="rounded-full bg-green-500 p-2">
+                <Check className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-green-700 dark:text-green-300">
+                  {t('evaluationStage.gate2Passed')}
+                </h3>
+                <p className="text-sm text-green-600 dark:text-green-400">
+                  {t('evaluationStage.gate2PassedDesc')}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-green-700 dark:text-green-300">
-                {t('evaluationStage.gate2Passed')}
-              </h3>
-              <p className="text-sm text-green-600 dark:text-green-400">
-                {t('evaluationStage.gate2PassedDesc')}
-              </p>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancelConfirm}
+              disabled={isCancellingConfirm}
+            >
+              {isCancellingConfirm ? (
+                <LoadingSpinner size="sm" className="mr-2" />
+              ) : (
+                <Undo2 className="mr-2 h-4 w-4" />
+              )}
+              {t('evaluationStage.cancelConfirm')}
+            </Button>
           </CardContent>
         </Card>
       )}
