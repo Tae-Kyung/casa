@@ -42,6 +42,12 @@ export async function middleware(request: NextRequest) {
   const handleI18nRouting = createMiddleware(routing)
   const response = handleI18nRouting(request)
 
+  // next-intl이 locale prefix 리다이렉트를 반환하는 경우 (예: /credits → /ko/credits)
+  // 인증 체크 없이 바로 리다이렉트 (리다이렉트 대상에서 다시 미들웨어 실행됨)
+  if (response.headers.get('location')) {
+    return response
+  }
+
   // Supabase 세션 갱신 — 기존 i18n 응답에 쿠키만 추가
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
