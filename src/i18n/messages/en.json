@@ -1187,7 +1187,11 @@
     "sendFailed": "Failed to send message.",
     "replyFailed": "Failed to send reply.",
     "searchRecipient": "Search by name or email...",
-    "noUsersFound": "No users found."
+    "noUsersFound": "No users found.",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this message?",
+    "deleted": "Message deleted.",
+    "deleteFailed": "Failed to delete message."
   },
   "mentor": {
     "dashboard": {

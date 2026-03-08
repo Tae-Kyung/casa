@@ -8,6 +8,7 @@ import {
   Send,
   Inbox,
   SendHorizontal,
+  Trash2,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -242,6 +243,23 @@ export default function MessagesPage() {
     }
   }
 
+  const handleDeleteMessage = async (id: string) => {
+    try {
+      const response = await fetch(`/api/messages/${id}`, { method: 'DELETE' })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('messages.deleted'))
+        setDetailOpen(false)
+        setSelectedMessage(null)
+        fetchInbox(inboxPage)
+      } else {
+        toast.error(result.error || t('messages.deleteFailed'))
+      }
+    } catch {
+      toast.error(t('messages.deleteFailed'))
+    }
+  }
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
     return date.toLocaleDateString(undefined, {
@@ -473,7 +491,20 @@ export default function MessagesPage() {
                   placeholder={t('messages.replyPlaceholder')}
                   rows={3}
                 />
-                <div className="flex justify-end">
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
+                    onClick={() => {
+                      if (selectedMessage && confirm(t('messages.deleteConfirm'))) {
+                        handleDeleteMessage(selectedMessage.id)
+                      }
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {t('messages.delete')}
+                  </Button>
                   <Button onClick={handleReply} disabled={replySending || !replyBody.trim()} size="sm">
                     {replySending ? <LoadingSpinner size="sm" className="mr-2" /> : <Send className="mr-2 h-4 w-4" />}
                     {t('messages.sendReply')}
