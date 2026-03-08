@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { useParams, useRouter } from 'next/navigation'
-import { Save, Send, Undo2, Sparkles, Star, ArrowLeft, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react'
+import { Save, Send, Undo2, Sparkles, Star, ArrowLeft, MessageSquare, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,7 @@ interface MentoringReport {
   overall_rating: number
   ai_generated_report: string
   status: 'draft' | 'submitted' | 'confirmed' | 'rejected'
+  rejection_reason: string | null
   created_at: string
   updated_at: string
 }
@@ -285,6 +286,23 @@ export default function MentoringReportPage() {
         </div>
         {report && getStatusBadge(report.status)}
       </div>
+
+      {/* 반려 사유 */}
+      {report?.status === 'rejected' && report.rejection_reason && (
+        <Card className="border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950">
+          <CardContent className="flex items-start gap-3 pt-6">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+            <div>
+              <p className="text-sm font-semibold text-red-800 dark:text-red-300">
+                {t('mentor.reports.rejectionReasonTitle')}
+              </p>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-red-700 dark:text-red-400">
+                {report.rejection_reason}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 단계별 멘토 피드백 (보고서 기초 자료) */}
       <Card>

@@ -45,15 +45,17 @@ export async function POST(
       return errorResponse('보고서 반려에 실패했습니다.', 500)
     }
 
-    // Fetch mentor_id from the match (FK join not supported by generated types)
+    // Fetch mentor_id and project_id from the match
     let mentorId: string | undefined
+    let projectId: string | undefined
     if (report?.match_id) {
       const { data: match } = await supabase
         .from('bi_mentor_matches')
-        .select('mentor_id')
+        .select('mentor_id, project_id')
         .eq('id', report.match_id)
         .single()
       mentorId = match?.mentor_id
+      projectId = match?.project_id
     }
     if (mentorId) {
       await createNotification({
@@ -61,7 +63,7 @@ export async function POST(
         type: 'report_rejected',
         title: '보고서가 반려되었습니다.',
         message: reason,
-        link: '/dashboard',
+        link: projectId ? `/projects/${projectId}/mentoring/report` : '/dashboard',
       })
     }
 
