@@ -38,23 +38,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return errorResponse('기관을 찾을 수 없습니다.', 404)
     }
 
-    // 통계: 소속 멘토 수
-    const { count: mentorCount } = await supabase
-      .from('bi_mentor_institution_pool')
-      .select('*', { count: 'exact', head: true })
-      .eq('institution_id', id)
-
-    // 통계: 매핑된 프로젝트 수
-    const { count: projectCount } = await supabase
-      .from('bi_project_institution_maps')
-      .select('*', { count: 'exact', head: true })
-      .eq('institution_id', id)
-
-    // 통계: 소속 담당자 수
-    const { count: memberCount } = await supabase
-      .from('bi_institution_members')
-      .select('*', { count: 'exact', head: true })
-      .eq('institution_id', id)
+    // 통계 병렬 조회
+    const [{ count: mentorCount }, { count: projectCount }, { count: memberCount }] = await Promise.all([
+      supabase.from('bi_mentor_institution_pool').select('*', { count: 'exact', head: true }).eq('institution_id', id),
+      supabase.from('bi_project_institution_maps').select('*', { count: 'exact', head: true }).eq('institution_id', id),
+      supabase.from('bi_institution_members').select('*', { count: 'exact', head: true }).eq('institution_id', id),
+    ])
 
     return successResponse({
       ...institution,

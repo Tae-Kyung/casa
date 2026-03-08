@@ -31,17 +31,11 @@ export async function GET(request: NextRequest) {
         .eq('status', 'pending'),
     ])
 
-    // 전체 세션 수 (완료+미완료)
-    const { count: totalSessionCount } = await supabase
-      .from('bi_mentoring_sessions')
-      .select('*', { count: 'exact', head: true })
-
-    // 대기 수당 총액
-    const { data: pendingPayoutData } = await supabase
-      .from('bi_mentor_payouts')
-      .select('amount')
-      .eq('institution_id', institutionId)
-      .eq('status', 'pending')
+    // 전체 세션 수 + 대기 수당 총액 병렬 조회
+    const [{ count: totalSessionCount }, { data: pendingPayoutData }] = await Promise.all([
+      supabase.from('bi_mentoring_sessions').select('*', { count: 'exact', head: true }),
+      supabase.from('bi_mentor_payouts').select('amount').eq('institution_id', institutionId).eq('status', 'pending'),
+    ])
 
     const pendingTotalAmount = (pendingPayoutData || []).reduce((sum, p) => sum + (p.amount || 0), 0)
 

@@ -66,49 +66,48 @@ export async function GET(
       }
     }
 
-    // 아이디어 카드 조회
-    const { data: ideaCard } = await serviceClient
-      .from('bi_idea_cards')
-      .select('*')
-      .eq('project_id', id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    // 평가 조회
-    const { data: evaluation } = await serviceClient
-      .from('bi_evaluations')
-      .select('*')
-      .eq('project_id', id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    // 문서 조회
-    const { data: documents } = await serviceClient
-      .from('bi_documents')
-      .select('*')
-      .eq('project_id', id)
-      .order('created_at', { ascending: false })
-
-    // 창업자 트랙: 비즈니스 리뷰 조회
-    let businessReview = null
-    if (project.project_type === 'startup') {
-      const { data: review } = await serviceClient
-        .from('bi_business_reviews')
+    // 관련 데이터 병렬 조회
+    const [
+      { data: ideaCard },
+      { data: evaluation },
+      { data: documents },
+      { data: businessReview },
+    ] = await Promise.all([
+      serviceClient
+        .from('bi_idea_cards')
         .select('*')
         .eq('project_id', id)
+        .order('created_at', { ascending: false })
         .limit(1)
-        .single()
-      businessReview = review || null
-    }
+        .single(),
+      serviceClient
+        .from('bi_evaluations')
+        .select('*')
+        .eq('project_id', id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single(),
+      serviceClient
+        .from('bi_documents')
+        .select('*')
+        .eq('project_id', id)
+        .order('created_at', { ascending: false }),
+      project.project_type === 'startup'
+        ? serviceClient
+            .from('bi_business_reviews')
+            .select('*')
+            .eq('project_id', id)
+            .limit(1)
+            .single()
+        : Promise.resolve({ data: null }),
+    ])
 
     return successResponse({
       ...project,
       ideaCard: ideaCard || null,
       evaluation: evaluation || null,
       documents: documents || [],
-      businessReview,
+      businessReview: businessReview || null,
       mentorRole,
       isOwner,
     })

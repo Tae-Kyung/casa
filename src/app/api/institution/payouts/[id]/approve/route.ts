@@ -37,40 +37,26 @@ export async function POST(
       return errorResponse('수당 승인에 실패했습니다. (이미 처리되었거나 존재하지 않습니다)', 400)
     }
 
+    // 감사 로그 & 프로젝트명 조회 병렬 실행
     const { ipAddress, userAgent } = extractRequestInfo(request)
-    await logAudit({
-      userId: user.id,
-      action: 'payout_approve',
-      resourceType: 'payout',
-      resourceId: id,
-      ipAddress,
-      userAgent,
-    })
 
-    // 프로젝트명 조회 (payout → report → match → project)
-    let projectName = '프로젝트'
-    if (data.report_id) {
+    const getProjectName = async () => {
+      if (!data.report_id) return '프로젝트'
       const { data: report } = await supabase
-        .from('bi_mentoring_reports')
-        .select('match_id')
-        .eq('id', data.report_id)
-        .single()
-      if (report?.match_id) {
-        const { data: match } = await supabase
-          .from('bi_mentor_matches')
-          .select('project_id')
-          .eq('id', report.match_id)
-          .single()
-        if (match?.project_id) {
-          const { data: project } = await supabase
-            .from('bi_projects')
-            .select('name')
-            .eq('id', match.project_id)
-            .single()
-          if (project?.name) projectName = project.name
-        }
-      }
+        .from('bi_mentoring_reports').select('match_id').eq('id', data.report_id).single()
+      if (!report?.match_id) return '프로젝트'
+      const { data: match } = await supabase
+        .from('bi_mentor_matches').select('project_id').eq('id', report.match_id).single()
+      if (!match?.project_id) return '프로젝트'
+      const { data: project } = await supabase
+        .from('bi_projects').select('name').eq('id', match.project_id).single()
+      return project?.name || '프로젝트'
     }
+
+    const [, projectName] = await Promise.all([
+      logAudit({ userId: user.id, action: 'payout_approve', resourceType: 'payout', resourceId: id, ipAddress, userAgent }),
+      getProjectName(),
+    ])
 
     // 멘토에게 알림
     if (data.mentor_id) {

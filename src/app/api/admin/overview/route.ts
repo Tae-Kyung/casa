@@ -42,54 +42,56 @@ export async function GET(request: NextRequest) {
       totalApplicants = uniqueApplicantIds.size
     }
 
-    // 기관별 현황
+    // 기관별 현황 — 배치 쿼리로 N+1 제거
     const { data: institutions } = await supabase
       .from('bi_institutions')
       .select('id, name, region, is_approved')
       .eq('is_approved', true)
       .order('region')
 
-    const institutionStats = await Promise.all(
-      (institutions || []).map(async (inst) => {
-        // 기관의 프로젝트, 멘토 수
-        const [projectsRes, mentorsRes] = await Promise.all([
-          supabase
-            .from('bi_project_institution_maps')
-            .select('*', { count: 'exact', head: true })
-            .eq('institution_id', inst.id),
-          supabase
-            .from('bi_mentor_institution_pool')
-            .select('*', { count: 'exact', head: true })
-            .eq('institution_id', inst.id),
+    const instIds = (institutions || []).map((i) => i.id)
+
+    // 3개 배치 쿼리로 모든 기관 데이터 한번에 조회
+    const [allProjectMaps, allMentorPool, allMatches] = instIds.length > 0
+      ? await Promise.all([
+          supabase.from('bi_project_institution_maps').select('institution_id').in('institution_id', instIds),
+          supabase.from('bi_mentor_institution_pool').select('institution_id').in('institution_id', instIds),
+          supabase.from('bi_mentor_matches').select('id, institution_id').in('institution_id', instIds),
         ])
+      : [{ data: [] }, { data: [] }, { data: [] }]
 
-        // 기관 매칭 기반 완료 세션 수
-        const { data: matches } = await supabase
-          .from('bi_mentor_matches')
-          .select('id')
-          .eq('institution_id', inst.id)
+    // 매칭 기반 완료 세션 배치 조회
+    const allMatchIds = (allMatches.data || []).map((m) => m.id)
+    const { data: allAckedSessions } = allMatchIds.length > 0
+      ? await supabase
+          .from('bi_mentoring_sessions')
+          .select('match_id')
+          .in('match_id', allMatchIds)
+          .eq('status', 'acknowledged')
+      : { data: [] as { match_id: string }[] }
 
-        let completedSessions = 0
-        const matchIds = (matches || []).map((m) => m.id)
-        if (matchIds.length > 0) {
-          const { count } = await supabase
-            .from('bi_mentoring_sessions')
-            .select('*', { count: 'exact', head: true })
-            .in('match_id', matchIds)
-            .eq('status', 'acknowledged')
-          completedSessions = count || 0
-        }
+    // 기관별 매칭 ID 매핑
+    const matchByInst: Record<string, string[]> = {}
+    for (const m of allMatches.data || []) {
+      if (!matchByInst[m.institution_id]) matchByInst[m.institution_id] = []
+      matchByInst[m.institution_id].push(m.id)
+    }
 
-        return {
-          id: inst.id,
-          name: inst.name,
-          region: inst.region,
-          projects: projectsRes.count || 0,
-          mentors: mentorsRes.count || 0,
-          completedSessions,
-        }
-      })
-    )
+    // 매칭별 완료 세션 수 집계
+    const sessionByMatch: Record<string, number> = {}
+    for (const s of allAckedSessions || []) {
+      sessionByMatch[s.match_id] = (sessionByMatch[s.match_id] || 0) + 1
+    }
+
+    // 기관별 집계
+    const institutionStats = (institutions || []).map((inst) => {
+      const projects = (allProjectMaps.data || []).filter((m) => m.institution_id === inst.id).length
+      const mentors = (allMentorPool.data || []).filter((m) => m.institution_id === inst.id).length
+      const instMatchIds = matchByInst[inst.id] || []
+      const completedSessions = instMatchIds.reduce((sum, mid) => sum + (sessionByMatch[mid] || 0), 0)
+
+      return { id: inst.id, name: inst.name, region: inst.region, projects, mentors, completedSessions }
+    })
 
     // 승인 대기 통계 — bi_users 기준으로 멘토 대기 카운트 (bi_mentor_profiles과의 동기화 문제 방지)
     const [pendingMembersResult, pendingMentorsResult, pendingInstitutionsResult] = await Promise.all([

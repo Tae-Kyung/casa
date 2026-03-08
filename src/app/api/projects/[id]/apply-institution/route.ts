@@ -140,30 +140,22 @@ export async function GET(
       return successResponse([])
     }
 
-    // 기관 이름 별도 조회
+    // 기관/프로그램 병렬 조회
     const institutionIds = [...new Set(mappings.map((m) => m.institution_id))]
-    const { data: institutions, error: instError } = await supabase
-      .from('bi_institutions')
-      .select('id, name, region, type')
-      .in('id', institutionIds)
-
-    if (instError) throw instError
-
-    // 프로그램 이름 별도 조회
     const programIds = mappings
       .map((m) => m.program_id)
       .filter((pid): pid is string => pid !== null)
 
-    let programs: { id: string; name: string }[] = []
-    if (programIds.length > 0) {
-      const { data: programData, error: progError } = await supabase
-        .from('bi_programs')
-        .select('id, name')
-        .in('id', programIds)
+    const [{ data: institutions, error: instError }, programResult] = await Promise.all([
+      supabase.from('bi_institutions').select('id, name, region, type').in('id', institutionIds),
+      programIds.length > 0
+        ? supabase.from('bi_programs').select('id, name').in('id', programIds)
+        : Promise.resolve({ data: [] as { id: string; name: string }[], error: null }),
+    ])
 
-      if (progError) throw progError
-      programs = programData || []
-    }
+    if (instError) throw instError
+    if (programResult.error) throw programResult.error
+    const programs = programResult.data || []
 
     // 매핑에 기관/프로그램 이름 병합
     const enrichedMappings = mappings.map((mapping) => {
