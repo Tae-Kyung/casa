@@ -12,7 +12,7 @@ interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-const IMAGE_MODEL = 'gemini-2.5-flash-image-preview'
+const IMAGE_MODEL = 'gemini-3-pro-image-preview'
 
 /**
  * 시스템 프롬프트에서 시나리오 기획 프롬프트와 이미지 스타일 프리픽스를 분리
@@ -97,13 +97,16 @@ export async function POST(
     const supabase = await createClient()
     const imageUrls: string[] = []
     const orderedResults: { index: number; imageData: Buffer; mimeType: string }[] = []
+    const failedReasons: string[] = []
     const timestamp = Date.now()
 
     for (const r of imageResults) {
       if (r.status === 'fulfilled') {
         orderedResults.push(r.value)
       } else {
-        console.error('Failed to generate slide:', r.reason)
+        const reason = r.reason instanceof Error ? r.reason.message : String(r.reason)
+        failedReasons.push(reason)
+        console.error('Failed to generate slide:', reason)
       }
     }
 
@@ -141,7 +144,8 @@ export async function POST(
     }
 
     if (imageUrls.length === 0) {
-      return errorResponse('이미지 생성에 실패했습니다. 다시 시도해주세요.', 500)
+      const detail = failedReasons.length > 0 ? ` (${failedReasons[0]})` : ''
+      return errorResponse(`이미지 생성에 실패했습니다.${detail}`, 500)
     }
 
     // ─── Phase 3: DB 저장 ───
