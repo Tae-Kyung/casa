@@ -45,10 +45,11 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'none'",
+              "script-src 'unsafe-inline' https://cdn.tailwindcss.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
+              "connect-src 'self' https://cdn.tailwindcss.com",
               "frame-ancestors 'none'",
             ].join('; '),
           },
