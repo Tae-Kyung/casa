@@ -403,6 +403,71 @@ ON CONFLICT (key) DO UPDATE SET
   user_prompt_template = EXCLUDED.user_prompt_template,
   updated_at = NOW();
 
+-- 6-1. 랜딩페이지 생성 프롬프트
+INSERT INTO bi_prompts (key, name, description, category, system_prompt, user_prompt_template, model, temperature, max_tokens, credit_cost)
+VALUES (
+  'doc_landing',
+  '랜딩페이지',
+  '고객용 랜딩페이지를 완전한 HTML 문서로 생성합니다. Tailwind CSS CDN 사용, 반응형 디자인 적용.',
+  'document',
+  '당신은 스타트업 랜딩페이지 전문 디자이너입니다.
+주어진 사업 아이디어와 평가 결과를 바탕으로 매력적인 랜딩페이지 HTML을 생성합니다.
+
+규칙:
+1. 반드시 완전한 HTML 문서를 생성합니다 (<!DOCTYPE html>부터 </html>까지)
+2. Tailwind CSS CDN을 사용합니다
+3. 반응형 디자인을 적용합니다
+4. 한국어로 작성합니다
+5. 다음 섹션을 포함합니다:
+   - Hero 섹션 (문제 정의 + CTA)
+   - 솔루션 소개
+   - 주요 기능/특징
+   - 타겟 고객
+   - 차별화 포인트
+   - CTA (이메일 수집 폼)
+   - Footer
+
+HTML만 출력하고, 다른 설명은 포함하지 마세요.',
+  '다음 정보를 바탕으로 랜딩페이지 HTML을 생성해주세요:
+
+## 프로젝트명
+{{project_name}}
+
+## 해결하려는 문제
+{{problem}}
+
+## 솔루션
+{{solution}}
+
+## 타겟 고객
+{{target}}
+
+## 차별화 포인트
+{{differentiation}}
+
+## 평가 점수
+- 종합 점수: {{total_score}}점
+- 투자 관점: {{investor_score}}점
+- 시장 관점: {{market_score}}점
+- 기술 관점: {{tech_score}}점
+
+완전한 HTML 문서를 생성해주세요.',
+  'claude-sonnet-4-20250514',
+  0.7,
+  8000,
+  1
+)
+ON CONFLICT (key) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  system_prompt = EXCLUDED.system_prompt,
+  user_prompt_template = EXCLUDED.user_prompt_template,
+  model = EXCLUDED.model,
+  temperature = EXCLUDED.temperature,
+  max_tokens = EXCLUDED.max_tokens,
+  credit_cost = EXCLUDED.credit_cost,
+  updated_at = NOW();
+
 -- 7. 서비스 소개 PPT 생성 프롬프트 (템플릿 기반 JSON 생성)
 INSERT INTO bi_prompts (key, name, description, category, system_prompt, user_prompt_template, model, temperature, max_tokens)
 VALUES (

@@ -12,7 +12,7 @@ interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-const IMAGE_MODEL = 'gemini-3-pro-image-preview'
+const IMAGE_MODEL = 'gemini-2.5-flash-image-preview'
 
 /**
  * 시스템 프롬프트에서 시나리오 기획 프롬프트와 이미지 스타일 프리픽스를 분리

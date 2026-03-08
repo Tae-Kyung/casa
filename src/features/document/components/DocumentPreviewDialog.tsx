@@ -125,6 +125,7 @@ export function DocumentPreviewDialog({ doc, onClose }: DocumentPreviewDialogPro
           ) : doc && isHtml ? (
             <iframe
               srcDoc={doc.content || ''}
+              sandbox="allow-scripts"
               className="h-[60vh] w-full rounded border"
               title={`${doc.title} Preview`}
             />

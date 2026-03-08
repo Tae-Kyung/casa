@@ -28,7 +28,7 @@ export interface GeminiImageResponse {
 
 /**
  * Gemini 이미지 생성 API 호출
- * gemini-2.5-flash-image 또는 gemini-3-pro-image-preview 모델 사용
+ * gemini-2.5-flash-image-preview 모델 사용
  */
 export async function generateImage(
   systemPrompt: string,
