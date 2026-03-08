@@ -156,18 +156,24 @@ export async function GET() {
     )
     const topActivity = recentActivity.slice(0, 10)
 
-    // 크레딧 추이 (최근 7일)
+    // 크레딧 추이 (최근 7일, KST 기준)
+    const KST_OFFSET = 9 * 60 * 60 * 1000
+    const toKSTDateKey = (date: Date) => {
+      const kst = new Date(date.getTime() + KST_OFFSET)
+      return kst.toISOString().slice(0, 10)
+    }
+
     const now = new Date()
     const dailyMap: Record<string, { consumed: number; recharged: number }> = {}
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now)
       d.setDate(d.getDate() - i)
-      const key = d.toISOString().slice(0, 10)
+      const key = toKSTDateKey(d)
       dailyMap[key] = { consumed: 0, recharged: 0 }
     }
 
     for (const log of creditLogs) {
-      const dateKey = new Date(log.created_at).toISOString().slice(0, 10)
+      const dateKey = toKSTDateKey(new Date(log.created_at))
       if (dailyMap[dateKey]) {
         if (log.amount < 0) {
           dailyMap[dateKey].consumed += Math.abs(log.amount)
