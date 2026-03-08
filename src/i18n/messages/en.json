@@ -1237,7 +1237,13 @@
       "statusCancelled": "Cancelled",
       "statusCompleted": "Completed",
       "statusInProgress": "In Progress",
-      "statusReview": "Under Review"
+      "statusReview": "Under Review",
+      "reportNotCreated": "No Report",
+      "reportDraft": "Report Draft",
+      "reportSubmitted": "Report Submitted",
+      "reportConfirmed": "Report Confirmed",
+      "reportRejected": "Report Rejected",
+      "sessionCount": "{count} sessions"
     },
     "sessions": {
       "title": "Mentoring Sessions",

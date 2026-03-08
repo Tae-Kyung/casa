@@ -100,12 +100,64 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 프로젝트에 소유자 + 매칭 + 기관 정보 결합
+    // 매칭 ID 매핑 (보고서 조회용)
+    const matchIdMap: Record<string, string> = {}
+    for (const m of matchList) {
+      if (!matchIdMap[m.project_id]) {
+        // match_id를 별도 조회
+      }
+    }
+    // match_id 조회 (matchList에는 project_id만 있으므로)
+    const { data: matchDetails } = await supabase
+      .from('bi_mentor_matches')
+      .select('id, project_id')
+      .eq('mentor_id', user.id)
+      .in('project_id', projectIds)
+
+    const matchIdByProject: Record<string, string> = {}
+    for (const m of matchDetails || []) {
+      matchIdByProject[m.project_id] = m.id
+    }
+
+    // 보고서 상태 조회
+    const matchIdsForReports = Object.values(matchIdByProject)
+    let reportMap: Record<string, { status: string; session_count: number }> = {}
+    if (matchIdsForReports.length > 0) {
+      const { data: reports } = await supabase
+        .from('bi_mentoring_reports')
+        .select('match_id, status')
+        .in('match_id', matchIdsForReports)
+
+      // 세션 수 조회
+      const { data: sessionCounts } = await supabase
+        .from('bi_mentoring_sessions')
+        .select('match_id')
+        .in('match_id', matchIdsForReports)
+
+      const sessionCountMap: Record<string, number> = {}
+      for (const s of sessionCounts || []) {
+        sessionCountMap[s.match_id] = (sessionCountMap[s.match_id] || 0) + 1
+      }
+
+      for (const r of reports || []) {
+        // match_id → project_id 역매핑
+        const pid = Object.entries(matchIdByProject).find(([, mid]) => mid === r.match_id)?.[0]
+        if (pid) {
+          reportMap[pid] = {
+            status: r.status,
+            session_count: sessionCountMap[r.match_id] || 0,
+          }
+        }
+      }
+    }
+
+    // 프로젝트에 소유자 + 매칭 + 기관 + 보고서 정보 결합
     const enriched = projectRows.map((p) => ({
       ...p,
       user: userMap[p.user_id] || null,
       match: matchMap[p.id] || null,
       institution: institutionMap[p.id] || null,
+      report: reportMap[p.id] || null,
     }))
 
     return paginatedResponse(enriched, count || 0, page, limit)

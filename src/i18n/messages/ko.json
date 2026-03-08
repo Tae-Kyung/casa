@@ -1236,7 +1236,13 @@
       "statusCancelled": "취소됨",
       "statusCompleted": "완료됨",
       "statusInProgress": "진행중",
-      "statusReview": "검토중"
+      "statusReview": "검토중",
+      "reportNotCreated": "보고서 미작성",
+      "reportDraft": "보고서 작성중",
+      "reportSubmitted": "보고서 제출됨",
+      "reportConfirmed": "보고서 확인됨",
+      "reportRejected": "보고서 반려됨",
+      "sessionCount": "세션 {count}회"
     },
     "sessions": {
       "title": "멘토링 세션",
