@@ -186,7 +186,7 @@ export default function MentoringReportPage() {
         setReport(result.data)
         toast.success(t('mentor.reports.submitted'))
       } else {
-        toast.error(t('mentor.reports.submitFailed'))
+        toast.error(result.error || t('mentor.reports.submitFailed'))
       }
     } catch {
       toast.error(t('mentor.reports.submitFailed'))

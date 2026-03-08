@@ -49,6 +49,16 @@ export async function POST(
       return errorResponse('이미 제출된 보고서입니다. 현재 상태: ' + report.status, 400)
     }
 
+    // 세션이 최소 1개 이상 있어야 제출 가능
+    const { count: sessionCount } = await supabase
+      .from('bi_mentoring_sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('match_id', report.match_id)
+
+    if (!sessionCount || sessionCount === 0) {
+      return errorResponse('멘토링 세션이 없습니다. 세션을 1개 이상 생성한 후 보고서를 제출해 주세요.', 400)
+    }
+
     const { data: updatedReport, error: updateError } = await supabase
       .from('bi_mentoring_reports')
       .update({
