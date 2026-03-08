@@ -49,9 +49,10 @@ export async function POST(
     if (data.mentor_id) {
       await createNotification({
         userId: data.mentor_id,
-        type: 'payout',
+        type: 'payout_approved',
         title: '수당이 승인되었습니다.',
-        link: '/dashboard',
+        message: `세션 ${data.total_sessions || 0}회, 수당 ${(data.amount || 0).toLocaleString()}원이 승인되었습니다.`,
+        link: '/mentoring/payouts',
       })
     }
 

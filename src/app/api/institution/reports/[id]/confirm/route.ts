@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { requireInstitutionAccess } from '@/lib/auth/institution'
 import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
+import { createNotification } from '@/lib/notifications'
 
 // POST: 보고서 확인(승인) → 수당 레코드 자동 생성
 export async function POST(
@@ -49,7 +50,7 @@ export async function POST(
     // 매칭 정보 조회 (멘토, 기관, 프로그램)
     const { data: match } = await supabase
       .from('bi_mentor_matches')
-      .select('id, mentor_id, institution_id, program_id')
+      .select('id, mentor_id, institution_id, program_id, project_id')
       .eq('id', report.match_id)
       .single()
 
@@ -111,6 +112,15 @@ export async function POST(
           // 수당 생성 실패해도 보고서 확인은 완료된 상태이므로 경고만 반환
         }
       }
+
+      // 멘토에게 보고서 확인 알림
+      await createNotification({
+        userId: match.mentor_id,
+        type: 'report_confirmed',
+        title: '보고서가 확인되었습니다.',
+        message: `멘토링 보고서가 승인되었습니다. 세션 ${totalSessions}회, 수당 ${amount.toLocaleString()}원이 등록되었습니다.`,
+        link: match.project_id ? `/projects/${match.project_id}/mentoring/report` : '/dashboard',
+      })
     }
 
     return successResponse({ message: '보고서가 확인되었습니다.' })

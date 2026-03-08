@@ -14,7 +14,7 @@ interface Notification {
   id: string
   type: string
   title: string
-  body: string | null
+  message: string | null
   link: string | null
   is_read: boolean
   created_at: string
@@ -72,12 +72,16 @@ export default function NotificationsPage() {
   }
 
   const typeIcons: Record<string, string> = {
-    approval: '✓',
+    approval: '✅',
     match: '🔗',
-    message: '✉',
+    message: '✉️',
     payout: '💰',
+    payout_approved: '💰',
     report: '📄',
+    report_rejected: '❌',
+    report_confirmed: '✅',
     system: '🔔',
+    mentor_invite: '📩',
   }
 
   return (
@@ -138,13 +142,16 @@ export default function NotificationsPage() {
                         </Badge>
                       )}
                     </div>
-                    {notif.body && (
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                        {notif.body}
+                    {notif.message && (
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                        {notif.message}
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(notif.created_at).toLocaleDateString()}
+                      {new Date(notif.created_at).toLocaleString('ko-KR', {
+                        year: 'numeric', month: '2-digit', day: '2-digit',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
                     </p>
                   </div>
                 </CardContent>
