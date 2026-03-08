@@ -124,6 +124,15 @@ export async function POST(
         }
       }
 
+      // 매칭 상태를 completed로 변경
+      await supabase
+        .from('bi_mentor_matches')
+        .update({
+          status: 'completed',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', match.id)
+
       // 멘토에게 보고서 확인 알림
       await createNotification({
         userId: match.mentor_id,
