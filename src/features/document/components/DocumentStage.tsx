@@ -27,6 +27,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
+import { CreditCostBadge } from '@/components/common/credit-cost-badge'
+import { AiDisclaimer } from '@/components/common/ai-disclaimer'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -687,6 +689,7 @@ export function DocumentStage({
                     >
                       <Edit3 className="mr-1 h-4 w-4" />
                       {t('documentStage.sectionRevise')}
+                      <CreditCostBadge cost={1} className="ml-1" />
                     </Button>
                   )}
                   <Button
@@ -697,6 +700,7 @@ export function DocumentStage({
                   >
                     <RefreshCw className="mr-1 h-4 w-4" />
                     {t('documentStage.regenerate')}
+                    <CreditCostBadge cost={type === 'ppt_image' ? 5 : 1} className="ml-1" />
                   </Button>
                   <Button
                     size="sm"
@@ -720,6 +724,7 @@ export function DocumentStage({
               disabled={isAnyGenerating}
             >
               {t('documentStage.generate', { label: config.label })}
+              <CreditCostBadge cost={type === 'ppt_image' ? 5 : 1} className="ml-2" />
             </Button>
           )}
         </CardContent>
@@ -729,6 +734,7 @@ export function DocumentStage({
 
   return (
     <div className="space-y-6">
+      <AiDisclaimer />
       {/* 진행 상태 요약 */}
       <Card>
         <CardContent className="py-4">
@@ -820,6 +826,7 @@ export function DocumentStage({
                 {isAnyGenerating
                   ? t('documentStage.generatingCount', { count: generatingTypes.size })
                   : t('documentStage.generateAll', { count: ungeneratedRequired.length })}
+                <CreditCostBadge cost={ungeneratedRequired.length} className="ml-1" />
               </Button>
             )
           })()}

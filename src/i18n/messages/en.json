@@ -24,7 +24,8 @@
     "saving": "Saving...",
     "submitting": "Submitting...",
     "registering": "Registering...",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "aiDisclaimer": "AI-generated results are for reference only. Final decisions rest with the user."
   },
   "auth": {
     "login": "Login",

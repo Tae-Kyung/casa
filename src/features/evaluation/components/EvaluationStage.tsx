@@ -19,6 +19,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
+import { CreditCostBadge } from '@/components/common/credit-cost-badge'
+import { AiDisclaimer } from '@/components/common/ai-disclaimer'
 import {
   Dialog,
   DialogContent,
@@ -377,6 +379,7 @@ export function EvaluationStage({
 
   return (
     <div className="space-y-6">
+      <AiDisclaimer />
       {/* 평가 시작 버튼 */}
       {!hasResults && !isEvaluating && !isConfirmed && (
         <Card>
@@ -403,6 +406,7 @@ export function EvaluationStage({
             </div>
             <Button size="lg" onClick={handleEvaluate}>
               {t('evaluation.start')}
+              <CreditCostBadge cost={3} className="ml-2" />
             </Button>
           </CardContent>
         </Card>
@@ -694,6 +698,7 @@ export function EvaluationStage({
                   <>
                     <RefreshCw className="mr-2 h-4 w-4" />
                     {t('evaluationStage.retryEval')}
+                    <CreditCostBadge cost={3} className="ml-1" />
                   </>
                 )}
               </Button>

@@ -22,6 +22,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
+import { CreditCostBadge } from '@/components/common/credit-cost-badge'
+import { AiDisclaimer } from '@/components/common/ai-disclaimer'
 import { useSSE } from '@/hooks/useSSE'
 import { toast } from 'sonner'
 import { MarkdownContent } from '@/components/common/markdown-content'
@@ -298,6 +300,7 @@ export function StrategyStage({
 
   return (
     <div className="space-y-6">
+      <AiDisclaimer />
       {/* Start Strategy Generation Button */}
       {!strategyResult && !sse.isLoading && (
         <Card>
@@ -314,6 +317,7 @@ export function StrategyStage({
             <Button size="lg" onClick={handleGenerate}>
               <Compass className="mr-2 h-4 w-4" />
               {t('strategy.generateButton')}
+              <CreditCostBadge cost={1} className="ml-2" />
             </Button>
           </CardContent>
         </Card>
@@ -329,6 +333,7 @@ export function StrategyStage({
             <Button variant="outline" onClick={handleGenerate}>
               <RotateCcw className="mr-2 h-4 w-4" />
               {t('strategy.regenerateButton')}
+              <CreditCostBadge cost={1} className="ml-1" />
             </Button>
           </CardContent>
         </Card>

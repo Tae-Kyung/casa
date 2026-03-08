@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect, useRef, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { ArrowLeft, Trash2, FileText, Pencil, Check, X } from 'lucide-react'
@@ -112,6 +112,8 @@ export default function ProjectDetailPage({ params }: PageProps) {
   const isMentor = !!project?.mentorRole
   const isOwner = project?.isOwner ?? true
 
+  const isInitialLoadRef = useRef(true)
+
   const fetchProject = async () => {
     try {
       const response = await fetch(`/api/projects/${id}`)
@@ -119,7 +121,11 @@ export default function ProjectDetailPage({ params }: PageProps) {
 
       if (result.success) {
         setProject(result.data)
-        setActiveTab(stageToTab[result.data.current_stage] || 'idea')
+        // Only auto-switch tab on initial load, not on subsequent updates
+        if (isInitialLoadRef.current) {
+          setActiveTab(stageToTab[result.data.current_stage] || 'idea')
+          isInitialLoadRef.current = false
+        }
       } else {
         toast.error(t('toast.projectFetchFailed'))
         router.push('/projects')

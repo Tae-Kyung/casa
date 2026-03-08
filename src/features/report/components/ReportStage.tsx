@@ -27,6 +27,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
+import { CreditCostBadge } from '@/components/common/credit-cost-badge'
+import { AiDisclaimer } from '@/components/common/ai-disclaimer'
 import { useSSE } from '@/hooks/useSSE'
 import { toast } from 'sonner'
 import { MarkdownContent } from '@/components/common/markdown-content'
@@ -269,6 +271,7 @@ export function ReportStage({
 
   return (
     <div className="space-y-6">
+      <AiDisclaimer />
       {/* Project Summary */}
       <Card>
         <CardHeader>
@@ -347,6 +350,7 @@ export function ReportStage({
             <Button size="lg" onClick={handleGenerate}>
               <FileText className="mr-2 h-4 w-4" />
               {t('report.generateButton')}
+              <CreditCostBadge cost={1} className="ml-2" />
             </Button>
           </CardContent>
         </Card>
@@ -362,6 +366,7 @@ export function ReportStage({
             <Button variant="outline" onClick={handleGenerate}>
               <RotateCcw className="mr-2 h-4 w-4" />
               {t('report.regenerateButton')}
+              <CreditCostBadge cost={1} className="ml-1" />
             </Button>
           </CardContent>
         </Card>

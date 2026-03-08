@@ -29,6 +29,8 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
+import { CreditCostBadge } from '@/components/common/credit-cost-badge'
+import { AiDisclaimer } from '@/components/common/ai-disclaimer'
 import { useSSE } from '@/hooks/useSSE'
 import { toast } from 'sonner'
 import { MarkdownContent } from '@/components/common/markdown-content'
@@ -364,6 +366,7 @@ export function ReviewStage({
 
   return (
     <div className="space-y-6">
+      <AiDisclaimer />
       {/* Business Plan Form */}
       <Card>
         <CardHeader>
@@ -559,6 +562,7 @@ export function ReviewStage({
             <Button size="lg" onClick={handleAnalyze}>
               <Sparkles className="mr-2 h-4 w-4" />
               {t('review.analyzeButton')}
+              <CreditCostBadge cost={1} className="ml-2" />
             </Button>
           </CardContent>
         </Card>
@@ -574,6 +578,7 @@ export function ReviewStage({
             <Button variant="outline" onClick={handleAnalyze}>
               <RotateCcw className="mr-2 h-4 w-4" />
               {t('review.reanalyzeButton')}
+              <CreditCostBadge cost={1} className="ml-1" />
             </Button>
           </CardContent>
         </Card>

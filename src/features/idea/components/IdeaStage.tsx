@@ -11,6 +11,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
+import { CreditCostBadge } from '@/components/common/credit-cost-badge'
+import { AiDisclaimer } from '@/components/common/ai-disclaimer'
 import { useSSE } from '@/hooks/useSSE'
 import { toast } from 'sonner'
 import type { IdeaCard } from '@/types/database'
@@ -378,6 +380,7 @@ export function IdeaStage({
 
   return (
     <div className="space-y-6">
+      <AiDisclaimer />
       {/* 아이디어 입력/표시 */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -429,6 +432,7 @@ export function IdeaStage({
                       <>
                         <Wand2 className="mr-2 h-4 w-4" />
                         {t('idea.enhance')}
+                        <CreditCostBadge cost={1} className="ml-1" />
                       </>
                     )}
                   </Button>
@@ -489,6 +493,7 @@ export function IdeaStage({
               <>
                 <Sparkles className="mr-2 h-5 w-5" />
                 {expandedIdea ? t('idea.regenerate') : t('idea.expand')}
+                <CreditCostBadge cost={1} className="ml-1" />
               </>
             )}
           </Button>
@@ -706,6 +711,7 @@ export function IdeaStage({
                 <>
                   <Search className="mr-2 h-4 w-4" />
                   {t('idea.searchSimilar')}
+                  <CreditCostBadge cost={1} className="ml-1" />
                 </>
               )}
             </Button>
