@@ -1,12 +1,12 @@
 import { requireMentor } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, handleApiError } from '@/lib/utils/api-response'
 
 export async function GET() {
   try {
     await requireMentor()
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 병렬 쿼리 실행
     const [
