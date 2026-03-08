@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
         role: string
         matchStatus: string
         reportStatus: string | null
+        reportId: string | null
       }>
     }> = []
 
@@ -86,17 +87,17 @@ export async function GET(request: NextRequest) {
 
       // 멘토 이름, 보고서 상태 병렬 조회
       let mentorMap: Record<string, { name: string | null }> = {}
-      let reportMap: Record<string, string> = {}
+      let reportMap: Record<string, { status: string; id: string }> = {}
 
       if (mentorIds.length > 0) {
         const [{ data: mentorUsers }, { data: reports }] = await Promise.all([
           supabase.from('bi_users').select('id, name').in('id', mentorIds),
           matchIds.length > 0
-            ? supabase.from('bi_mentoring_reports').select('match_id, status').in('match_id', matchIds)
-            : Promise.resolve({ data: [] as { match_id: string; status: string }[] }),
+            ? supabase.from('bi_mentoring_reports').select('id, match_id, status').in('match_id', matchIds)
+            : Promise.resolve({ data: [] as { id: string; match_id: string; status: string }[] }),
         ])
         for (const u of mentorUsers || []) mentorMap[u.id] = { name: u.name }
-        for (const r of reports || []) reportMap[r.match_id] = r.status
+        for (const r of reports || []) reportMap[r.match_id] = { status: r.status, id: r.id }
       }
 
       // 프로젝트별 조합
@@ -109,7 +110,8 @@ export async function GET(request: NextRequest) {
             name: mentorMap[m.mentor_id]?.name || null,
             role: m.mentor_role,
             matchStatus: m.status,
-            reportStatus: reportMap[m.id] || null,
+            reportStatus: reportMap[m.id]?.status || null,
+            reportId: reportMap[m.id]?.id || null,
           })),
         }
       })

@@ -12,6 +12,7 @@ import {
   ArrowRight,
   FileText,
   CircleDot,
+  Eye,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,6 +26,7 @@ interface MentorOverview {
   role: string
   matchStatus: string
   reportStatus: string | null
+  reportId: string | null
 }
 
 interface ProjectOverview {
@@ -309,8 +311,15 @@ export default function InstitutionDashboardPage() {
                         <div className="col-span-2">
                           {matchStatusBadge(mentor.matchStatus)}
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-2 flex items-center gap-1.5">
                           {reportStatusBadge(mentor.reportStatus)}
+                          {mentor.reportStatus && mentor.reportId && (
+                            <Link href={`/institution/reports`}>
+                              <Button variant="ghost" size="sm" className="h-6 px-1.5">
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                            </Link>
+                          )}
                         </div>
                       </div>
                     ))
