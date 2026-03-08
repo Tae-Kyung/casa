@@ -1543,6 +1543,8 @@
     "projectCreateFailed": "프로젝트 생성에 실패했습니다.",
     "projectDeleted": "프로젝트가 삭제되었습니다.",
     "projectDeleteFailed": "프로젝트 삭제에 실패했습니다.",
+    "projectUpdated": "프로젝트가 업데이트되었습니다.",
+    "projectUpdateFailed": "프로젝트 업데이트에 실패했습니다.",
     "confirmFailed": "확정에 실패했습니다.",
     "saveFailed": "저장에 실패했습니다.",
     "retryFailed": "재평가 요청에 실패했습니다.",

@@ -46,7 +46,7 @@ export default async function DashboardLayoutWrapper({
   }
 
   return (
-    <DashboardLayout userRole={userRole} userName={userProfile?.name} institutionName={institutionName}>
+    <DashboardLayout userRole={userRole} userName={userProfile?.name} userEmail={user.email} institutionName={institutionName}>
       {children}
     </DashboardLayout>
   )

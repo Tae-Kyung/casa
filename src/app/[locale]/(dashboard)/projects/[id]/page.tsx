@@ -3,11 +3,12 @@
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Trash2, FileText } from 'lucide-react'
+import { ArrowLeft, Trash2, FileText, Pencil, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { StageProgress } from '@/components/common/progress-bar'
 import { ConfirmModal } from '@/components/common/confirm-modal'
@@ -100,6 +101,9 @@ export default function ProjectDetailPage({ params }: PageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('idea')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [isSavingName, setIsSavingName] = useState(false)
 
   const projectType: ProjectType = project?.project_type || 'pre_startup'
   const isStartup = projectType === 'startup'
@@ -154,6 +158,44 @@ export default function ProjectDetailPage({ params }: PageProps) {
     fetchProject()
   }
 
+  const handleStartRename = () => {
+    if (!project) return
+    setEditName(project.name)
+    setIsEditingName(true)
+  }
+
+  const handleCancelRename = () => {
+    setIsEditingName(false)
+    setEditName('')
+  }
+
+  const handleSaveRename = async () => {
+    if (!project || !editName.trim() || editName.trim() === project.name) {
+      setIsEditingName(false)
+      return
+    }
+    setIsSavingName(true)
+    try {
+      const response = await fetch(`/api/projects/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName.trim() }),
+      })
+      const result = await response.json()
+      if (result.success) {
+        setProject({ ...project, name: editName.trim() })
+        toast.success(t('toast.projectUpdated'))
+      } else {
+        toast.error(result.error || t('toast.projectUpdateFailed'))
+      }
+    } catch {
+      toast.error(t('toast.projectUpdateFailed'))
+    } finally {
+      setIsSavingName(false)
+      setIsEditingName(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
@@ -176,7 +218,37 @@ export default function ProjectDetailPage({ params }: PageProps) {
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold">{project.name}</h1>
+              {isEditingName ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveRename()
+                      if (e.key === 'Escape') handleCancelRename()
+                    }}
+                    className="h-9 text-lg font-bold"
+                    maxLength={200}
+                    autoFocus
+                    disabled={isSavingName}
+                  />
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSaveRename} disabled={isSavingName || !editName.trim()}>
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancelRename} disabled={isSavingName}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-3xl font-bold">{project.name}</h1>
+                  {isOwner && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={handleStartRename}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                </>
+              )}
               <Badge
                 variant="outline"
                 className={

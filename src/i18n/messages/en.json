@@ -1544,6 +1544,8 @@
     "projectCreateFailed": "Failed to create project.",
     "projectDeleted": "Project has been deleted.",
     "projectDeleteFailed": "Failed to delete project.",
+    "projectUpdated": "Project has been updated.",
+    "projectUpdateFailed": "Failed to update project.",
     "confirmFailed": "Failed to confirm.",
     "saveFailed": "Failed to save.",
     "retryFailed": "Failed to request re-evaluation.",

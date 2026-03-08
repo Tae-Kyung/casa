@@ -56,6 +56,7 @@ interface DashboardLayoutProps {
   children: React.ReactNode
   userRole?: 'user' | 'mentor' | 'institution' | 'admin'
   userName?: string | null
+  userEmail?: string | null
   institutionName?: string
 }
 
@@ -173,7 +174,7 @@ function getSectionsForRole(
   ]
 }
 
-export function DashboardLayout({ children, userRole = 'user', userName, institutionName }: DashboardLayoutProps) {
+export function DashboardLayout({ children, userRole = 'user', userName, userEmail, institutionName }: DashboardLayoutProps) {
   const t = useTranslations()
   const tAuth = useTranslations('auth')
   const tCredits = useTranslations('credits')
@@ -352,6 +353,17 @@ export function DashboardLayout({ children, userRole = 'user', userName, institu
               <div className="min-w-0">
                 <p className="text-sm font-medium truncate">{userName || t('nav.mentor')}</p>
                 <p className="text-xs text-muted-foreground truncate">{t('nav.mentor')}</p>
+              </div>
+            </div>
+          )}
+          {userRole === 'user' && (userName || userEmail) && (
+            <div className="mt-2 flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
+              <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{userName || userEmail}</p>
+                {userName && userEmail && (
+                  <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+                )}
               </div>
             </div>
           )}
