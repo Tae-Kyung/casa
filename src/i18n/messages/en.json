@@ -1495,7 +1495,14 @@
       "feedbackDeleteTitle": "Delete Feedback",
       "feedbackDeleteMessage": "Are you sure you want to delete this feedback? This action cannot be undone.",
       "noFeedbackYet": "No mentor feedback yet.",
-      "likeFailed": "Failed to like feedback."
+      "likeFailed": "Failed to like feedback.",
+      "reply": "Reply",
+      "writeReply": "Write Reply",
+      "replyPlaceholder": "Write a reply...",
+      "replySaved": "Reply posted",
+      "replyFailed": "Failed to post reply",
+      "replyDeleted": "Reply deleted",
+      "replyDeleteFailed": "Failed to delete reply"
     }
   },
   "applicant": {

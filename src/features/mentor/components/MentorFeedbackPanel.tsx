@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { MessageSquare, Send, Plus, ChevronDown, ChevronUp, Pencil, Trash2, ThumbsUp } from 'lucide-react'
+import { MessageSquare, Send, Plus, ChevronDown, ChevronUp, Pencil, Trash2, ThumbsUp, Reply } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,14 @@ import {
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { toast } from 'sonner'
 
+interface ReplyItem {
+  id: string
+  comment: string
+  created_at: string
+  author: { id: string; name: string | null; email: string } | null
+  is_mine: boolean
+}
+
 interface FeedbackItem {
   id: string
   stage: string
@@ -29,6 +37,7 @@ interface FeedbackItem {
   like_count: number
   is_liked: boolean
   feedback_source?: string
+  replies?: ReplyItem[]
 }
 
 interface MentorFeedbackPanelProps {
@@ -63,6 +72,11 @@ export function MentorFeedbackPanel({ projectId, stage, mentorRole, readOnly = f
 
   // Like state
   const [likingId, setLikingId] = useState<string | null>(null)
+
+  // Reply state
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [replyComment, setReplyComment] = useState('')
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false)
 
   const fetchFeedbacks = useCallback(async () => {
     setIsLoading(true)
@@ -176,6 +190,49 @@ export function MentorFeedbackPanel({ projectId, stage, mentorRole, readOnly = f
       toast.error(t('mentor.workstation.feedbackDeleteFailed'))
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  const handleSubmitReply = async (feedbackId: string) => {
+    if (!replyComment.trim()) return
+
+    setIsSubmittingReply(true)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/feedbacks/${feedbackId}/replies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment: replyComment }),
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('mentor.workstation.replySaved'))
+        setReplyingTo(null)
+        setReplyComment('')
+        await fetchFeedbacks()
+      } else {
+        toast.error(result.error || t('mentor.workstation.replyFailed'))
+      }
+    } catch {
+      toast.error(t('mentor.workstation.replyFailed'))
+    } finally {
+      setIsSubmittingReply(false)
+    }
+  }
+
+  const handleDeleteReply = async (replyId: string) => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/feedbacks/${replyId}`, {
+        method: 'DELETE',
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('mentor.workstation.replyDeleted'))
+        await fetchFeedbacks()
+      } else {
+        toast.error(result.error || t('mentor.workstation.replyDeleteFailed'))
+      }
+    } catch {
+      toast.error(t('mentor.workstation.replyDeleteFailed'))
     }
   }
 
@@ -370,7 +427,7 @@ export function MentorFeedbackPanel({ projectId, stage, mentorRole, readOnly = f
                           </div>
                         </div>
                         <p className="whitespace-pre-wrap text-sm">{fb.comment}</p>
-                        <div className="mt-2 flex items-center">
+                        <div className="mt-2 flex items-center gap-2">
                           <button
                             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors ${
                               fb.is_liked
@@ -383,7 +440,79 @@ export function MentorFeedbackPanel({ projectId, stage, mentorRole, readOnly = f
                             <ThumbsUp className={`h-3 w-3 ${fb.is_liked ? 'fill-current' : ''}`} />
                             {fb.like_count > 0 && <span>{fb.like_count}</span>}
                           </button>
+                          {replyingTo !== fb.id && (
+                            <button
+                              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                              onClick={() => { setReplyingTo(fb.id); setReplyComment('') }}
+                            >
+                              <Reply className="h-3 w-3" />
+                              {t('mentor.workstation.reply')}
+                            </button>
+                          )}
                         </div>
+
+                        {/* 답글 목록 */}
+                        {fb.replies && fb.replies.length > 0 && (
+                          <div className="mt-2 space-y-2 border-l-2 border-blue-200 pl-3 dark:border-blue-800">
+                            {fb.replies.map((reply) => (
+                              <div key={reply.id} className="rounded-md bg-muted/20 p-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span className="font-medium text-foreground">
+                                      {reply.author?.name || reply.author?.email || '-'}
+                                    </span>
+                                    <span>{new Date(reply.created_at).toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                                  </div>
+                                  {reply.is_mine && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+                                      onClick={() => handleDeleteReply(reply.id)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                                <p className="mt-1 whitespace-pre-wrap text-sm">{reply.comment}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* 답글 작성 폼 */}
+                        {replyingTo === fb.id && (
+                          <div className="mt-2 space-y-2 border-l-2 border-blue-200 pl-3 dark:border-blue-800">
+                            <Textarea
+                              value={replyComment}
+                              onChange={(e) => setReplyComment(e.target.value)}
+                              placeholder={t('mentor.workstation.replyPlaceholder')}
+                              rows={2}
+                              autoFocus
+                            />
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => { setReplyingTo(null); setReplyComment('') }}
+                              >
+                                {t('common.cancel')}
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handleSubmitReply(fb.id)}
+                                disabled={isSubmittingReply || !replyComment.trim()}
+                              >
+                                {isSubmittingReply ? (
+                                  <LoadingSpinner size="sm" className="mr-2" />
+                                ) : (
+                                  <Send className="mr-2 h-3 w-3" />
+                                )}
+                                {t('mentor.workstation.reply')}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

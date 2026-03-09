@@ -1494,7 +1494,14 @@
       "feedbackDeleteTitle": "의견 삭제",
       "feedbackDeleteMessage": "이 의견을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
       "noFeedbackYet": "아직 멘토 의견이 없습니다.",
-      "likeFailed": "좋아요 처리에 실패했습니다."
+      "likeFailed": "좋아요 처리에 실패했습니다.",
+      "reply": "답글",
+      "writeReply": "답글 작성",
+      "replyPlaceholder": "답글을 입력하세요...",
+      "replySaved": "답글이 등록되었습니다",
+      "replyFailed": "답글 등록에 실패했습니다",
+      "replyDeleted": "답글이 삭제되었습니다",
+      "replyDeleteFailed": "답글 삭제에 실패했습니다"
     }
   },
   "applicant": {

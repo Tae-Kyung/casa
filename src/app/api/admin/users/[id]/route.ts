@@ -49,6 +49,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         .select('id, role')
         .single()
       if (error) return errorResponse('역할 변경에 실패했습니다.', 500)
+
+      // 멘토로 변경 시 bi_mentor_profiles row 자동 생성
+      if (parsed.data.role === 'mentor') {
+        await supabase
+          .from('bi_mentor_profiles')
+          .upsert({ user_id: id }, { onConflict: 'user_id' })
+      }
+
       return successResponse(data)
     }
 
@@ -97,6 +105,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     // 이메일 변경 시 bi_users도 동기화
     if (parsed.data.email) {
       await supabase.from('bi_users').update({ email: parsed.data.email }).eq('id', id)
+    }
+
+    // 멘토로 변경 시 bi_mentor_profiles row 자동 생성
+    if (parsed.data.role === 'mentor') {
+      await supabase
+        .from('bi_mentor_profiles')
+        .upsert({ user_id: id }, { onConflict: 'user_id' })
     }
 
     // 업데이트된 사용자 반환

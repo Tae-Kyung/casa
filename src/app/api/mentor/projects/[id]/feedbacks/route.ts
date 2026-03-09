@@ -32,6 +32,7 @@ export async function GET(
       .select('*')
       .eq('project_id', id)
       .eq('feedback_source', 'mentoring')
+      .is('parent_id', null)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -81,12 +82,45 @@ export async function GET(
       }
     }
 
+    // 답글 조회
+    let repliesMap: Record<string, Array<Record<string, unknown>>> = {}
+    if (feedbackIds.length > 0) {
+      const { data: replies } = await supabase
+        .from('bi_feedbacks')
+        .select('*')
+        .in('parent_id', feedbackIds)
+        .order('created_at', { ascending: true })
+
+      // 답글 작성자 정보도 조회
+      const replyUserIds = [...new Set((replies || []).map((r) => r.user_id).filter((uid) => !userMap[uid]))]
+      if (replyUserIds.length > 0) {
+        const { data: replyUsers } = await supabase
+          .from('bi_users')
+          .select('id, name, email')
+          .in('id', replyUserIds)
+        for (const u of replyUsers || []) {
+          userMap[u.id] = u
+        }
+      }
+
+      for (const reply of replies || []) {
+        const parentId = reply.parent_id as string
+        if (!repliesMap[parentId]) repliesMap[parentId] = []
+        repliesMap[parentId].push({
+          ...reply,
+          author: userMap[reply.user_id] || null,
+          is_mine: reply.user_id === user.id,
+        })
+      }
+    }
+
     const enriched = feedbacks.map((f) => ({
       ...f,
       author: userMap[f.user_id] || null,
       is_mine: f.user_id === user.id,
       like_count: likeCountMap[f.id] || 0,
       is_liked: myLikeSet.has(f.id),
+      replies: repliesMap[f.id] || [],
     }))
 
     return successResponse(enriched)

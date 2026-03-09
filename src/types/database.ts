@@ -384,6 +384,7 @@ export interface Database {
           resolved_at: string | null
           session_id: string | null
           feedback_source: FeedbackSource
+          parent_id: string | null
           created_at: string
         }
         Insert: {
@@ -398,6 +399,7 @@ export interface Database {
           resolved_at?: string | null
           session_id?: string | null
           feedback_source?: FeedbackSource
+          parent_id?: string | null
           created_at?: string
         }
         Update: {
@@ -412,6 +414,7 @@ export interface Database {
           resolved_at?: string | null
           session_id?: string | null
           feedback_source?: FeedbackSource
+          parent_id?: string | null
           created_at?: string
         }
         Relationships: []
