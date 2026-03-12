@@ -38,13 +38,23 @@ export async function GET(request: NextRequest) {
     const rawSort = searchParams.get('sort')
     const sortField = rawSort === 'project' || rawSort === 'mentor' ? rawSort : null
     const sortDir = searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc'
+    const validStatuses = ['assigned', 'in_progress', 'review', 'completed', 'cancelled'] as const
+    type MatchStatus = typeof validStatuses[number]
+    const rawStatus = searchParams.get('status')
+    const statusFilter: MatchStatus | null = validStatuses.includes(rawStatus as MatchStatus) ? rawStatus as MatchStatus : null
 
     // 정렬이 project/mentor인 경우 전체를 가져와서 정렬 후 페이징
-    const { data, error } = await supabase
+    let query = supabase
       .from('bi_mentor_matches')
       .select('*')
       .in('project_id', projectIds)
       .order('created_at', { ascending: false })
+
+    if (statusFilter) {
+      query = query.eq('status', statusFilter)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       console.error('Matches query error:', error.message)

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { requireProjectOwner } from '@/lib/auth/guards'
 import { deductCredits } from '@/lib/credits'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { errorResponse, handleApiError } from '@/lib/utils/api-response'
 import { preparePrompt, getPromptCreditCost } from '@/lib/prompts'
 import { streamAI, getAvailableProviders, type AIProvider } from '@/lib/ai'
@@ -314,9 +315,9 @@ IMPORTANT: Write all string values in the SAME LANGUAGE as the user's idea input
             ...(results.tech?.recommendations || []),
           ]
 
-          // DB 저장
-          const supabaseUpdate = await createClient()
-          await supabaseUpdate
+          // DB 저장 (ReadableStream 내부에서는 cookies() 접근이 불안정하므로 serviceClient 사용)
+          const supabaseUpdate = createServiceClient()
+          const { error: updateError } = await supabaseUpdate
             .from('bi_evaluations')
             .update({
               investor_score: investorScore,
@@ -347,6 +348,10 @@ IMPORTANT: Write all string values in the SAME LANGUAGE as the user's idea input
               recommendations: recommendations.length > 0 ? recommendations : null,
             })
             .eq('id', evalId)
+
+          if (updateError) {
+            console.error('Evaluation DB update error:', updateError)
+          }
 
           await supabaseUpdate
             .from('bi_projects')

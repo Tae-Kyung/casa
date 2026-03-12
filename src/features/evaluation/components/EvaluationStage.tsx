@@ -97,7 +97,7 @@ export function EvaluationStage({
     if (!raw) return { feedback: '' }
     try {
       const parsed = JSON.parse(raw)
-      if (parsed && typeof parsed === 'object' && parsed.feedback) {
+      if (parsed && typeof parsed === 'object' && 'feedback' in parsed) {
         return {
           feedback: parsed.feedback,
           strengths: parsed.strengths,

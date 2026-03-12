@@ -62,9 +62,24 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Fetch mentor counts per project
+    const pagedProjectIds = projectRows.map((p) => p.id)
+    let mentorCountMap: Record<string, number> = {}
+    if (pagedProjectIds.length > 0) {
+      const { data: matchCounts } = await supabase
+        .from('bi_mentor_matches')
+        .select('project_id')
+        .in('project_id', pagedProjectIds)
+        .neq('status', 'cancelled')
+      for (const m of matchCounts || []) {
+        mentorCountMap[m.project_id] = (mentorCountMap[m.project_id] || 0) + 1
+      }
+    }
+
     const enriched = projectRows.map((p) => ({
       ...p,
       user: userMap[p.user_id] || null,
+      mentor_count: mentorCountMap[p.id] || 0,
     }))
 
     return paginatedResponse(enriched, count || 0, page, limit)

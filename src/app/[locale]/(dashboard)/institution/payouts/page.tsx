@@ -27,7 +27,9 @@ interface MentorDocument {
   resume_url: string | null
   bank_account_url: string | null
   privacy_consent_url: string | null
+  id_card_url: string | null
   documents_complete: boolean
+  documents_confirmed: boolean
 }
 
 interface Mentor {
@@ -230,6 +232,30 @@ export default function InstitutionPayoutsPage() {
       setIsLoadingDocs(false)
     }
   }, [t])
+
+  const [confirmingDocId, setConfirmingDocId] = useState<string | null>(null)
+
+  const handleConfirmDocs = async (mentorId: string, confirmed: boolean) => {
+    setConfirmingDocId(mentorId)
+    try {
+      const response = await fetch('/api/institution/mentors/documents/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mentor_id: mentorId, confirmed }),
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(confirmed ? t('institution.payouts.docConfirmed') : t('institution.payouts.docUnconfirmed'))
+        setMentorDocs((prev) => prev.map((d) => d.mentor_id === mentorId ? { ...d, documents_confirmed: confirmed } : d))
+      } else {
+        toast.error(result.error || t('institution.payouts.docConfirmFailed'))
+      }
+    } catch {
+      toast.error(t('institution.payouts.docConfirmFailed'))
+    } finally {
+      setConfirmingDocId(null)
+    }
+  }
 
   useEffect(() => {
     if (showMentorDocs && mentorDocs.length === 0) {
@@ -544,17 +570,18 @@ export default function InstitutionPayoutsPage() {
                   {t('institution.payouts.mentorDocsDesc')}
                 </p>
                 {/* Table header */}
-                <div className="hidden rounded-lg bg-muted px-4 py-2 text-xs font-medium text-muted-foreground md:grid md:grid-cols-6 md:gap-4">
+                <div className="hidden rounded-lg bg-muted px-4 py-2 text-xs font-medium text-muted-foreground md:grid md:grid-cols-7 md:gap-4">
                   <div className="col-span-2">{t('institution.payouts.mentorName')}</div>
                   <div>{t('institution.payouts.docResume')}</div>
                   <div>{t('institution.payouts.docBankAccount')}</div>
                   <div>{t('institution.payouts.docPrivacyConsent')}</div>
+                  <div>{t('institution.payouts.docIdCard')}</div>
                   <div>{t('institution.payouts.docStatus')}</div>
                 </div>
                 {mentorDocs.map((doc) => (
                   <div
                     key={doc.mentor_id}
-                    className="flex flex-col gap-2 rounded-lg border p-3 md:grid md:grid-cols-6 md:items-center md:gap-4"
+                    className="flex flex-col gap-2 rounded-lg border p-3 md:grid md:grid-cols-7 md:items-center md:gap-4"
                   >
                     <div className="col-span-2 min-w-0">
                       <p className="truncate text-sm font-medium">
@@ -595,13 +622,51 @@ export default function InstitutionPayoutsPage() {
                       )}
                     </div>
                     <div>
-                      {doc.documents_complete ? (
-                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                          <Check className="mr-1 h-3 w-3" />
-                          {t('institution.payouts.docComplete')}
-                        </Badge>
+                      {doc.id_card_url ? (
+                        <a href={doc.id_card_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400">
+                          <ExternalLink className="h-3 w-3" />
+                          {t('institution.payouts.download')}
+                        </a>
                       ) : (
-                        <Badge variant="outline" className="border-yellow-500 text-yellow-700 dark:text-yellow-300">
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      {doc.documents_complete ? (
+                        doc.documents_confirmed ? (
+                          <>
+                            <Badge className="bg-green-500 text-white text-xs">
+                              <Check className="mr-1 h-3 w-3" />
+                              {t('institution.payouts.docConfirmedBadge')}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-xs text-muted-foreground"
+                              disabled={confirmingDocId === doc.mentor_id}
+                              onClick={() => handleConfirmDocs(doc.mentor_id, false)}
+                            >
+                              {confirmingDocId === doc.mentor_id ? <LoadingSpinner size="sm" /> : t('institution.payouts.docUnconfirmBtn')}
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
+                              <Check className="mr-1 h-3 w-3" />
+                              {t('institution.payouts.docComplete')}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              disabled={confirmingDocId === doc.mentor_id}
+                              onClick={() => handleConfirmDocs(doc.mentor_id, true)}
+                            >
+                              {confirmingDocId === doc.mentor_id ? <LoadingSpinner size="sm" /> : t('institution.payouts.docConfirmBtn')}
+                            </Button>
+                          </>
+                        )
+                      ) : (
+                        <Badge variant="outline" className="border-yellow-500 text-yellow-700 dark:text-yellow-300 text-xs">
                           <AlertCircle className="mr-1 h-3 w-3" />
                           {t('institution.payouts.docIncomplete')}
                         </Badge>

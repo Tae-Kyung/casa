@@ -69,6 +69,7 @@ interface Project {
   status: string
   created_at: string
   user: ProjectUser
+  mentor_count: number
 }
 
 interface ReportDetail {
@@ -332,7 +333,8 @@ export default function InstitutionProjectsPage() {
           {/* Table Header (desktop) */}
           <div className="hidden rounded-lg bg-muted px-4 py-3 text-sm font-medium text-muted-foreground md:grid md:grid-cols-12 md:gap-4">
             <div className="col-span-1" />
-            <div className="col-span-3">{t('institution.projects.projectName')}</div>
+            <div className="col-span-2">{t('institution.projects.projectName')}</div>
+            <div className="col-span-1 text-center">{t('institution.projects.mentorCount')}</div>
             <div className="col-span-2">{t('institution.projects.userName')}</div>
             <div className="col-span-2">{t('institution.projects.stage')}</div>
             <div className="col-span-2">{t('institution.projects.status')}</div>
@@ -359,11 +361,16 @@ export default function InstitutionProjectsPage() {
                         <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       )}
                     </div>
-                    <div className="col-span-3 min-w-0">
+                    <div className="col-span-2 min-w-0">
                       <p className="truncate text-sm font-medium">{project.name}</p>
                       <p className="truncate text-xs text-muted-foreground md:hidden">
                         {project.user.name || project.user.email}
                       </p>
+                    </div>
+                    <div className="col-span-1 hidden md:flex items-center justify-center">
+                      <Badge variant="secondary" className="text-xs">
+                        {project.mentor_count}
+                      </Badge>
                     </div>
                     <div className="col-span-2 hidden min-w-0 md:block">
                       <p className="truncate text-sm">{project.user.name || '-'}</p>

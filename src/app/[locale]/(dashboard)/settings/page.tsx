@@ -12,6 +12,14 @@ import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { locales } from '@/i18n/routing'
 import { toast } from 'sonner'
@@ -32,6 +40,7 @@ interface MentorDocuments {
   resume: string | null
   bank_account: string | null
   privacy_consent: string | null
+  id_card: string | null
 }
 
 interface ProfileData {
@@ -80,6 +89,11 @@ export default function SettingsPage() {
   const [isLoadingDocs, setIsLoadingDocs] = useState(false)
   const [uploadingType, setUploadingType] = useState<string | null>(null)
   const [deletingType, setDeletingType] = useState<string | null>(null)
+
+  // Account deletion state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
 
   // Fetch profile
   useEffect(() => {
@@ -285,9 +299,28 @@ export default function SettingsPage() {
     { key: 'resume', label: t('mentorDocs.resume'), description: t('mentorDocs.resumeDesc') },
     { key: 'bank_account', label: t('mentorDocs.bankAccount'), description: t('mentorDocs.bankAccountDesc') },
     { key: 'privacy_consent', label: t('mentorDocs.privacyConsent'), description: t('mentorDocs.privacyConsentDesc') },
+    { key: 'id_card', label: t('mentorDocs.idCard'), description: t('mentorDocs.idCardDesc') },
   ]
 
-  const allDocsUploaded = documents?.resume && documents?.bank_account && documents?.privacy_consent
+  const allDocsUploaded = documents?.resume && documents?.bank_account && documents?.privacy_consent && documents?.id_card
+
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true)
+    try {
+      const response = await fetch('/api/settings/account', { method: 'DELETE' })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('deleteAccount.successMessage'))
+        router.push('/ko/login')
+      } else {
+        toast.error(result.error || t('deleteAccount.failed'))
+      }
+    } catch {
+      toast.error(t('deleteAccount.failed'))
+    } finally {
+      setIsDeletingAccount(false)
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -611,7 +644,64 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* 계정 탈퇴 (일반 사용자만) */}
+        {profile?.role === 'user' && (
+          <Card className="border-destructive/40">
+            <CardHeader>
+              <CardTitle className="text-destructive">{t('deleteAccount.title')}</CardTitle>
+              <CardDescription>{t('deleteAccount.description')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="destructive"
+                onClick={() => { setShowDeleteDialog(true); setDeleteConfirmText('') }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t('deleteAccount.button')}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* 계정 탈퇴 확인 다이얼로그 */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">{t('deleteAccount.confirmTitle')}</DialogTitle>
+            <DialogDescription>{t('deleteAccount.confirmDescription')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {t('deleteAccount.warningMessage')}
+            </p>
+            <div className="space-y-2">
+              <Label className="text-sm">
+                {t('deleteAccount.confirmInputLabel', { keyword: t('deleteAccount.confirmKeyword') })}
+              </Label>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder={t('deleteAccount.confirmKeyword')}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              {t('deleteAccount.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteConfirmText !== t('deleteAccount.confirmKeyword') || isDeletingAccount}
+              onClick={handleDeleteAccount}
+            >
+              {isDeletingAccount ? <LoadingSpinner size="sm" className="mr-2" /> : null}
+              {t('deleteAccount.confirmButton')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

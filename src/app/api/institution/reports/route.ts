@@ -93,11 +93,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch sessions for each match
-    let sessionMap: Record<string, Array<{ id: string; round_number: number; session_type: string; session_date: string | null; duration_minutes: number | null; status: string }>> = {}
+    let sessionMap: Record<string, Array<{ id: string; round_number: number; session_type: string; session_date: string | null; duration_minutes: number | null; status: string; comments: unknown }>> = {}
     if (reportMatchIds.length > 0) {
       const { data: sessions } = await supabase
         .from('bi_mentoring_sessions')
-        .select('id, match_id, round_number, session_type, session_date, duration_minutes, status')
+        .select('id, match_id, round_number, session_type, session_date, duration_minutes, status, comments')
         .in('match_id', reportMatchIds)
         .order('round_number', { ascending: true })
 
@@ -110,6 +110,7 @@ export async function GET(request: NextRequest) {
           session_date: s.session_date,
           duration_minutes: s.duration_minutes,
           status: s.status,
+          comments: s.comments,
         })
       }
     }

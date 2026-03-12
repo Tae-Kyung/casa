@@ -83,6 +83,7 @@ export default function InstitutionMatchesPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [sortField, setSortField] = useState<'project' | 'mentor' | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
 
   const fetchParams = useMemo(() => {
     const p: Record<string, string> = {}
@@ -90,8 +91,11 @@ export default function InstitutionMatchesPage() {
       p.sort = sortField
       p.sort_dir = sortDirection
     }
+    if (statusFilter && statusFilter !== 'all') {
+      p.status = statusFilter
+    }
     return p
-  }, [sortField, sortDirection])
+  }, [sortField, sortDirection, statusFilter])
 
   const {
     data: matches,
@@ -313,6 +317,24 @@ export default function InstitutionMatchesPage() {
           </Button>
         </div>
       </div>
+
+      {/* Status Filter */}
+      <Card>
+        <CardContent className="flex items-center gap-3 px-4 py-3">
+          <span className="text-sm text-muted-foreground shrink-0">{t('institution.matches.filterByStatus')}</span>
+          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1) }}>
+            <SelectTrigger className="h-8 w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('common.all')}</SelectItem>
+              {STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>{getStatusLabel(s)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
 
       {/* Match list */}
       {isLoading ? (
