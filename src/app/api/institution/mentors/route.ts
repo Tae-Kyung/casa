@@ -11,44 +11,60 @@ export async function GET(request: NextRequest) {
     const { institutionId } = await requireInstitutionAccess(searchParams.get('institution_id'))
     const { page, limit } = parsePagination(searchParams)
     const offset = (page - 1) * limit
+    const docsFilter = searchParams.get('docs_filter') // 'all' | 'incomplete' | 'confirmed'
 
     const supabase = createServiceClient()
 
-    const { count } = await supabase
-      .from('bi_mentor_institution_pool')
-      .select('*', { count: 'exact', head: true })
-      .eq('institution_id', institutionId)
-
-    const { data, error } = await supabase
+    // 전체 풀 조회 (필터링을 위해 페이징 전에 전체 조회)
+    const { data: allPoolData } = await supabase
       .from('bi_mentor_institution_pool')
       .select('*')
       .eq('institution_id', institutionId)
       .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
 
-    if (error) {
-      console.error('Institution mentors error:', error.message)
-    }
-
-    // Fetch mentor user info and profiles separately (FK join not supported by generated types)
-    const pool = data || []
-    const mentorIds = [...new Set(pool.map((p) => p.mentor_id))]
+    const allPool = allPoolData || []
+    const allMentorIds = [...new Set(allPool.map((p) => p.mentor_id))]
 
     let mentorMap: Record<string, { id: string; name: string | null; email: string }> = {}
-    let profileMap: Record<string, { specialty: string[]; is_approved: boolean; is_active: boolean }> = {}
+    let profileMap: Record<string, { specialty: string[]; is_approved: boolean; is_active: boolean; documents_complete: boolean; documents_confirmed: boolean }> = {}
 
-    if (mentorIds.length > 0) {
-      const [{ data: mentors }, { data: profiles }] = await Promise.all([
-        supabase.from('bi_users').select('id, name, email').in('id', mentorIds),
-        supabase.from('bi_mentor_profiles').select('user_id, specialty, is_approved, is_active').in('user_id', mentorIds),
+    if (allMentorIds.length > 0) {
+      const [{ data: mentors }, { data: profilesRaw }] = await Promise.all([
+        supabase.from('bi_users').select('id, name, email').in('id', allMentorIds),
+        supabase.from('bi_mentor_profiles').select('*').in('user_id', allMentorIds),
       ])
       for (const m of mentors || []) {
         mentorMap[m.id] = m
       }
-      for (const p of profiles || []) {
-        profileMap[p.user_id] = { specialty: p.specialty, is_approved: p.is_approved, is_active: p.is_active }
+      for (const pAny of (profilesRaw || []) as unknown as Record<string, unknown>[]) {
+        const documents_complete = !!(pAny.resume_url && pAny.bank_account_url && pAny.privacy_consent_url && pAny.id_card_url)
+        profileMap[pAny.user_id as string] = {
+          specialty: (pAny.specialty as string[]) || [],
+          is_approved: !!(pAny.is_approved),
+          is_active: !!(pAny.is_active),
+          documents_complete,
+          documents_confirmed: !!(pAny.documents_confirmed),
+        }
       }
     }
+
+    // docs_filter 적용
+    let filteredPool = allPool
+    if (docsFilter === 'incomplete') {
+      filteredPool = allPool.filter((p) => {
+        const profile = profileMap[p.mentor_id]
+        return !profile || !profile.documents_complete
+      })
+    } else if (docsFilter === 'confirmed') {
+      filteredPool = allPool.filter((p) => {
+        const profile = profileMap[p.mentor_id]
+        return profile && profile.documents_confirmed
+      })
+    }
+
+    const total = filteredPool.length
+    const pool = filteredPool.slice(offset, offset + limit)
+    const mentorIds = [...new Set(pool.map((p) => p.mentor_id))]
 
     // 멘토별 활동 통계: 매칭, 세션, 보고서
     let activityMap: Record<string, {
@@ -128,7 +144,7 @@ export async function GET(request: NextRequest) {
       activity: activityMap[p.mentor_id] || { projects: [], totalProjects: 0, totalSessions: 0, completedSessions: 0, reportsSubmitted: 0, reportsTotal: 0 },
     }))
 
-    return paginatedResponse(enriched, count || 0, page, limit)
+    return paginatedResponse(enriched, total, page, limit)
   } catch (error) {
     return handleApiError(error)
   }

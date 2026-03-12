@@ -3,7 +3,7 @@ import { requireMentor } from '@/lib/auth/guards'
 import { createServiceClient } from '@/lib/supabase/service'
 import { successResponse, errorResponse, handleApiError } from '@/lib/utils/api-response'
 
-const ALLOWED_TYPES = ['resume', 'bank_account', 'privacy_consent'] as const
+const ALLOWED_TYPES = ['resume', 'bank_account', 'privacy_consent', 'id_card'] as const
 type DocType = (typeof ALLOWED_TYPES)[number]
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -27,6 +27,7 @@ export async function GET() {
       resume: (p?.resume_url as string) || null,
       bank_account: (p?.bank_account_url as string) || null,
       privacy_consent: (p?.privacy_consent_url as string) || null,
+      id_card: (p?.id_card_url as string) || null,
     })
   } catch (error) {
     return handleApiError(error)
@@ -37,6 +38,18 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const user = await requireMentor()
+
+    // 서류가 확정된 경우 업로드 차단
+    const supabaseCheck = createServiceClient()
+    const { data: profileCheck } = await supabaseCheck
+      .from('bi_mentor_profiles')
+      .select('documents_confirmed')
+      .eq('user_id', user.id)
+      .single()
+    const profileCheckRaw = profileCheck as Record<string, unknown> | null
+    if (profileCheckRaw?.documents_confirmed) {
+      return errorResponse('서류가 확정되어 더 이상 업로드할 수 없습니다.', 403)
+    }
 
     const formData = await request.formData()
     const file = formData.get('file') as File | null
@@ -99,6 +112,7 @@ export async function POST(request: NextRequest) {
       resume: 'resume_url',
       bank_account: 'bank_account_url',
       privacy_consent: 'privacy_consent_url',
+      id_card: 'id_card_url',
     }
 
     const { error: updateError } = await supabase
@@ -133,10 +147,22 @@ export async function DELETE(request: NextRequest) {
 
     const supabase = createServiceClient()
 
+    // 서류가 확정된 경우 삭제 차단
+    const { data: profileForDelete } = await supabase
+      .from('bi_mentor_profiles')
+      .select('documents_confirmed')
+      .eq('user_id', user.id)
+      .single()
+    const profileForDeleteRaw = profileForDelete as Record<string, unknown> | null
+    if (profileForDeleteRaw?.documents_confirmed) {
+      return errorResponse('서류가 확정되어 더 이상 삭제할 수 없습니다.', 403)
+    }
+
     const columnMap: Record<string, string> = {
       resume: 'resume_url',
       bank_account: 'bank_account_url',
       privacy_consent: 'privacy_consent_url',
+      id_card: 'id_card_url',
     }
 
     const { error } = await supabase

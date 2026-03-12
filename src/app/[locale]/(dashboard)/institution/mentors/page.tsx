@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { UserPlus, RefreshCw, User2, Search, ChevronDown, ChevronRight, FolderKanban, CalendarCheck, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -59,12 +59,22 @@ interface MentorItem {
     specialty: string | string[] | null
     is_approved: boolean
     is_active: boolean
-  }
+    documents_complete: boolean
+    documents_confirmed: boolean
+  } | null
   activity: MentorActivity
 }
 
 export default function InstitutionMentorsPage() {
   const t = useTranslations()
+
+  const [docsFilter, setDocsFilter] = useState<'all' | 'incomplete' | 'confirmed'>('all')
+
+  const fetchParams = useMemo(() => {
+    const p: Record<string, string> = {}
+    if (docsFilter !== 'all') p.docs_filter = docsFilter
+    return p
+  }, [docsFilter])
 
   const {
     data: mentors,
@@ -75,6 +85,7 @@ export default function InstitutionMentorsPage() {
     refetch,
   } = usePaginatedFetch<MentorItem>({
     url: '/api/institution/mentors',
+    params: fetchParams,
   })
 
   // Invite modal state
@@ -258,6 +269,23 @@ export default function InstitutionMentorsPage() {
         </div>
       </div>
 
+      {/* Docs Filter */}
+      <Card>
+        <CardContent className="flex items-center gap-3 px-4 py-3">
+          <span className="text-sm text-muted-foreground shrink-0">{t('institution.mentors.docsFilter')}</span>
+          <Select value={docsFilter} onValueChange={(v) => { setDocsFilter(v as 'all' | 'incomplete' | 'confirmed'); setCurrentPage(1) }}>
+            <SelectTrigger className="h-8 w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('common.all')}</SelectItem>
+              <SelectItem value="incomplete">{t('institution.mentors.docsFilterIncomplete')}</SelectItem>
+              <SelectItem value="confirmed">{t('institution.mentors.docsFilterConfirmed')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
       {/* Mentor List */}
       {isLoading ? (
         <div className="flex justify-center py-12">
@@ -274,7 +302,7 @@ export default function InstitutionMentorsPage() {
         <>
           <div className="space-y-3">
             {mentors.map((item) => {
-              const specialties = getSpecialtyArray(item.profile?.specialty)
+              const specialties = getSpecialtyArray(item.profile?.specialty ?? null)
               const isExpanded = expandedIds.has(item.mentor_id)
               const act = item.activity
 
@@ -323,6 +351,15 @@ export default function InstitutionMentorsPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
+                        {item.profile?.documents_confirmed ? (
+                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
+                            {t('institution.mentors.docsConfirmed')}
+                          </Badge>
+                        ) : (!item.profile || !item.profile.documents_complete) ? (
+                          <Badge variant="outline" className="border-orange-400 text-orange-600 dark:border-orange-500 dark:text-orange-400 text-xs">
+                            {t('institution.mentors.docsIncomplete')}
+                          </Badge>
+                        ) : null}
                         {item.status === 'active' ? (
                           <Badge className="bg-green-500 text-white">{t('institution.mentors.active')}</Badge>
                         ) : (

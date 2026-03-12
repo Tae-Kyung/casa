@@ -56,7 +56,9 @@ export async function GET(request: NextRequest) {
         resume_url: (p?.resume_url as string) || null,
         bank_account_url: (p?.bank_account_url as string) || null,
         privacy_consent_url: (p?.privacy_consent_url as string) || null,
-        documents_complete: !!(p?.resume_url && p?.bank_account_url && p?.privacy_consent_url),
+        id_card_url: (p?.id_card_url as string) || null,
+        documents_complete: !!(p?.resume_url && p?.bank_account_url && p?.privacy_consent_url && p?.id_card_url),
+        documents_confirmed: !!(p?.documents_confirmed),
       }
     })
 

@@ -58,11 +58,15 @@ interface SessionInfo {
   session_date: string | null
   duration_minutes: number | null
   status: string
+  comments: unknown
 }
 
 interface MentoringReport {
   id: string
   match_id: string
+  mentor_opinion: string | null
+  strengths: string | null
+  improvements: string | null
   overall_rating: number | null
   ai_generated_report: string | null
   ai_summary: string | null
@@ -461,47 +465,89 @@ export default function InstitutionReportsPage() {
                 <div className="space-y-2">
                   <p className="text-sm font-medium">{t('institution.reports.sessionsTitle')}</p>
                   <div className="space-y-1">
-                    {selectedReport.sessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="font-medium">
-                            {session.round_number}{t('institution.reports.sessionRound')}
-                          </span>
-                          <Badge variant="outline" className="text-xs">{session.session_type}</Badge>
-                          {session.session_date && (
-                            <span className="text-muted-foreground">
-                              {new Date(session.session_date).toLocaleDateString()}
-                            </span>
+                    {selectedReport.sessions.map((session) => {
+                      const commentsText = session.comments
+                        ? typeof session.comments === 'string'
+                          ? session.comments
+                          : typeof session.comments === 'object' && session.comments !== null && 'text' in (session.comments as object)
+                            ? String((session.comments as { text: unknown }).text)
+                            : JSON.stringify(session.comments)
+                        : null
+                      return (
+                        <div
+                          key={session.id}
+                          className="rounded-lg border px-3 py-2 text-sm"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="font-medium">
+                                {session.round_number}{t('institution.reports.sessionRound')}
+                              </span>
+                              <Badge variant="outline" className="text-xs">{session.session_type}</Badge>
+                              {session.session_date && (
+                                <span className="text-muted-foreground">
+                                  {new Date(session.session_date).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {session.duration_minutes && (
+                                <span className="text-muted-foreground">
+                                  {session.duration_minutes}{t('institution.reports.minutes')}
+                                </span>
+                              )}
+                              <Badge
+                                className={
+                                  session.status === 'acknowledged'
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                    : session.status === 'submitted'
+                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                                }
+                              >
+                                {session.status === 'acknowledged'
+                                  ? t('institution.reports.sessionAcknowledged')
+                                  : session.status === 'submitted'
+                                  ? t('institution.reports.sessionSubmitted')
+                                  : t('institution.reports.sessionDraft')}
+                              </Badge>
+                            </div>
+                          </div>
+                          {commentsText && (
+                            <p className="mt-1.5 text-xs text-muted-foreground border-t pt-1.5">
+                              <span className="font-medium text-foreground">{t('institution.reports.sessionComments')}: </span>
+                              {commentsText}
+                            </p>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          {session.duration_minutes && (
-                            <span className="text-muted-foreground">
-                              {session.duration_minutes}{t('institution.reports.minutes')}
-                            </span>
-                          )}
-                          <Badge
-                            className={
-                              session.status === 'acknowledged'
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                : session.status === 'submitted'
-                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                                : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-                            }
-                          >
-                            {session.status === 'acknowledged'
-                              ? t('institution.reports.sessionAcknowledged')
-                              : session.status === 'submitted'
-                              ? t('institution.reports.sessionSubmitted')
-                              : t('institution.reports.sessionDraft')}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
+                </div>
+              )}
+
+              {/* 멘토 의견서 (mentor_opinion, strengths, improvements) */}
+              {(selectedReport.mentor_opinion || selectedReport.strengths || selectedReport.improvements) && (
+                <div className="space-y-3 rounded-lg border p-4">
+                  <p className="text-sm font-medium">{t('institution.reports.mentorOpinionTitle')}</p>
+                  {selectedReport.mentor_opinion && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">{t('institution.reports.mentorOpinion')}</p>
+                      <p className="text-sm whitespace-pre-wrap">{selectedReport.mentor_opinion}</p>
+                    </div>
+                  )}
+                  {selectedReport.strengths && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">{t('institution.reports.strengths')}</p>
+                      <p className="text-sm whitespace-pre-wrap">{selectedReport.strengths}</p>
+                    </div>
+                  )}
+                  {selectedReport.improvements && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">{t('institution.reports.improvements')}</p>
+                      <p className="text-sm whitespace-pre-wrap">{selectedReport.improvements}</p>
+                    </div>
+                  )}
                 </div>
               )}
 
