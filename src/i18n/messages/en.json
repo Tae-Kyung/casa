@@ -1105,10 +1105,10 @@
       "sessions": "Sessions",
       "hours": "Hours",
       "status": {
-        "approved": "Approved",
-        "paid": "Paid",
-        "pending": "Pending",
-        "processing": "Processing"
+        "approved": "Confirmed",
+        "paid": "Confirmed",
+        "pending": "Scheduled",
+        "processing": "Confirmed"
       },
       "pending": "Pending",
       "approved": "Approved",

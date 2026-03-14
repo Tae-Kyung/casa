@@ -21,7 +21,11 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact', head: true })
       .eq('institution_id', institutionId)
 
-    if (status) countQuery = countQuery.eq('status', status as PayoutStatus)
+    if (status === 'approved') {
+      countQuery = countQuery.in('status', ['approved', 'processing', 'paid'])
+    } else if (status) {
+      countQuery = countQuery.eq('status', status as PayoutStatus)
+    }
 
     const { count } = await countQuery
 
@@ -32,7 +36,11 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
-    if (status) dataQuery = dataQuery.eq('status', status as PayoutStatus)
+    if (status === 'approved') {
+      dataQuery = dataQuery.in('status', ['approved', 'processing', 'paid'])
+    } else if (status) {
+      dataQuery = dataQuery.eq('status', status as PayoutStatus)
+    }
 
     const { data, error } = await dataQuery
 

@@ -1104,10 +1104,10 @@
       "sessions": "세션수",
       "hours": "시간",
       "status": {
-        "approved": "승인됨",
-        "paid": "지급완료",
-        "pending": "대기중",
-        "processing": "처리중"
+        "approved": "지급확정",
+        "paid": "지급확정",
+        "pending": "지급예정",
+        "processing": "지급확정"
       },
       "pending": "대기",
       "approved": "승인됨",

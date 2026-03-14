@@ -49,12 +49,12 @@ interface Payout {
   mentor: Mentor
 }
 
-type StatusFilter = 'all' | 'pending' | 'approved' | 'processing' | 'paid'
+type StatusFilter = 'all' | 'pending' | 'approved'
 
 const STATUS_BADGE_CLASSES: Record<Payout['status'], string> = {
   pending: 'bg-yellow-500 text-white',
-  approved: 'bg-blue-500 text-white',
-  processing: 'bg-purple-500 text-white',
+  approved: 'bg-green-500 text-white',
+  processing: 'bg-green-500 text-white',
   paid: 'bg-green-500 text-white',
   cancelled: 'bg-red-500 text-white',
 }
@@ -385,8 +385,6 @@ export default function InstitutionPayoutsPage() {
                 <SelectItem value="all">{t('common.all')}</SelectItem>
                 <SelectItem value="pending">{t('institution.payouts.status.pending')}</SelectItem>
                 <SelectItem value="approved">{t('institution.payouts.status.approved')}</SelectItem>
-                <SelectItem value="processing">{t('institution.payouts.status.processing')}</SelectItem>
-                <SelectItem value="paid">{t('institution.payouts.status.paid')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
