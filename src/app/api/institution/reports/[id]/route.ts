@@ -37,10 +37,15 @@ export async function GET(
       return errorResponse('접근 권한이 없습니다.', 403)
     }
 
-    // 멘토, 프로젝트 정보 조회
-    const [{ data: mentor }, { data: project }] = await Promise.all([
+    // 멘토, 프로젝트 정보, 세션 조회
+    const [{ data: mentor }, { data: project }, { data: sessions }] = await Promise.all([
       supabase.from('bi_users').select('id, name, email').eq('id', match.mentor_id).single(),
       supabase.from('bi_projects').select('id, name, current_stage').eq('id', match.project_id).single(),
+      supabase
+        .from('bi_mentoring_sessions')
+        .select('id, match_id, round_number, session_type, session_date, duration_minutes, status, comments')
+        .eq('match_id', match.id)
+        .order('round_number', { ascending: true }),
     ])
 
     return successResponse({
@@ -50,6 +55,7 @@ export async function GET(
         mentor: mentor || null,
         project: project || null,
       },
+      sessions: sessions || [],
     })
   } catch (error) {
     return handleApiError(error)

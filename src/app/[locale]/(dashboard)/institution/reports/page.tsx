@@ -112,6 +112,23 @@ export default function InstitutionReportsPage() {
 
   // Report detail dialog
   const [selectedReport, setSelectedReport] = useState<MentoringReport | null>(null)
+  const [isDetailLoading, setIsDetailLoading] = useState(false)
+
+  const handleViewReport = async (report: MentoringReport) => {
+    setSelectedReport(report)
+    setIsDetailLoading(true)
+    try {
+      const res = await fetch(`/api/institution/reports/${report.id}`)
+      const result = await res.json()
+      if (result.success) {
+        setSelectedReport(result.data)
+      }
+    } catch {
+      // 목록 데이터로 fallback
+    } finally {
+      setIsDetailLoading(false)
+    }
+  }
 
   // Reject modal state
   const [rejectTarget, setRejectTarget] = useState<MentoringReport | null>(null)
@@ -367,7 +384,7 @@ export default function InstitutionReportsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setSelectedReport(report)}
+                        onClick={() => handleViewReport(report)}
                       >
                         <Eye className="mr-2 h-4 w-4" />
                         {t('institution.reports.viewReport')}
@@ -461,7 +478,11 @@ export default function InstitutionReportsPage() {
               )}
 
               {/* Sessions */}
-              {selectedReport.sessions && selectedReport.sessions.length > 0 && (
+              {isDetailLoading ? (
+                <div className="flex justify-center py-4">
+                  <LoadingSpinner size="sm" />
+                </div>
+              ) : selectedReport.sessions && selectedReport.sessions.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-sm font-medium">{t('institution.reports.sessionsTitle')}</p>
                   <div className="space-y-1">
