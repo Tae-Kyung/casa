@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { useParams } from 'next/navigation'
-import { FileText, MessageSquare, Plus, Send, Save, ChevronDown, ChevronUp, Download } from 'lucide-react'
+import { FileText, MessageSquare, Plus, Send, Save, ChevronDown, ChevronUp, Download, Trash2 } from 'lucide-react'
 import { marked } from 'marked'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -108,6 +108,7 @@ export default function MentoringWorkstationPage() {
   const [savingSessionId, setSavingSessionId] = useState<string | null>(null)
   const [submittingSessionId, setSubmittingSessionId] = useState<string | null>(null)
   const [creatingSession, setCreatingSession] = useState(false)
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
 
   // Feedback state
   const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([])
@@ -231,6 +232,27 @@ export default function MentoringWorkstationPage() {
       toast.error(t('mentor.sessions.submitFailed'))
     } finally {
       setSubmittingSessionId(null)
+    }
+  }
+
+  const handleDeleteSession = async (sessionId: string) => {
+    setDeletingSessionId(sessionId)
+    try {
+      const response = await fetch(`/api/mentor/sessions/${sessionId}`, {
+        method: 'DELETE',
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success(t('mentor.sessions.deleted'))
+        setExpandedSessionId(null)
+        await fetchSessions()
+      } else {
+        toast.error(result.error || t('mentor.sessions.deleteFailed'))
+      }
+    } catch {
+      toast.error(t('mentor.sessions.deleteFailed'))
+    } finally {
+      setDeletingSessionId(null)
     }
   }
 
@@ -762,14 +784,34 @@ export default function MentoringWorkstationPage() {
                           {session.status}
                         </Badge>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {session.session_date
-                          ? new Date(session.session_date).toLocaleDateString()
-                          : '-'}
-                        {session.duration_minutes && (
-                          <span className="ml-2">
-                            ({session.duration_minutes}{t('mentor.sessions.minutes')})
-                          </span>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>
+                          {session.session_date
+                            ? new Date(session.session_date).toLocaleDateString()
+                            : '-'}
+                          {session.duration_minutes && (
+                            <span className="ml-2">
+                              ({session.duration_minutes}{t('mentor.sessions.minutes')})
+                            </span>
+                          )}
+                        </span>
+                        {session.status === 'draft' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteSession(session.id)
+                            }}
+                            disabled={deletingSessionId === session.id}
+                          >
+                            {deletingSessionId === session.id ? (
+                              <LoadingSpinner size="sm" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
                         )}
                       </div>
                     </div>

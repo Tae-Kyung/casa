@@ -1340,7 +1340,9 @@
       "saved": "저장되었습니다",
       "unsubmit": "제출 취소",
       "unsubmitted": "제출이 취소되었습니다.",
-      "unsubmitFailed": "제출 취소에 실패했습니다."
+      "unsubmitFailed": "제출 취소에 실패했습니다.",
+      "deleted": "세션이 삭제되었습니다.",
+      "deleteFailed": "세션 삭제에 실패했습니다."
     },
     "reports": {
       "title": "멘토링 보고서",

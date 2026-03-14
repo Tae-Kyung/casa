@@ -1341,7 +1341,9 @@
       "saved": "Saved successfully",
       "unsubmit": "Unsubmit",
       "unsubmitted": "Session unsubmitted.",
-      "unsubmitFailed": "Failed to unsubmit session."
+      "unsubmitFailed": "Failed to unsubmit session.",
+      "deleted": "Session deleted.",
+      "deleteFailed": "Failed to delete session."
     },
     "reports": {
       "title": "Mentoring Report",

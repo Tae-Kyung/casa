@@ -16,6 +16,56 @@ const updateSessionSchema = z.object({
   duration_minutes: z.number().int().positive().max(480).optional(),
 })
 
+// DELETE: 멘토링 세션 삭제 (draft 상태만)
+export async function DELETE(
+  _request: NextRequest,
+  context: RouteContext
+) {
+  try {
+    const { sessionId } = await context.params
+    if (!isValidUUID(sessionId)) return errorResponse('잘못된 ID 형식입니다.', 400)
+    const user = await requireAuth()
+
+    const supabase = createServiceClient()
+
+    const { data: session, error: sessionError } = await supabase
+      .from('bi_mentoring_sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .single()
+
+    if (sessionError || !session) {
+      return errorResponse('멘토링 세션을 찾을 수 없습니다.', 404)
+    }
+
+    const { data: match, error: matchError } = await supabase
+      .from('bi_mentor_matches')
+      .select('id')
+      .eq('id', session.match_id)
+      .eq('mentor_id', user.id)
+      .single()
+
+    if (matchError || !match) {
+      return errorResponse('해당 세션에 대한 삭제 권한이 없습니다.', 403)
+    }
+
+    if (session.status !== 'draft') {
+      return errorResponse('제출된 세션은 삭제할 수 없습니다.', 400)
+    }
+
+    const { error: deleteError } = await supabase
+      .from('bi_mentoring_sessions')
+      .delete()
+      .eq('id', sessionId)
+
+    if (deleteError) throw deleteError
+
+    return successResponse({ id: sessionId })
+  } catch (error) {
+    return handleApiError(error)
+  }
+}
+
 // PATCH: 멘토링 세션 수정
 export async function PATCH(
   request: NextRequest,

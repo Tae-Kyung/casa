@@ -75,6 +75,18 @@ export async function POST(
       return errorResponse('멘토 매칭 정보를 찾을 수 없습니다.', 404)
     }
 
+    // 보고서가 제출된 경우 세션 생성 차단
+    const { data: submittedReport } = await supabase
+      .from('bi_mentoring_reports')
+      .select('id, status')
+      .eq('match_id', match.id)
+      .in('status', ['submitted', 'confirmed'])
+      .maybeSingle()
+
+    if (submittedReport) {
+      return errorResponse('멘토링 보고서가 제출된 이후에는 세션을 추가할 수 없습니다.', 400)
+    }
+
     let body = {}
     try { body = await request.json() } catch { /* empty body is ok */ }
     const validatedData = createSessionSchema.parse(body)

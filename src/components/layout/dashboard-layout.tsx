@@ -230,7 +230,7 @@ export function DashboardLayout({ children, userRole = 'user', userName, userEma
         .then(result => {
           if (result.success) {
             const d = result.data
-            setMentorDocsIncomplete(!d.resume || !d.bank_account || !d.privacy_consent)
+            setMentorDocsIncomplete(!d.resume || !d.bank_account || !d.privacy_consent || !d.id_card)
           }
         })
         .catch(() => {})
